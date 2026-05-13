@@ -6,7 +6,6 @@ import { StatusBadge } from "./StatusBadge";
 export function MatchCard({ m }: { m: Match }) {
   const winnerA = m.status === "Encerrada" && m.scoreA > m.scoreB;
   const winnerB = m.status === "Encerrada" && m.scoreB > m.scoreA;
-npm
   const name = m.tournamentName.toLowerCase();
   const isValorant = name.includes("vct") || name.includes("valorant");
   const isCS2 = !isValorant && (name.includes("cs") || name.includes("counter-strike"));

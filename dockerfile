@@ -4,10 +4,10 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN yarn install
+RUN npm install
 
 COPY . .
-RUN yarn build
+RUN npm run build
 
 # Production stage
 FROM node:22-alpine
