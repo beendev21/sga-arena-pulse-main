@@ -6,6 +6,7 @@ import { TeamLogo } from "@/components/sga/TeamLogo";
 import { MatchCard } from "@/components/sga/MatchCard";
 import { Bracket } from "@/components/sga/Bracket";
 import { Trophy, Calendar, Users, CheckCircle2, XCircle, ShieldAlert } from "lucide-react";
+import { formatDateBR } from "@/lib/dateUtils";
 
 export const Route = createFileRoute("/tournaments/$id")({ component: TPage });
 
@@ -36,7 +37,7 @@ function TPage() {
           <div className="flex flex-wrap gap-4 mt-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5"><Trophy className="h-4 w-4 text-primary" /> {t.prize}</span>
             <span className="flex items-center gap-1.5"><Users className="h-4 w-4" /> {t.teamsCount} times</span>
-            <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" /> {new Date(t.startDate).toLocaleDateString("pt-BR")} → {new Date(t.endDate).toLocaleDateString("pt-BR")}</span>
+            <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" /> {formatDateBR(t.startDate)} → {formatDateBR(t.endDate)}</span>
           </div>
         </div>
       </div>

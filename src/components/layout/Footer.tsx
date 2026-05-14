@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Trophy, Twitter, Twitch, Youtube, Instagram } from "lucide-react";
+import { getCurrentYear } from "@/lib/dateUtils";
 
 export function Footer() {
   return (
@@ -46,7 +47,7 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-border/60 py-4 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Santos Games Arena — MVP demonstrativo. Dados fictícios.
+        © {getCurrentYear()} Santos Games Arena — MVP demonstrativo. Dados fictícios.
       </div>
     </footer>
   );

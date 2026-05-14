@@ -11,6 +11,7 @@ import { useAuth } from "@/store/auth";
 import { useDataStore } from "@/store/dataStore";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { formatDateBR } from "@/lib/dateUtils";
 
 /**
  * Definição da rota '/admin' utilizando TanStack Router.
@@ -187,7 +188,7 @@ function Admin() {
                         <td><StatusBadge status={t.status} /></td>
                         <td className="text-center">{t.teamsCount}</td>
                         <td className="text-center">{t.prize}</td>
-                        <td className="text-center">{new Date(t.startDate).toLocaleDateString("pt-BR")}</td>
+                        <td className="text-center">{formatDateBR(t.startDate)}</td>
                         <td className="px-4 py-3"><RowActions /></td>
                       </tr>
                     ))}

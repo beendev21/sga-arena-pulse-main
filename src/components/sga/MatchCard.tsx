@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { Match } from "@/mocks/data";
 import { TeamLogo } from "./TeamLogo";
 import { StatusBadge } from "./StatusBadge";
+import { formatDateTimeBR } from "@/lib/dateUtils";
 
 export function MatchCard({ m }: { m: Match }) {
   const winnerA = m.status === "Encerrada" && m.scoreA > m.scoreB;
@@ -37,7 +38,7 @@ export function MatchCard({ m }: { m: Match }) {
           {m.status === "Agendada" ? (
             <div>
               <div className="text-[10px] uppercase tracking-widest text-muted-foreground">VS</div>
-              <div className="text-[10px] md:text-xs mt-1">{new Date(m.startsAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit" })}</div>
+              <div className="text-[10px] md:text-xs mt-1">{formatDateTimeBR(m.startsAt)}</div>
             </div>
           ) : (
             <div className="font-display text-2xl flex items-center gap-2">
