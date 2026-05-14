@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { players, getTeam } from '@/mocks/data'
 import { loggingMiddleware, authMiddleware } from './auth'
+import { z } from 'zod'
 
 export const getPlayers = createServerFn({ method: 'GET' })
   .middleware([loggingMiddleware, authMiddleware])
@@ -10,7 +11,7 @@ export const getPlayers = createServerFn({ method: 'GET' })
   })
 
 export const getTeamById = createServerFn({ method: 'GET' })
-  .validator((teamId: string) => teamId)
+  .validator(z.string())
   .middleware([authMiddleware])
   .handler(async ({ data: teamId }) => {
     return getTeam(teamId)
