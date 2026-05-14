@@ -10,7 +10,8 @@ export const getPlayers = createServerFn({ method: 'GET' })
   })
 
 export const getTeamById = createServerFn({ method: 'GET' })
+  .validator((teamId: string) => teamId)
   .middleware([authMiddleware])
-  .handler(async ({ data: teamId }: { data: string }) => {
+  .handler(async ({ data: teamId }) => {
     return getTeam(teamId)
   })
