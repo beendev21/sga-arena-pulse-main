@@ -87,12 +87,14 @@ export function Navbar() {
                   <span className="text-[10px] font-black text-white italic leading-none">{user.nick}</span>
                   <span className="text-[8px] text-primary font-bold tracking-widest uppercase leading-none mt-1">Authorized Player</span>
                 </div>
-                <div className="relative">
-                  <div className="h-9 w-9 border border-primary/40 p-0.5 group-hover:border-primary transition-colors">
-                    <img src={user.avatar} alt={user.nick} className="h-full w-full object-cover" />
+                <Link to={user.email === "admin@sga.gg" ? "/admin" : "/profile" as any}>
+                  <div className="relative">
+                    <div className="h-9 w-9 border border-primary/40 p-0.5 group-hover:border-primary transition-colors">
+                      <img src={user.avatar} alt={user.nick} className="h-full w-full object-cover" />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-[#0a0a0c] rounded-full" />
                   </div>
-                  <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-[#0a0a0c] rounded-full" />
-                </div>
+                </Link>
                 <button 
                   onClick={() => logout()} 
                   title="Sair" 

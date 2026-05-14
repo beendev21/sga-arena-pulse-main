@@ -1,7 +1,41 @@
-import { players, getTeam } from "@/mocks/data";
+import { useEffect, useState } from "react";
+import { getPlayers } from "./player-functions";
 import { TeamLogo } from "./TeamLogo";
+import { useAuth } from "@/store/auth";
+import { getTeam } from "@/mocks/data";
 
 export function PlayerStatsTable({ limit = 40 }: { limit?: number }) {
+  const { token } = useAuth();
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const result = await getPlayers({
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        // Verifica se o resultado é de fato a lista de jogadores (array)
+        if (Array.isArray(result)) {
+          setData(result);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [token]);
+
+  if (loading) return <div className="p-8 text-center text-muted-foreground animate-pulse">Carregando estatísticas protegidas...</div>;
+  if (!token) return <div className="p-8 text-center text-red-400">Acesso negado. Por favor, faça login.</div>;
+
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60 bg-card-grad">
       <table className="w-full text-sm min-w-[820px]">
@@ -21,7 +55,7 @@ export function PlayerStatsTable({ limit = 40 }: { limit?: number }) {
           </tr>
         </thead>
         <tbody>
-          {players.slice(0, limit).map((p, i) => {
+          {data.slice(0, limit).map((p, i) => {
             const team = getTeam(p.teamId)!;
             const kda = ((p.kills + p.assists) / Math.max(p.deaths, 1)).toFixed(2);
             return (

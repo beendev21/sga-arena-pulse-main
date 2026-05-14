@@ -33,7 +33,6 @@ export function Footer() {
           <ul className="space-y-2 text-sm">
             <li><Link to="/login" className="hover:text-primary">Entrar</Link></li>
             <li><Link to="/register" className="hover:text-primary">Cadastrar</Link></li>
-            <li><Link to="/admin" className="hover:text-primary">Admin</Link></li>
           </ul>
         </div>
         <div>

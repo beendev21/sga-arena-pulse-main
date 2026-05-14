@@ -137,7 +137,7 @@ function Home() {
               <img src="https://upload.wikimedia.org/wikipedia/commons/d/d8/League_of_Legends_2019_vector.svg" alt="LoL" className="h-8 w-auto" title="League of Legends" />
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link to="/tournaments/$id" params={{ id: featured.id }}>
+              <Link to="/login">
                 <Button className="bg-primary hover:bg-primary/90 px-8 h-12 uppercase tracking-widest font-black italic">
                   Participar agora <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>

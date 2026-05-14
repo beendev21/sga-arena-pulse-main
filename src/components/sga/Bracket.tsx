@@ -1,4 +1,4 @@
-import { bracket } from "@/mocks/data";
+import { useDataStore } from "@/store/dataStore";
 import { TeamLogo } from "./TeamLogo";
 import type { Team } from "@/mocks/data";
 
@@ -28,6 +28,8 @@ function Row({ team, score, win }: { team: Team; score: number; win: boolean }) 
 }
 
 export function Bracket() {
+  const { bracket } = useDataStore();
+
   return (
     <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-white/10">
       <div className="flex gap-16 min-w-max p-10 bg-black/20">

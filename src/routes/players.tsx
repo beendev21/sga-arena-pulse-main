@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { PlayerStatsTable } from "@/components/sga/PlayerStatsTable";
 
@@ -48,6 +48,13 @@ function P() {
           <p className="text-muted-foreground mt-4 text-base md:text-lg max-w-xl leading-relaxed font-medium">
             O ranking definitivo baseado em estatísticas avançadas de KDA, ADR e Rating. Dados verificados de todas as competições oficiais.
           </p>
+
+          <Link 
+            to="/login" 
+            className="mt-8 inline-flex items-center justify-center rounded-md bg-neon px-8 py-3 font-display text-lg font-bold uppercase italic text-primary-foreground shadow-neon transition-all hover:scale-105 active:scale-95"
+          >
+            Participar Agora
+          </Link>
         </motion.div>
 
         {/* Game Tabs Navigation */}

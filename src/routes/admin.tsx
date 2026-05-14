@@ -1,13 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { tournaments, teams, players, matches, highlights, gallery } from "@/mocks/data";
+import { tournaments, teams, players, matches, highlights, gallery, bracket } from "@/mocks/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TeamLogo } from "@/components/sga/TeamLogo";
 import { StatusBadge } from "@/components/sga/StatusBadge";
-import { Trophy, Users, Swords, Activity, Image as Img, Film, Plus, Search, Upload, Trash2, Pencil } from "lucide-react";
+import { Trophy, Users, Swords, Activity, Image as Img, Film, Plus, Search, Upload, Trash2, Pencil, ShieldAlert, ChevronRight, Crown, Save } from "lucide-react";
 import { StatsCard } from "@/components/sga/StatsCard";
+import { useAuth } from "@/store/auth";
+import { useDataStore } from "@/store/dataStore";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 /**
  * Definição da rota '/admin' utilizando TanStack Router.
@@ -27,17 +30,54 @@ const tabs = [
   { k: "times", label: "Times" },
   { k: "jogadores", label: "Jogadores" },
   { k: "partidas", label: "Partidas" },
+  { k: "chaveamentos", label: "Chaveamentos" },
   { k: "highlights", label: "Highlights" },
   { k: "galeria", label: "Galeria" },
 ] as const;
 
 function Admin() {
+  const user = useAuth((s) => s.user);
+  const nav = useNavigate();
+
+  // Guard de Autenticação Admin - Simulação de nível de acesso
+  if (!user || user.email !== "admin@sga.gg") {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center bg-[#06070a] px-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center max-w-md border border-white/5 bg-[#0a0a0c]/80 p-10 backdrop-blur-xl relative group shadow-2xl"
+        >
+          <div className="absolute -top-2 -left-2 w-6 h-6 border-t border-l border-primary group-hover:w-10 group-hover:h-10 transition-all" />
+          <div className="absolute -bottom-2 -right-2 w-6 h-6 border-b border-r border-primary group-hover:w-10 group-hover:h-10 transition-all" />
+          
+          <ShieldAlert className="w-16 h-16 text-primary mx-auto mb-6 animate-pulse" />
+          <h1 className="font-display text-4xl font-black italic uppercase text-white mb-4 tracking-tighter">Acesso Restrito</h1>
+          <p className="text-muted-foreground mb-8 uppercase tracking-[0.2em] text-[10px] italic leading-relaxed">
+            Identificação de nível Administrador (Alpha_Gate) necessária para acessar o núcleo de comando_ <br/>
+            <span className="text-[8px] opacity-30 mt-2 block">(Utilize admin@sga.gg para testes)</span>
+          </p>
+          <Link to="/login">
+            <Button className="bg-primary hover:bg-primary/90 w-full h-12 uppercase tracking-[0.2em] font-black italic shadow-neon">
+              Autenticar Terminal
+            </Button>
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
+
   // Gerenciamento de estado local para UI e filtros.
   // Em produção, 'page' e 'q' poderiam ser movidos para a URL (Search Params)
   // para permitir que o usuário compartilhe links de busca.
   const [tab, setTab] = useState<(typeof tabs)[number]["k"]>("campeonatos");
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
+  
+  // Pegando dados e ações da Store Global
+  const { tournaments, bracket, updateMatchScore } = useDataStore();
+
+  const [selectedTourney, setSelectedTourney] = useState(tournaments[0]?.id || "");
   const PAGE = 8;
 
   /**
@@ -158,6 +198,120 @@ function Admin() {
             </>
           );
         })()}
+
+        {tab === "chaveamentos" && (
+          <div className="animate-in fade-in duration-700 space-y-6">
+            <div className="flex items-center justify-between gap-4 flex-wrap border-b border-white/5 pb-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-primary/10 text-primary">
+                  <Swords className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-display text-2xl uppercase italic font-black text-white leading-none">Gestão de <span className="text-primary">Chaveamentos</span></h3>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest italic mt-1">Playoff_Matrix_Control // Protocol_9.9</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                 <Button variant="outline" className="text-[10px] font-black uppercase italic h-10 border-white/10 hover:bg-white/5" onClick={fakeAct("Exportação iniciada")}>Exportar Dados</Button>
+                 <Button className="bg-neon shadow-neon text-[10px] font-black uppercase italic h-10 px-6" onClick={fakeAct("Chaveamento salvo no sistema")}>Salvar Alterações</Button>
+              </div>
+            </div>
+
+            <div className="grid lg:grid-cols-[400px_1fr] gap-8 items-start">
+              {/* Lista de Seleção */}
+              <div className="space-y-4">
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] italic">Tournament_Stream</span>
+                <div className="grid gap-2">
+                  {tournaments.map(t => (
+                    <button 
+                      key={t.id}
+                      onClick={() => setSelectedTourney(t.id)}
+                      className={`p-4 text-left border transition-all relative group ${selectedTourney === t.id ? "bg-primary/10 border-primary/40 shadow-[0_0_15px_rgba(248,109,131,0.1)]" : "bg-white/5 border-white/5 hover:bg-white/10"}`}
+                    >
+                      <div className="text-sm font-display uppercase italic font-bold tracking-tight">{t.name}</div>
+                      <div className="flex items-center justify-between mt-1">
+                         <StatusBadge status={t.status as any} />
+                         <span className="text-[8px] text-white/20 font-black tracking-widest">{t.teamsCount} TEAMS</span>
+                      </div>
+                      {selectedTourney === t.id && <div className="absolute right-0 top-0 bottom-0 w-1 bg-primary" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Workspace do Editor */}
+              <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 p-8 relative">
+                 <div className="absolute top-0 right-0 p-4 text-[8px] font-black text-white/5 uppercase tracking-[0.4em] pointer-events-none">
+                   HUD_EDITOR // ACTIVE_STATE
+                 </div>
+
+                 <div className="flex flex-col gap-12">
+                    {/* QUARTAS */}
+                    <div className="space-y-6">
+                      <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.4em] italic flex items-center gap-3">
+                        <div className="w-8 h-px bg-primary/40" /> 01. Quartas de Final
+                      </h4>
+                      <div className="grid md:grid-cols-2 gap-4">
+                         {[1,2,3,4].map(matchIdx => (
+                           <div key={matchIdx} className="bg-white/5 p-4 border border-white/10 group/match hover:border-primary/40 transition-all">
+                              <div className="flex justify-between items-center mb-4">
+                                 <span className="text-[8px] font-black text-white/30 tracking-widest uppercase">Match QF-0{matchIdx}</span>
+                                 <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover/match:opacity-100"><Pencil className="w-3 h-3" /></Button>
+                              </div>
+                              <div className="space-y-3">
+                                 <div className="flex items-center gap-3">
+                                    <select className="flex-1 bg-black border border-white/10 text-[10px] font-black p-1 uppercase focus:border-primary outline-none">
+                                      <option>Selecionar Time A</option>
+                                      {teams.map(tm => <option key={tm.id}>{tm.name}</option>)}
+                                    </select>
+                                    <Input className="w-12 h-7 text-center text-xs font-black bg-black border-white/10" defaultValue="0" />
+                                 </div>
+                                 <div className="flex items-center gap-4 py-1">
+                                    <div className="h-px flex-1 bg-white/5" />
+                                    <span className="text-[8px] font-black text-white/10 italic tracking-tighter">VERSUS</span>
+                                    <div className="h-px flex-1 bg-white/5" />
+                                 </div>
+                                 <div className="flex items-center gap-3">
+                                    <select className="flex-1 bg-black border border-white/10 text-[10px] font-black p-1 uppercase focus:border-primary outline-none">
+                                      <option>Selecionar Time B</option>
+                                      {teams.map(tm => <option key={tm.id}>{tm.name}</option>)}
+                                    </select>
+                                    <Input className="w-12 h-7 text-center text-xs font-black bg-black border-white/10" defaultValue="0" />
+                                 </div>
+                              </div>
+                           </div>
+                         ))}
+                      </div>
+                    </div>
+
+                    {/* SEMIFINAIS */}
+                    <div className="space-y-6">
+                       <h4 className="text-[10px] font-black text-neon uppercase tracking-[0.4em] italic flex items-center gap-3">
+                         <div className="w-8 h-px bg-neon/40" /> 02. Semifinais
+                       </h4>
+                       <div className="grid md:grid-cols-2 gap-4">
+                          {[1,2].map(sfIdx => (
+                            <div key={sfIdx} className="bg-neon/5 p-4 border border-neon/10 hover:border-neon/40 transition-all">
+                              <div className="text-[8px] font-black text-neon/40 tracking-widest uppercase mb-3 text-center">Semi Final SF-0{sfIdx}</div>
+                              <div className="flex flex-col gap-2">
+                                 <div className="flex items-center justify-between text-[10px] text-white/40 font-bold px-2">
+                                   <span className="uppercase">Vencedor QF-0{sfIdx*2-1}</span>
+                                   <Input className="w-10 h-6 text-center text-[10px] font-black border-white/10" defaultValue="0" />
+                                 </div>
+                                 <div className="flex items-center justify-between text-[10px] text-white/40 font-bold px-2">
+                                   <span className="uppercase">Vencedor QF-0{sfIdx*2}</span>
+                                   <Input className="w-10 h-6 text-center text-[10px] font-black border-white/10" defaultValue="0" />
+                                 </div>
+                              </div>
+                            </div>
+                          ))}
+                       </div>
+                    </div>
+                 </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {tab === "times" && (() => {
           const f = filt(teams, "name");
