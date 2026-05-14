@@ -21,4 +21,4 @@ COPY --from=build /app/dist ./dist
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "exec node ./node_modules/vite/bin/vite.js preview --host 0.0.0.0 --port ${PORT:-3000}"]
+CMD ["sh", "-c", "cd /app/dist/server && exec node ../../node_modules/wrangler/bin/wrangler.js dev --config wrangler.json --ip 0.0.0.0 --port ${PORT:-3000}"]
