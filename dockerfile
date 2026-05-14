@@ -12,6 +12,7 @@ FROM node:22-bookworm-slim AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
+ENV VITE_ALLOWED_HOSTS=true
 
 COPY package.json package-lock.json ./
 COPY --from=build /app/node_modules ./node_modules
