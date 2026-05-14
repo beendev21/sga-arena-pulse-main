@@ -8,6 +8,7 @@ import { StatusBadge } from "@/components/sga/StatusBadge";
 import { Trophy, Users, Swords, Activity, Image as Img, Film, Plus, Search, Upload, Trash2, Pencil } from "lucide-react";
 import { StatsCard } from "@/components/sga/StatsCard";
 import { toast } from "sonner";
+import { formatDateBR } from "@/lib/dateUtils";
 
 /**
  * Definição da rota '/admin' utilizando TanStack Router.
@@ -147,7 +148,7 @@ function Admin() {
                         <td><StatusBadge status={t.status} /></td>
                         <td className="text-center">{t.teamsCount}</td>
                         <td className="text-center">{t.prize}</td>
-                        <td className="text-center">{new Date(t.startDate).toLocaleDateString("pt-BR")}</td>
+                        <td className="text-center">{formatDateBR(t.startDate)}</td>
                         <td className="px-4 py-3"><RowActions /></td>
                       </tr>
                     ))}

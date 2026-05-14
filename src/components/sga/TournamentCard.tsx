@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Calendar, Trophy, Users } from "lucide-react";
 import type { Tournament } from "@/mocks/data";
 import { StatusBadge } from "./StatusBadge";
+import { formatDateBR } from "@/lib/dateUtils";
 
 export function TournamentCard({ t }: { t: Tournament }) {
   const name = t.name.toLowerCase();
@@ -27,7 +28,7 @@ export function TournamentCard({ t }: { t: Tournament }) {
           <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{t.teamsCount} times</div>
             <div className="flex items-center gap-1"><Trophy className="h-3.5 w-3.5 text-primary" />{t.prize}</div>
-            <div className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{new Date(t.startDate).toLocaleDateString("pt-BR")}</div>
+            <div className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{formatDateBR(t.startDate)}</div>
           </div>
         </div>
       </div>
