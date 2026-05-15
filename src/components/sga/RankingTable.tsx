@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getTeams } from "./player-functions";
+import useApiController from "../../API/controler";
 import { TeamLogo } from "./TeamLogo";
 import { Link } from "@tanstack/react-router";
 import { teams as mockTeams } from "@/mocks/data";
@@ -7,11 +7,12 @@ import { teams as mockTeams } from "@/mocks/data";
 export function RankingTable({ game }: { game: string }) {
   const [teams, setTeams] = useState<any[]>(mockTeams);
   const [loading, setLoading] = useState(true);
+  const getTeams = useApiController("Teams");
 
   useEffect(() => {
     const load = async () => {
       try {
-        const result = await getTeams();
+        const result = await getTeams.getAll();
         if (Array.isArray(result)) {
           const filtered = result.filter(t => !game || t.game === game);
           setTeams(filtered);

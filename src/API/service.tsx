@@ -3,39 +3,12 @@ import { getToken } from "../Utils/auth";
 // Configuração da URL Base da API.
 // Prioriza variáveis de ambiente (compatível com Create React App e Vite) 
 // e usa a sua URL como fallback padrão.
-const getApiUrl = () => {
-  // Captura o objeto de ambiente dependendo da ferramenta de build
-  const viteEnv = (import.meta as any).env || {};
-  const processEnv = typeof process !== "undefined" ? (process.env as any) : {};
+const viteEnv = (import.meta as any).env || {};
+const processEnv = typeof process !== "undefined" ? (process.env as any) : {};
+const envUrl = viteEnv.VITE_API_URL || processEnv.VITE_API_URL || processEnv.REACT_APP_API_URL;
 
-  // Ordem de prioridade e detecção da fonte
-  let source = "Fallback (Padrão)";
-  let url = "https://app.santos-games.com"; // URL Padrão
 
-  // Só usa a variável de ambiente se ela não for localhost, 
-  // ou se você realmente quiser usar o local.
-  const envUrl = viteEnv.VITE_API_URL || processEnv.VITE_API_URL || processEnv.REACT_APP_API_URL;
-  
-  if (envUrl && !envUrl.toLowerCase().includes("localhost")) {
-    url = envUrl;
-    source = "Ambiente (Produção)";
-  } else if (envUrl && envUrl.toLowerCase().includes("localhost")) {
-    source = "Ambiente (Local detectado - Ignorado para usar Produção)";
-  }
-
-  // LOG DE DIAGNÓSTICO: Abra o console (F12) para ver esta mensagem
-  console.log(
-    `%c[SGA API] Fonte: ${source} | URL: ${url}`, 
-    "background: #ff4655; color: white; padding: 2px 5px; font-weight: bold;"
-  );
-
-  // Se você está em produção ou quer forçar a URL correta mesmo que o .env local esteja errado:
-  // return "https://app.santos-games.com"; 
-
-  return url;
-};
-
-const API_BASE_URL: string = getApiUrl();
+const API_BASE_URL: string = envUrl;
 
 /**
  * Interface para erros da API, permitindo acessar o status HTTP

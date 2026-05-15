@@ -10,8 +10,7 @@ import { RankingTable } from "@/components/sga/RankingTable";
 import { PlayerStatsTable } from "@/components/sga/PlayerStatsTable";
 import { StatsCard } from "@/components/sga/StatsCard";
 import { Button } from "@/components/ui/button";
-import { getTournaments, getMatches, getTeams } from "@/components/sga/player-functions";
-
+import useApiController from "../API/controler";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -82,14 +81,17 @@ function Home() {
   const [matches, setMatches] = useState<any[]>(mockMatches);
   const [teams, setTeams] = useState<any[]>(mockTeams);
   const [loading, setLoading] = useState(true);
+  const getTournaments = useApiController("Tournaments");
+  const getMatches = useApiController("Matches");
+  const getTeams = useApiController("Teams");
 
   useEffect(() => {
     const syncWithBackend = async () => {
       try {
         const [tRes, mRes, tmRes] = await Promise.all([
-          getTournaments(),
-          getMatches(),
-          getTeams()
+          getTournaments.getAll(),
+          getMatches.getAll(),
+          getTeams.getAll()
         ]);
 
         // Só atualiza se a resposta for um array válido

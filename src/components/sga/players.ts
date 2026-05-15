@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { players } from '@/mocks/data'
 
-export const Route = createFileRoute('/api/players')({
+export const Route = createFileRoute('/api/Players')({
   server: {
     handlers: {
       GET: async () => {

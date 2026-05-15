@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getPlayers } from "./player-functions";
+import useApiController from "../../API/controler";
 import { TeamLogo } from "./TeamLogo";
 import { useAuth } from "@/store/auth";
 import { getTeam } from "@/mocks/data";
@@ -9,13 +9,14 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
   const user = useAuth((s) => s.user);
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const getPlayers = useApiController("Players");
 
   useEffect(() => {
     const load = async () => {
       // Removida a trava obrigatória de token para permitir visualização pública
       // O ApiService enviará a requisição sem o header de Authorization se o token for nulo.
       try {
-        const result = await getPlayers();
+        const result = await getPlayers.getAll();
 
         // Verifica se o resultado é de fato a lista de jogadores (array)
         if (Array.isArray(result)) {

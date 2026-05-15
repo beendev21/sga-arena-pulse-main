@@ -29,7 +29,7 @@ const useApiController = (entityName: string) => {
   const getAll = async () => {
     try {
       loadingPush();
-      return await ApiService.get(entityName);
+      return await ApiService.get(`api/${entityName}`);
     } catch (error) {
       // Se for erro 401, trata silenciosamente
       if (handleUnauthorized(error)) {
@@ -47,7 +47,7 @@ const useApiController = (entityName: string) => {
       throw new Error("ID é obrigatório para buscar um registro específico.");
     try {
       loadingPush();
-      return await ApiService.get(`${entityName}/${id}`);
+      return await ApiService.get(`api/${entityName}/${id}`);
     } catch (error) {
       // Se for erro 401, trata silenciosamente
       if (handleUnauthorized(error)) {
@@ -65,7 +65,7 @@ const useApiController = (entityName: string) => {
       throw new Error("Dados são obrigatórios para criar um registro.");
     try {
       loadingPush();
-      const endpoint = `${entityName}`;
+      const endpoint = `api/${entityName}`;
       return await ApiService.post(endpoint, data);
     } catch (error) {
       // Se for erro 401, trata silenciosamente
@@ -85,7 +85,7 @@ const useApiController = (entityName: string) => {
       throw new Error("Dados são obrigatórios para atualizar um registro.");
     try {
       loadingPush();
-      return await ApiService.put(`${entityName}/${id}`, data);
+      return await ApiService.put(`api/${entityName}/${id}`, data);
     } catch (error) {
       // Se for erro 401, trata silenciosamente
       if (handleUnauthorized(error)) {
@@ -103,7 +103,7 @@ const useApiController = (entityName: string) => {
     if (!id) throw new Error("ID é obrigatório para deletar um registro.");
     try {
       loadingPush();
-      return await ApiService.delete(`${entityName}/${id}`);
+      return await ApiService.delete(`api/${entityName}/${id}`);
     } catch (error) {
       // Se for erro 401, trata silenciosamente
       if (handleUnauthorized(error)) {
@@ -127,7 +127,7 @@ const useApiController = (entityName: string) => {
       const formData = new FormData();
       formData.append("imagem", file);
 
-      const response = await ApiService.postImage(`${entityName}`, formData);
+      const response = await ApiService.postImage(`api/${entityName}`, formData);
       return response;
     } catch (error) {
       // Se for erro 401, trata silenciosamente

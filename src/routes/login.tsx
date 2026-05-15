@@ -27,13 +27,15 @@ function Login() {
     e.preventDefault();
     // Mock: Substitua por chamada à API de autenticação.
     // Adicionado o campo 'role' para que o sistema reconheça o nível de acesso Administrador.
-    login({ 
-      name: email.includes("willian") ? "Willian" : "Player", 
-      nick: email.split("@")[0] || "player", 
-      email, 
-      role: email.includes("willian") ? "Administrador" : "Jogador",
-      avatar: "https://picsum.photos/seed/me/80/80" 
-    });
+    login(
+      { 
+        name: email.includes("willian") ? "Willian" : "Player", 
+        email, 
+        role: email.includes("willian") ? "Administrador" : "Jogador",
+        avatar: "https://picsum.photos/seed/me/80/80" 
+      },
+      "mock-token-123"
+    );
     toast.success("Bem-vindo de volta à arena!");
     nav({ to: "/" });
   };

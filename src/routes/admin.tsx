@@ -10,7 +10,7 @@ import { StatsCard } from "@/components/sga/StatsCard";
 import { useAuth } from "@/store/auth";
 import { useDataStore } from "@/store/dataStore";
 import { toast } from "sonner";
-import { getTournaments, getPlayers, getTeams, getMatches, createTournament, createTeam, createPlayer, createMatch, updateMatch } from "@/components/sga/player-functions";
+import useApiController from "../API/controler";
 import { motion } from "framer-motion";
 import { formatDateBR } from "@/lib/dateUtils";
 
@@ -89,7 +89,15 @@ function Admin() {
     teamId: "",
     avatar: "https://picsum.photos/seed/sga/200/200"
   });
-
+  const getTournaments = useApiController("Tournaments");
+  const createTournament = useApiController("Tournaments");
+  const getPlayers = useApiController("Players");
+  const createPlayer = useApiController("Players");
+  const getTeams = useApiController("Teams");
+  const createTeam = useApiController("Teams");
+  const getMatches = useApiController("Matches");
+  const updateMatch = useApiController("Matches");
+  const createMatch = useApiController("Matches");
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
   const [newMatch, setNewMatch] = useState({
     tournamentId: "",
@@ -108,10 +116,10 @@ function Admin() {
     const load = async () => {
       try {
         const [tourneyRes, playerRes, teamRes, matchRes] = await Promise.all([
-          getTournaments(),
-          getPlayers(),
-          getTeams(),
-          getMatches()
+          getTournaments.getAll(),
+          getPlayers.getAll(),
+          getTeams.getAll(),
+          getMatches.getAll()
         ]);
 
         if (Array.isArray(tourneyRes)) setTournamentsData(tourneyRes);
@@ -307,10 +315,10 @@ function Admin() {
                     <Button variant="ghost" onClick={() => setIsCreatingTourney(false)}>Cancelar</Button>
                     <Button className="bg-primary" onClick={async () => {
                       try {
-                        await createTournament(newTourney);
+                        await createTournament.create(newTourney);
                         toast.success("Campeonato criado com sucesso!");
                         setIsCreatingTourney(false);
-                        const res = await getTournaments();
+                        const res = await getTournaments.getAll();
                         if (Array.isArray(res)) setTournamentsData(res);
                       } catch (err: any) {
                         console.error("Erro detalhado da API:", err);
@@ -395,10 +403,10 @@ function Admin() {
                            
                            const saveSlot = async (data: any) => {
                              try {
-                               if (m?.id) await updateMatch(m.id, { ...m, ...data });
-                               else await createMatch({ ...data, tournamentId: selectedTourney, bracketPosition: pos, status: "Agendada", startsAt: new Date().toISOString(), map: "TBD" });
+                               if (m?.id) await updateMatch.update(m.id, { ...m, ...data });
+                               else await createMatch.create({ ...data, tournamentId: selectedTourney, bracketPosition: pos, status: "Agendada", startsAt: new Date().toISOString(), map: "TBD" });
                                
-                               const res = await getMatches();
+                               const res = await getMatches.getAll();
                                if (Array.isArray(res)) setMatchesData(res);
                                toast.success(`Slot ${pos} atualizado`);
                              } catch (err) {
@@ -522,10 +530,10 @@ function Admin() {
                     <Button className="bg-neon text-black font-black" onClick={async () => {
                       try {
                         if(!newTeam.name || !newTeam.tag) throw new Error("Nome e TAG são obrigatórios.");
-                        await createTeam(newTeam);
+                        await createTeam.create(newTeam);
                         toast.success("Equipe registrada!");
                         setIsCreatingTeam(false);
-                        const res = await getTeams();
+                        const res = await getTeams.getAll();
                         if (Array.isArray(res)) setTeamsData(res);
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao registrar time");
@@ -597,10 +605,10 @@ function Admin() {
                     <Button className="bg-primary font-black" onClick={async () => {
                       try {
                         if(!newPlayer.nick) throw new Error("O Nick é obrigatório.");
-                        await createPlayer(newPlayer);
+                        await createPlayer.create(newPlayer);
                         toast.success("Jogador contratado!");
                         setIsCreatingPlayer(false);
-                        const res = await getPlayers();
+                        const res = await getPlayers.getAll();
                         if (Array.isArray(res)) setPlayersData(res);
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao criar jogador");
@@ -673,10 +681,10 @@ function Admin() {
                     <Button className="bg-secondary text-black font-black" onClick={async () => {
                       try {
                         if(!newMatch.tournamentId || !newMatch.teamAId || !newMatch.teamBId) throw new Error("Preencha os campos obrigatórios");
-                        await createMatch(newMatch);
+                        await createMatch.create(newMatch);
                         toast.success("Partida agendada!");
                         setIsCreatingMatch(false);
-                        const res = await getMatches();
+                        const res = await getMatches.getAll();
                         if (Array.isArray(res)) setMatchesData(res);
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao agendar partida");
