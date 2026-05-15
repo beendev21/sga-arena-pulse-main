@@ -1,13 +1,13 @@
 import ApiService from "../API/service";
 import { setToken } from "../Utils/auth";
-import { useLoading } from "../Utils/loading/loadingFunction.jsx";
 
 /**
  * Hook genérico para operações CRUD em uma entidade da API.
  * @param {string} entityName
  */
 const useApiController = (entityName) => {
-  const { loadingPush, loadingPop } = useLoading();
+  const loadingPush = () => {};
+  const loadingPop = () => {};
 
   if (!entityName || typeof entityName !== "string") {
     throw new Error(

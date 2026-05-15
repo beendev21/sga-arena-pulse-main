@@ -41,33 +41,7 @@ function Admin() {
   const user = useAuth((s) => s.user);
   const nav = useNavigate();
 
-  // Guard de Autenticação Admin - Simulação de nível de acesso
-  if (!user || user.email !== "admin@sga.gg") {
-    return (
-      <div className="min-h-[80vh] flex items-center justify-center bg-[#06070a] px-4">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center max-w-md border border-white/5 bg-[#0a0a0c]/80 p-10 backdrop-blur-xl relative group shadow-2xl"
-        >
-          <div className="absolute -top-2 -left-2 w-6 h-6 border-t border-l border-primary group-hover:w-10 group-hover:h-10 transition-all" />
-          <div className="absolute -bottom-2 -right-2 w-6 h-6 border-b border-r border-primary group-hover:w-10 group-hover:h-10 transition-all" />
-          
-          <ShieldAlert className="w-16 h-16 text-primary mx-auto mb-6 animate-pulse" />
-          <h1 className="font-display text-4xl font-black italic uppercase text-white mb-4 tracking-tighter">Acesso Restrito</h1>
-          <p className="text-muted-foreground mb-8 uppercase tracking-[0.2em] text-[10px] italic leading-relaxed">
-            Identificação de nível Administrador (Alpha_Gate) necessária para acessar o núcleo de comando_ <br/>
-            <span className="text-[8px] opacity-30 mt-2 block">(Utilize admin@sga.gg para testes)</span>
-          </p>
-          <Link to="/login">
-            <Button className="bg-primary hover:bg-primary/90 w-full h-12 uppercase tracking-[0.2em] font-black italic shadow-neon">
-              Autenticar Terminal
-            </Button>
-          </Link>
-        </motion.div>
-      </div>
-    );
-  }
+  console.log("[SGA DEBUG] Usuário atual:", user?.email, "| Cargo:", user?.role);
 
   // Gerenciamento de estado local para UI e filtros.
   // Em produção, 'page' e 'q' poderiam ser movidos para a URL (Search Params)
@@ -166,6 +140,35 @@ function Admin() {
       setSelectedTourney(tournamentsData[0].id);
     }
   }, [tournamentsData, selectedTourney]);
+
+  // Guard de Autenticação Admin - Verificação dinâmica por Role (Administrador)
+  // Posicionado após TODOS os Hooks para evitar o erro "Rendered more hooks than during the previous render"
+  if (!user || user.role !== "Administrador") {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center bg-[#06070a] px-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center max-w-md border border-white/5 bg-[#0a0a0c]/80 p-10 backdrop-blur-xl relative group shadow-2xl"
+        >
+          <div className="absolute -top-2 -left-2 w-6 h-6 border-t border-l border-primary group-hover:w-10 group-hover:h-10 transition-all" />
+          <div className="absolute -bottom-2 -right-2 w-6 h-6 border-b border-r border-primary group-hover:w-10 group-hover:h-10 transition-all" />
+          
+          <ShieldAlert className="w-16 h-16 text-primary mx-auto mb-6 animate-pulse" />
+          <h1 className="font-display text-4xl font-black italic uppercase text-white mb-4 tracking-tighter">Acesso Restrito</h1>
+          <p className="text-muted-foreground mb-8 uppercase tracking-[0.2em] text-[10px] italic leading-relaxed">
+            Identificação de nível Administrador necessária para acessar o núcleo de comando_ <br/>
+            <span className="text-[8px] opacity-30 mt-2 block">Terminal restrito a usuários com permissão de gestão via API.</span>
+          </p>
+          <Link to="/login">
+            <Button className="bg-primary hover:bg-primary/90 w-full h-12 uppercase tracking-[0.2em] font-black italic shadow-neon">
+              Autenticar Terminal
+            </Button>
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
 
   const PAGE = 8;
 
