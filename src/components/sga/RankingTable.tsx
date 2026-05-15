@@ -12,11 +12,13 @@ export function RankingTable({ game }: { game: string }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const result = await getTeams.getAll();
-        if (Array.isArray(result)) {
-          const filtered = result.filter(t => !game || t.game === game);
-          setTeams(filtered);
-        }
+        const res = await getTeams.getAll();
+        const teamList = Array.isArray(res) ? res : (res?.data || res?.$values || []);
+        
+        const filtered = teamList.filter((t: any) => 
+          !game || t.game?.toUpperCase() === game.toUpperCase()
+        );
+        setTeams(filtered);
       } finally {
         setLoading(false);
       }

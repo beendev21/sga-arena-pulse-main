@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { tournaments, teams, players, matches, highlights, gallery, bracket } from "@/mocks/data";
+import { highlights, gallery } from "@/mocks/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TeamLogo } from "@/components/sga/TeamLogo";
@@ -56,10 +56,10 @@ function Admin() {
     updateMatchScore 
   } = useDataStore();
 
-  const [tournamentsData, setTournamentsData] = useState<any[]>(tournaments);
-  const [playersData, setPlayersData] = useState<any[]>(players);
-  const [teamsData, setTeamsData] = useState<any[]>(teams);
-  const [matchesData, setMatchesData] = useState<any[]>(matches);
+  const [tournamentsData, setTournamentsData] = useState<any[]>([]);
+  const [playersData, setPlayersData] = useState<any[]>([]);
+  const [teamsData, setTeamsData] = useState<any[]>([]);
+  const [matchesData, setMatchesData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreatingTourney, setIsCreatingTourney] = useState(false);
   const [newTourney, setNewTourney] = useState({ 
@@ -87,7 +87,8 @@ function Admin() {
     name: "",
     role: "Duelista",
     teamId: "",
-    avatar: "https://picsum.photos/seed/sga/200/200"
+    avatar: "https://picsum.photos/seed/sga/200/200",
+    game: "COUNTER-STRIKE 2"
   });
   const getTournaments = useApiController("Tournaments");
   const createTournament = useApiController("Tournaments");
@@ -115,24 +116,32 @@ function Admin() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [tourneyRes, playerRes, teamRes, matchRes] = await Promise.all([
+        const [tr, pr, ter, mr] = await Promise.all([
           getTournaments.getAll(),
           getPlayers.getAll(),
           getTeams.getAll(),
           getMatches.getAll()
         ]);
 
-        if (Array.isArray(tourneyRes)) setTournamentsData(tourneyRes);
-        if (Array.isArray(playerRes)) setPlayersData(playerRes);
-        if (Array.isArray(teamRes)) setTeamsData(teamRes);
-        if (Array.isArray(matchRes)) setMatchesData(matchRes);
+        const robustParse = (r: any) => {
+          if (!r) return [];
+          if (Array.isArray(r)) return r;
+          return r?.data || r?.$values || [];
+          const possible = r.data || r.$values || r.value || r.items || [];
+          return Array.isArray(possible) ? possible : [];
+        };
+
+        setTournamentsData(robustParse(tr));
+        setPlayersData(robustParse(pr));
+        setTeamsData(robustParse(ter));
+        setMatchesData(robustParse(mr));
 
       } catch (err) {
         console.error("Erro ao carregar dados do painel:", err);
-        setTournamentsData(tournaments || []);
-        setPlayersData(players || []);
-        setTeamsData(teams || []);
-        setMatchesData(matches || []);
+        setTournamentsData([]);
+        setPlayersData([]);
+        setTeamsData([]);
+        setMatchesData([]);
       } finally {
         setLoading(false);
       }
@@ -148,6 +157,12 @@ function Admin() {
       setSelectedTourney(tournamentsData[0].id);
     }
   }, [tournamentsData, selectedTourney]);
+
+  // Função auxiliar global para o componente garantir que o estado sempre receba um Array
+  const updateStateRobustly = (setter: Function, data: any) => {
+    const parsed = Array.isArray(data) ? data : (data?.data || data?.$values || []);
+    setter(parsed);
+  };
 
   // Guard de Autenticação Admin - Verificação dinâmica por Role (Administrador)
   // Posicionado após TODOS os Hooks para evitar o erro "Rendered more hooks than during the previous render"
@@ -318,8 +333,7 @@ function Admin() {
                         await createTournament.create(newTourney);
                         toast.success("Campeonato criado com sucesso!");
                         setIsCreatingTourney(false);
-                        const res = await getTournaments.getAll();
-                        if (Array.isArray(res)) setTournamentsData(res);
+                        updateStateRobustly(setTournamentsData, await getTournaments.getAll());
                       } catch (err: any) {
                         console.error("Erro detalhado da API:", err);
                         toast.error(err.message || "Erro ao criar campeonato");
@@ -407,7 +421,7 @@ function Admin() {
                                else await createMatch.create({ ...data, tournamentId: selectedTourney, bracketPosition: pos, status: "Agendada", startsAt: new Date().toISOString(), map: "TBD" });
                                
                                const res = await getMatches.getAll();
-                               if (Array.isArray(res)) setMatchesData(res);
+                               updateStateRobustly(setMatchesData, res);
                                toast.success(`Slot ${pos} atualizado`);
                              } catch (err) {
                                toast.error("Erro ao salvar bracket");
@@ -533,8 +547,7 @@ function Admin() {
                         await createTeam.create(newTeam);
                         toast.success("Equipe registrada!");
                         setIsCreatingTeam(false);
-                        const res = await getTeams.getAll();
-                        if (Array.isArray(res)) setTeamsData(res);
+                        updateStateRobustly(setTeamsData, await getTeams.getAll());
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao registrar time");
                       }
@@ -599,6 +612,18 @@ function Admin() {
                         {teamsData.map(tm => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
                       </select>
                     </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Jogo</label>
+                      <select 
+                        className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                        value={newPlayer.game} 
+                        onChange={e => setNewPlayer({...newPlayer, game: e.target.value})}
+                      >
+                        <option value="COUNTER-STRIKE 2">CS2</option>
+                        <option value="VALORANT">VALORANT</option>
+                        <option value="LEAGUE OF LEGENDS">LoL</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="flex gap-2 justify-end">
                     <Button variant="ghost" onClick={() => setIsCreatingPlayer(false)}>Cancelar</Button>
@@ -608,8 +633,7 @@ function Admin() {
                         await createPlayer.create(newPlayer);
                         toast.success("Jogador contratado!");
                         setIsCreatingPlayer(false);
-                        const res = await getPlayers.getAll();
-                        if (Array.isArray(res)) setPlayersData(res);
+                        updateStateRobustly(setPlayersData, await getPlayers.getAll());
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao criar jogador");
                       }
@@ -625,11 +649,11 @@ function Admin() {
                   </thead>
                   <tbody>
                     {items.map((p) => (
-                      <tr key={p.id} className="border-t border-border/40 hover:bg-muted/30">
+                      <tr key={p.id} className="border-t border-border/40 hover:bg-muted/30 transition">
                         <td className="px-4 py-3"><div className="flex items-center gap-2"><img src={p.avatar} className="h-7 w-7 rounded-full" alt="" /><span className="font-display">{p.nick}</span></div></td>
                         <td className="text-center">{p.role}</td>
-                        <td className="text-center">{p.kills}/{p.deaths}/{p.assists}</td>
-                        <td className="text-center text-primary font-display">{p.rating}</td>
+                        <td className="text-center">{(p.kills || 0)}/{(p.deaths || 0)}/{(p.assists || 0)}</td>
+                        <td className="text-center text-primary font-display">{(p.rating || 0).toFixed(2)}</td>
                         <td className="px-4 py-3"><RowActions /></td>
                       </tr>
                     ))}
@@ -684,8 +708,7 @@ function Admin() {
                         await createMatch.create(newMatch);
                         toast.success("Partida agendada!");
                         setIsCreatingMatch(false);
-                        const res = await getMatches.getAll();
-                        if (Array.isArray(res)) setMatchesData(res);
+                        updateStateRobustly(setMatchesData, await getMatches.getAll());
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao agendar partida");
                       }

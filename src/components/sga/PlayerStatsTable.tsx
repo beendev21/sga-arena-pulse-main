@@ -2,33 +2,50 @@ import { useEffect, useState } from "react";
 import useApiController from "../../API/controler";
 import { TeamLogo } from "./TeamLogo";
 import { useAuth } from "@/store/auth";
-import { getTeam } from "@/mocks/data";
 
 export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: string }) {
   const token = useAuth((s) => s.token);
   const user = useAuth((s) => s.user);
   const [data, setData] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const getPlayers = useApiController("Players");
+  const getTeams = useApiController("Teams");
 
   useEffect(() => {
     const load = async () => {
-      // Removida a trava obrigatória de token para permitir visualização pública
-      // O ApiService enviará a requisição sem o header de Authorization se o token for nulo.
       try {
-        const result = await getPlayers.getAll({ includeAuth: false });
+        const [pRaw, tRaw] = await Promise.all([
+          getPlayers.getAll({ includeAuth: false }),
+          getTeams.getAll()
+        ]);
 
-        // Verifica se o resultado é de fato a lista de jogadores (array)
-        if (Array.isArray(result)) {
-          // Filtro resiliente: verifica o jogo no jogador ou no time associado nos mocks
-          const filtered = result.filter(p => {
-            if (!game) return true;
-            if (p.game === game) return true;
-            const team = getTeam(p.teamId);
-            return team && (team as any).game === game;
-          });
-          setData(filtered);
-        }
+        // Função auxiliar para lidar com diferentes formatos de resposta (JSON puro ou envelopado)
+        const parseRes = (res: any) => {
+          if (Array.isArray(res)) return res;
+          if (res && typeof res === 'object') return res.data || res.$values || [];
+          return [];
+        };
+
+        const playerRes = parseRes(pRaw);
+        const teamRes = parseRes(tRaw);
+
+        setTeams(teamRes);
+        const filtered = playerRes.filter((p: any) => {
+          if (!game) return true;
+          // Se o jogador não tiver o campo 'game', tentamos ver se o time dele tem. 
+          // Se ainda assim não tiver, mostramos (para evitar que o jogador suma do front)
+          const pGame = p.game?.toUpperCase();
+          const targetGame = game.toUpperCase();
+          
+          if (pGame === targetGame) return true;
+          
+          const team = teamRes?.find((t: any) => String(t.id) === String(p.teamId));
+          if (team && team.game?.toUpperCase() === targetGame) return true;
+          
+          return !p.game; // Se estiver sem jogo definido, aparece em todos para o Admin ver
+        });
+        setData(filtered);
       } finally {
         setLoading(false);
       }
@@ -58,9 +75,12 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
         </thead>
         <tbody>
           {data.slice(0, limit).map((p, i) => {
-            const team = getTeam(p.teamId);
-            if (!team) return null; // Pula a renderização se o time for inválido
-            const kda = ((p.kills + p.assists) / Math.max(p.deaths, 1)).toFixed(2);
+            const team = teams.find(t => String(t.id) === String(p.teamId));
+            
+            const kills = p.kills || 0;
+            const assists = p.assists || 0;
+            const deaths = p.deaths || 0;
+            const kda = ((kills + assists) / Math.max(deaths, 1)).toFixed(2);
             return (
               <tr key={p.id} className="border-t border-border/40 hover:bg-muted/30 transition">
                 <td className="px-3 py-2 font-display text-muted-foreground">{i + 1}</td>
@@ -74,19 +94,23 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
                   </div>
                 </td>
                 <td className="px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <TeamLogo team={team} size={24} />
-                    <span className="text-xs">{team.tag}</span>
-                  </div>
+                  {team ? (
+                    <div className="flex items-center gap-2">
+                      <TeamLogo team={team} size={24} />
+                      <span className="text-xs">{team.tag}</span>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground italic">Sem Equipe</span>
+                  )}
                 </td>
-                <td className="px-3 py-2 text-right">{p.kills}</td>
-                <td className="px-3 py-2 text-right">{p.deaths}</td>
-                <td className="px-3 py-2 text-right">{p.assists}</td>
+                <td className="px-3 py-2 text-right">{kills}</td>
+                <td className="px-3 py-2 text-right">{deaths}</td>
+                <td className="px-3 py-2 text-right">{assists}</td>
                 <td className="px-3 py-2 text-right">{kda}</td>
-                <td className="px-3 py-2 text-right">{p.defuses}</td>
-                <td className="px-3 py-2 text-right">{p.plants}</td>
-                <td className="px-3 py-2 text-right">{p.hs}%</td>
-                <td className="px-3 py-2 text-right font-display text-primary">{p.rating}</td>
+                <td className="px-3 py-2 text-right">{p.defuses || 0}</td>
+                <td className="px-3 py-2 text-right">{p.plants || 0}</td>
+                <td className="px-3 py-2 text-right">{p.hs || 0}%</td>
+                <td className="px-3 py-2 text-right font-display text-primary">{(p.rating || 0).toFixed(2)}</td>
               </tr>
             );
           })}
