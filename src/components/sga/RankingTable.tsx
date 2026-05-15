@@ -1,8 +1,30 @@
-import { teams } from "@/mocks/data";
+import { useEffect, useState } from "react";
+import { getTeams } from "./player-functions";
 import { TeamLogo } from "./TeamLogo";
 import { Link } from "@tanstack/react-router";
+import { teams as mockTeams } from "@/mocks/data";
 
-export function RankingTable() {
+export function RankingTable({ game }: { game: string }) {
+  const [teams, setTeams] = useState<any[]>(mockTeams);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const result = await getTeams();
+        if (Array.isArray(result)) {
+          const filtered = result.filter(t => !game || t.game === game);
+          setTeams(filtered);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [game]);
+
+  if (loading) return <div className="p-8 text-center text-muted-foreground animate-pulse">Buscando ranking...</div>;
+
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60 bg-card-grad">
       <table className="w-full text-sm min-w-[600px]">

@@ -4,37 +4,38 @@ import { TeamLogo } from "./TeamLogo";
 import { useAuth } from "@/store/auth";
 import { getTeam } from "@/mocks/data";
 
-export function PlayerStatsTable({ limit = 40 }: { limit?: number }) {
-  const { token } = useAuth();
+export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: string }) {
+  const token = useAuth((s) => s.token);
+  const user = useAuth((s) => s.user);
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+      // Removida a trava obrigatória de token para permitir visualização pública
+      // O ApiService enviará a requisição sem o header de Authorization se o token for nulo.
       try {
-        const result = await getPlayers({
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const result = await getPlayers();
 
         // Verifica se o resultado é de fato a lista de jogadores (array)
         if (Array.isArray(result)) {
-          setData(result);
+          // Filtro resiliente: verifica o jogo no jogador ou no time associado nos mocks
+          const filtered = result.filter(p => {
+            if (!game) return true;
+            if (p.game === game) return true;
+            const team = getTeam(p.teamId);
+            return team && (team as any).game === game;
+          });
+          setData(filtered);
         }
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [token]);
+  }, [token, user, game]);
 
   if (loading) return <div className="p-8 text-center text-muted-foreground animate-pulse">Carregando estatísticas protegidas...</div>;
-  if (!token) return <div className="p-8 text-center text-red-400">Acesso negado. Por favor, faça login.</div>;
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60 bg-card-grad">
@@ -56,7 +57,8 @@ export function PlayerStatsTable({ limit = 40 }: { limit?: number }) {
         </thead>
         <tbody>
           {data.slice(0, limit).map((p, i) => {
-            const team = getTeam(p.teamId)!;
+            const team = getTeam(p.teamId);
+            if (!team) return null; // Pula a renderização se o time for inválido
             const kda = ((p.kills + p.assists) / Math.max(p.deaths, 1)).toFixed(2);
             return (
               <tr key={p.id} className="border-t border-border/40 hover:bg-muted/30 transition">

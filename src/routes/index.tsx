@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Users, Swords, Flame, ChevronRight, Crown, Medal, Award } from "lucide-react";
-import { tournaments, matches, lastTournament, teams } from "@/mocks/data";
+import { tournaments as mockTournaments, matches as mockMatches, lastTournament, teams as mockTeams } from "@/mocks/data";
 import { TournamentCard } from "@/components/sga/TournamentCard";
 import { MatchCard } from "@/components/sga/MatchCard";
 import { TeamLogo } from "@/components/sga/TeamLogo";
@@ -10,6 +10,7 @@ import { RankingTable } from "@/components/sga/RankingTable";
 import { PlayerStatsTable } from "@/components/sga/PlayerStatsTable";
 import { StatsCard } from "@/components/sga/StatsCard";
 import { Button } from "@/components/ui/button";
+import { getTournaments, getMatches, getTeams } from "@/components/sga/player-functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -72,19 +73,79 @@ function Section({ title, index, action, children, id, alternate }: { title: str
 }
 
 function Home() {
-  /**
-   * Engenharia de Dados:
-   * A Home consome dados de múltiplas entidades (torneios, partidas, times).
-   * Em escala, é recomendado usar Prefetching para que os dados das seções 
-   * subsequentes (Ranking, Top Players) já estejam no cache.
-   */
-  const featured = tournaments[0];
-  const live = matches.filter((m) => m.status === "Ao vivo").slice(0, 4);
-  const upcoming = matches.filter((m) => m.status === "Agendada").slice(0, 6);
-
+  const [heroIndex, setHeroIndex] = useState(0);
   const [rankingGame, setRankingGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
   const [playerStatsGame, setPlayerStatsGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
-  const [heroIndex, setHeroIndex] = useState(0);
+
+  // Estados locais para dados vindos do banco de dados
+  const [tournaments, setTournaments] = useState<any[]>(mockTournaments);
+  const [matches, setMatches] = useState<any[]>(mockMatches);
+  const [teams, setTeams] = useState<any[]>(mockTeams);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const syncWithBackend = async () => {
+      try {
+        const [tRes, mRes, tmRes] = await Promise.all([
+          getTournaments(),
+          getMatches(),
+          getTeams()
+        ]);
+
+        // Só atualiza se a resposta for um array válido
+        if (Array.isArray(tRes)) setTournaments(tRes);
+        if (Array.isArray(mRes)) setMatches(mRes);
+        if (Array.isArray(tmRes)) setTeams(tmRes);
+
+      } catch (err) {
+        console.error("Erro ao sincronizar Home com o servidor:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    syncWithBackend();
+  }, []);
+
+  // Filtros derivados dos estados sincronizados
+  const live = useMemo(() => matches.filter((m) => m.status === "Ao vivo").slice(0, 4), [matches]);
+  const upcoming = useMemo(() => matches.filter((m) => m.status === "Agendada").slice(0, 6), [matches]);
+
+  // Configuração dos cards informativos que irão rotacionar no Hero
+  const infoCards = [
+    {
+      type: "TORNEIO ATIVO",
+      title: tournaments[0]?.name || "Carregando Evento...",
+      status: "Em Andamento",
+      banner: tournaments[0]?.banner || mockTournaments[0].banner,
+      stats: [
+        { label: "Premiação Total", value: tournaments[0]?.prize || "..." },
+        { label: "Vagas", value: tournaments[0] ? `${tournaments[0].teamsCount} / 16 Equipes` : "..." }
+      ]
+    },
+    {
+      type: "HALL OF FAME",
+      title: "Elite da Temporada",
+      status: "SGA Season 2024.1",
+      banner: "https://www.esports.net/de/wp-content/uploads/sites/7/2025/11/Valve-Counter-Strike-2.jpg",
+      stats: [
+        { label: "Equipe Alpha", value: teams[6]?.name || teams[0]?.name || "Pulse Elite" },
+        { label: "MVP Global", value: "Pulse.X" }
+      ]
+    },
+    {
+      type: "ESTATÍSTICAS",
+      title: "Domínio Global",
+      status: "Servidores Ativos",
+      banner: "https://cdn1.epicgames.com/offer/24b9b5e323bc40eea252a10cdd3b2f10/EGS_LeagueofLegends_RiotGames_S1_2560x1440-47eb328eac5ddd63ebd096ded7d0d5ab",
+      stats: [
+        { label: "Agentes Ativos", value: "14.2k" },
+        { label: "Partidas Hoje", value: "842" }
+      ]
+    }
+  ];
+
+  const currentInfo = infoCards[heroIndex];
 
   const heroImages = [
     "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/67fbd4c273f3d5e92a18666c6379db09e74b7cda-1920x1080.jpg?accountingTag=VAL&auto=format&fit=fill&q=80&w=1541",
@@ -157,56 +218,92 @@ function Home() {
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.2 }}
             className="relative lg:pl-10">
             
-            <div className="relative group">
+            <motion.div whileHover="hover" className="relative group">
               {/* Molduras táticas nos cantos */}
-              <div className="absolute -top-[2px] -left-[2px] w-12 h-12 border-t-2 border-l-2 border-primary z-20 transition-all duration-500 group-hover:w-16 group-hover:h-16" />
-              <div className="absolute -bottom-[2px] -right-[2px] w-12 h-12 border-b-2 border-r-2 border-primary z-20 transition-all duration-500 group-hover:w-16 group-hover:h-16" />
+              <motion.div 
+                variants={{ hover: { x: -5, y: -5 } }}
+                className="absolute -top-[2px] -left-[2px] w-12 h-12 border-t-2 border-l-2 border-primary z-20 transition-all duration-500 group-hover:w-16 group-hover:h-16" 
+              />
+              <motion.div 
+                variants={{ hover: { x: 5, y: 5 } }}
+                className="absolute -bottom-[2px] -right-[2px] w-12 h-12 border-b-2 border-r-2 border-primary z-20 transition-all duration-500 group-hover:w-16 group-hover:h-16" 
+              />
               <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-white/20 z-20" />
               <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-white/20 z-20" />
 
-              <div className="relative overflow-hidden border border-white/10 bg-[#0a0a0c] shadow-2xl transition-all duration-300 group-hover:border-primary/40 group-hover:shadow-[0_0_50px_rgba(248,109,131,0.15)]">
-              {/* Image with zoom effect and lower opacity for contrast */}
-              <img 
-                src={featured.banner} 
-                alt={featured.name} 
-                className="w-full aspect-video object-cover transition-transform duration-700 group-hover:scale-105 opacity-50" 
-              />
-              
-              {/* Technical Gradients */}
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-              
-              {/* Content Container */}
-              <div className="absolute inset-0 p-8 flex flex-col justify-end">
-                {/* Status Indicator */}
-                <div className="flex items-center gap-2.5 mb-4">
-                  <div className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary shadow-[0_0_8px_rgba(248,109,131,0.6)]"></span>
+              <AnimatePresence mode="wait">
+                <motion.div 
+                  key={heroIndex}
+                  initial={{ opacity: 0, x: 40, filter: "blur(10px)" }}
+                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, x: -40, filter: "blur(10px)" }}
+                  variants={{ hover: { scale: 1.02 } }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 90, 
+                    damping: 20,
+                    mass: 1 
+                  }}
+                  className="relative overflow-hidden border border-white/10 bg-[#0a0a0c] shadow-2xl transition-[border-color,box-shadow] duration-500 group-hover:border-primary/40 group-hover:shadow-[0_0_50px_rgba(248,109,131,0.2)] cursor-pointer"
+                >
+                  {/* Image with zoom effect and lower opacity for contrast */}
+                  <motion.img 
+                    src={currentInfo.banner} 
+                    alt={currentInfo.title} 
+                    variants={{ hover: { scale: 1.1 } }}
+                    transition={{ duration: 0.6 }}
+                    className="w-full aspect-video object-cover opacity-50" 
+                  />
+                  
+                  {/* Technical Gradients */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+                  
+                  {/* Content Container */}
+                  <div className="absolute inset-0 p-8 flex flex-col justify-end">
+                    {/* Status Indicator */}
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="flex items-center gap-2.5 mb-4"
+                    >
+                      <div className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-primary shadow-[0_0_8px_rgba(248,109,131,0.6)]"></span>
+                      </div>
+                      <div className="text-[10px] font-black uppercase tracking-[0.3em] text-primary italic">{currentInfo.type} // {currentInfo.status}</div>
+                    </motion.div>
+                    
+                    <motion.h3 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="font-display text-2xl sm:text-4xl md:text-5xl italic font-black uppercase tracking-tight text-white leading-[1.1] mb-4 md:mb-6 group-hover:text-primary transition-colors duration-300"
+                    >
+                      {currentInfo.title}
+                    </motion.h3>
+                    
+                    {/* Data Grid */}
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="grid grid-cols-2 gap-4 pt-6 border-t border-white/10"
+                    >
+                      {currentInfo.stats.map((stat, i) => (
+                        <div key={i} className="space-y-0.5">
+                          <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-black italic">{stat.label}</span>
+                          <div className={`font-display text-2xl ${i === 0 ? 'text-primary' : 'text-white'} italic font-black leading-none`}>{stat.value}</div>
+                        </div>
+                      ))}
+                    </motion.div>
                   </div>
-                  <div className="text-[10px] font-black uppercase tracking-[0.3em] text-primary italic">Em Andamento</div>
-                </div>
-                
-                <h3 className="font-display text-2xl sm:text-4xl md:text-5xl italic font-black uppercase tracking-tight text-white leading-[1.1] mb-4 md:mb-6">
-                  {featured.name}
-                </h3>
-                
-                {/* Data Grid */}
-                <div className="grid grid-cols-2 gap-4 pt-6 border-t border-white/10">
-                  <div className="space-y-0.5">
-                    <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-black italic">Premiação Total</span>
-                    <div className="font-display text-2xl text-primary italic font-black leading-none">{featured.prize}</div>
-                  </div>
-                  <div className="space-y-0.5">
-                    <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-black italic">Vagas</span>
-                    <div className="font-display text-2xl text-white italic font-black leading-none">{featured.teamsCount} <span className="text-muted-foreground">/</span> 16 Equipes</div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Accent Line */}
-              <div className="absolute right-0 top-0 bottom-0 w-1 bg-primary transform translate-x-full group-hover:translate-x-0 transition-transform duration-300" />
-              </div>
-            </div>
+                  
+                  {/* Accent Line */}
+                  <div className="absolute right-0 top-0 bottom-0 w-1 bg-primary transform translate-x-full group-hover:translate-x-0 transition-transform duration-300" />
+                </motion.div>
+              </AnimatePresence>
+            </motion.div>
           </motion.div>
         </div>
       </section>
