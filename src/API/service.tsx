@@ -7,8 +7,7 @@ const viteEnv = (import.meta as any).env || {};
 const processEnv = typeof process !== "undefined" ? (process.env as any) : {};
 const envUrl = viteEnv.VITE_API_URL || processEnv.VITE_API_URL || processEnv.REACT_APP_API_URL;
 
-
-const API_BASE_URL: string = envUrl;
+const API_BASE_URL = (envUrl || "/").trim();
 
 /**
  * Interface para erros da API, permitindo acessar o status HTTP
@@ -19,12 +18,36 @@ export interface ApiError extends Error {
   data?: any;
 }
 
+export interface ApiRequestOptions {
+  includeAuth?: boolean;
+}
+
 // Função auxiliar para formatar a URL e evitar erros de barras duplas
-const getFullUrl = (endpoint: string) => `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
+const getFullUrl = (endpoint: string) => {
+  if (/^https?:\/\//i.test(endpoint)) {
+    return endpoint;
+  }
+
+  if (API_BASE_URL === "/") {
+    return endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  }
+
+  return `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
+};
 
 const authHeader = (): Record<string, string> => {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+const buildHeaders = ({
+  includeAuth = true,
+  includeJsonContentType = false,
+}: ApiRequestOptions & { includeJsonContentType?: boolean }): Record<string, string> => {
+  return {
+    ...(includeJsonContentType ? { "Content-Type": "application/json" } : {}),
+    ...(includeAuth ? authHeader() : {}),
+  };
 };
 
 const handleResponse = async (response: Response) => {
@@ -68,60 +91,46 @@ const handleResponse = async (response: Response) => {
 };
 
 const ApiService = {
-  get: async (endpoint: string): Promise<any> => {
+  get: async (endpoint: string, options: ApiRequestOptions = {}): Promise<any> => {
     console.log(`%c[API GET] Tentando acessar: ${getFullUrl(endpoint)}`, "color: #00ff00; font-weight: bold;");
     const response = await fetch(getFullUrl(endpoint), {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeader(),
-      },
+      headers: buildHeaders(options),
     });
     return handleResponse(response);
   },
 
-  post: async (endpoint: string, data: any): Promise<any> => {
+  post: async (endpoint: string, data: any, options: ApiRequestOptions = {}): Promise<any> => {
     console.log(`%c[API POST] Enviando para: ${getFullUrl(endpoint)}`, "color: #3b82f6; font-weight: bold;", data);
     const response = await fetch(getFullUrl(endpoint), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeader(),
-      },
+      headers: buildHeaders({ ...options, includeJsonContentType: true }),
       body: JSON.stringify(data),
     });
     return handleResponse(response);
   },
 
-  postImage: async (endpoint: string, formData: FormData): Promise<any> => {
+  postImage: async (endpoint: string, formData: FormData, options: ApiRequestOptions = {}): Promise<any> => {
     const response = await fetch(getFullUrl(endpoint), {
       method: "POST",
-      headers: {
-        ...authHeader(),
-      },
+      headers: buildHeaders(options),
       body: formData,
     });
     return handleResponse(response);
   },
 
-  put: async (endpoint: string, data: any): Promise<any> => {
+  put: async (endpoint: string, data: any, options: ApiRequestOptions = {}): Promise<any> => {
     const response = await fetch(getFullUrl(endpoint), {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeader(),
-      },
+      headers: buildHeaders({ ...options, includeJsonContentType: true }),
       body: JSON.stringify(data),
     });
     return handleResponse(response);
   },
-  delete: async (endpoint: string): Promise<any> => {
+  delete: async (endpoint: string, options: ApiRequestOptions = {}): Promise<any> => {
     const response = await fetch(getFullUrl(endpoint), {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeader(),
-      },
+      headers: buildHeaders(options),
     });
     return handleResponse(response);
   },

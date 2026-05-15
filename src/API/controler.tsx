@@ -1,4 +1,4 @@
-import ApiService from "../API/service";
+import ApiService, { type ApiRequestOptions } from "../API/service";
 
 /**
  * Hook genérico para operações CRUD em uma entidade da API.
@@ -26,10 +26,10 @@ const useApiController = (entityName: string) => {
     return false;
   };
 
-  const getAll = async () => {
+  const getAll = async (options?: ApiRequestOptions) => {
     try {
       loadingPush();
-      return await ApiService.get(`api/${entityName}`);
+      return await ApiService.get(`api/${entityName}`, options);
     } catch (error) {
       // Se for erro 401, trata silenciosamente
       if (handleUnauthorized(error)) {
@@ -42,12 +42,12 @@ const useApiController = (entityName: string) => {
     }
   };
 
-  const getById = async (id: string | number) => {
+  const getById = async (id: string | number, options?: ApiRequestOptions) => {
     if (!id)
       throw new Error("ID é obrigatório para buscar um registro específico.");
     try {
       loadingPush();
-      return await ApiService.get(`api/${entityName}/${id}`);
+      return await ApiService.get(`api/${entityName}/${id}`, options);
     } catch (error) {
       // Se for erro 401, trata silenciosamente
       if (handleUnauthorized(error)) {

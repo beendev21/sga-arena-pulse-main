@@ -16,7 +16,7 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
       // Removida a trava obrigatória de token para permitir visualização pública
       // O ApiService enviará a requisição sem o header de Authorization se o token for nulo.
       try {
-        const result = await getPlayers.getAll();
+        const result = await getPlayers.getAll({ includeAuth: false });
 
         // Verifica se o resultado é de fato a lista de jogadores (array)
         if (Array.isArray(result)) {
