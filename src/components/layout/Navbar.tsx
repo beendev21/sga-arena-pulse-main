@@ -57,6 +57,16 @@ export function Navbar() {
                 <span>{l.label}</span>
               </Link>
             ))}
+            {user?.role === "Administrador" && (
+              <Link
+                to="/admin"
+                activeProps={{ className: "active" }}
+                className="nav-link-glow group/nav"
+              >
+                <span className="text-[7px] opacity-30 font-black group-hover/nav:text-primary group-hover/nav:opacity-100 transition-all">09</span>
+                <span>Admin</span>
+              </Link>
+            )}
           </nav>
         </div>
 
@@ -87,7 +97,7 @@ export function Navbar() {
                   <span className="text-[10px] font-black text-white italic leading-none">{user.nick}</span>
                   <span className="text-[8px] text-primary font-bold tracking-widest uppercase leading-none mt-1">Authorized Player</span>
                 </div>
-                <Link to={user.email === "admin@sga.gg" ? "/admin" : "/profile" as any}>
+                <Link to={user.role === "Administrador" ? "/admin" : "/profile" as any}>
                   <div className="relative">
                     <div className="h-9 w-9 border border-primary/40 p-0.5 group-hover:border-primary transition-colors">
                       <img src={user.avatar} alt={user.nick} className="h-full w-full object-cover" />

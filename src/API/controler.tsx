@@ -1,11 +1,10 @@
 import ApiService from "../API/service";
-import { setToken } from "../Utils/auth";
 
 /**
  * Hook genérico para operações CRUD em uma entidade da API.
  * @param {string} entityName
  */
-const useApiController = (entityName) => {
+const useApiController = (entityName: string) => {
   const loadingPush = () => {};
   const loadingPop = () => {};
 
@@ -16,12 +15,12 @@ const useApiController = (entityName) => {
   }
 
   // Função auxiliar para tratar erros 401 (token expirado)
-  const handleUnauthorized = (error) => {
+  const handleUnauthorized = (error: any) => {
     if (error.status === 401 && error.data?.msg === "Token has expired") {
       // Redireciona silenciosamente para página de token expirado
-      setTimeout(() => {
-        window.location.href = "/auth/expired";
-      }, 100);
+      // Nota: Em uma implementação ideal, usaríamos o 'navigate' do router aqui.
+      console.warn("Sessão expirada. Redirecionando...");
+      window.location.href = "/login"; 
       return true;
     }
     return false;
@@ -43,7 +42,7 @@ const useApiController = (entityName) => {
     }
   };
 
-  const getById = async (id) => {
+  const getById = async (id: string | number) => {
     if (!id)
       throw new Error("ID é obrigatório para buscar um registro específico.");
     try {
@@ -61,7 +60,7 @@ const useApiController = (entityName) => {
     }
   };
 
-  const create = async (data) => {
+  const create = async (data: any) => {
     if (!data)
       throw new Error("Dados são obrigatórios para criar um registro.");
     try {
@@ -80,7 +79,7 @@ const useApiController = (entityName) => {
     }
   };
 
-  const update = async (id, data) => {
+  const update = async (id: string | number, data: any) => {
     if (!id) throw new Error("ID é obrigatório para atualizar um registro.");
     if (!data)
       throw new Error("Dados são obrigatórios para atualizar um registro.");
@@ -100,7 +99,7 @@ const useApiController = (entityName) => {
   };
 
   //Funcao do DELETE
-  const deleteRecord = async (id) => {
+  const deleteRecord = async (id: string | number) => {
     if (!id) throw new Error("ID é obrigatório para deletar um registro.");
     try {
       loadingPush();
@@ -121,7 +120,7 @@ const useApiController = (entityName) => {
     }
   };
 
-  const uploadFile = async (file) => {
+  const uploadFile = async (file: File) => {
     if (!file) throw new Error("Arquivo é obrigatório para upload.");
     try {
       loadingPush();
