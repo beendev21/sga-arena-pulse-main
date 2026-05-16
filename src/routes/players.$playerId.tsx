@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion } from "framer-motion";
-import { getPlayer, matches, teams } from "@/mocks/data";
+import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useCallback } from "react";
+import useApiController from "@/API/controler";
 import { TeamLogo } from "@/components/sga/TeamLogo";
 import { MatchCard } from "@/components/sga/MatchCard";
 import { StatsCard } from "@/components/sga/StatsCard";
@@ -23,7 +25,43 @@ export const Route = createFileRoute("/players/$playerId")({
 
 function PlayerProfilePage() {
   const { playerId } = Route.useParams();
-  const player = getPlayer(playerId);
+  const apiPlayers = useApiController("Players");
+  const apiTeams = useApiController("Teams");
+  const apiMatches = useApiController("Matches");
+
+  const { data: player, isLoading: l1 } = useQuery({
+    queryKey: ["player", playerId],
+    queryFn: () => apiPlayers.getById(playerId)
+  });
+
+  const { data: teamsRaw, isLoading: l2 } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => apiTeams.getAll()
+  });
+
+  const { data: matchesRaw, isLoading: l3 } = useQuery({
+    queryKey: ["matches"],
+    queryFn: () => apiMatches.getAll()
+  });
+
+  const parse = useCallback((r: any) => {
+    if (!r) return [];
+    return Array.isArray(r) ? r : (r?.data || r?.$values || []);
+  }, []);
+
+  const teams = useMemo(() => parse(teamsRaw), [teamsRaw, parse]);
+  const matches = useMemo(() => parse(matchesRaw), [matchesRaw, parse]);
+
+  const playerTeam = useMemo(() => teams.find((t: any) => t.id === player?.teamId), [teams, player]);
+  
+  const playerMatches = useMemo(() => {
+    if (!playerTeam) return [];
+    return matches.filter(
+      (m: any) => m.teamA?.id === playerTeam.id || m.teamB?.id === playerTeam.id
+    ).slice(0, 5);
+  }, [matches, playerTeam]);
+
+  if (l1 || l2 || l3) return <div className="p-20 text-center font-display uppercase animate-pulse">Sincronizando dossiê do agente...</div>;
 
   if (!player) {
     return (
@@ -35,14 +73,6 @@ function PlayerProfilePage() {
       </div>
     );
   }
-
-  // Encontrar o time do jogador (lógica baseada no mock)
-  const playerTeam = teams.find(t => t.id === (player as any).teamId);
-  
-  // Filtrar partidas recentes onde o time do jogador participou
-  const playerMatches = matches.filter(
-    (m) => m.teamA.id === playerTeam?.id || m.teamB.id === playerTeam?.id
-  ).slice(0, 5);
 
   return (
     <div className="relative min-h-screen bg-[#06070a] overflow-hidden">
@@ -88,7 +118,7 @@ function PlayerProfilePage() {
 
                 {/* Team Badge */}
                 {playerTeam && (
-                  <Link to="/teams/$teamId" params={{ teamId: playerTeam.id }} className="flex items-center gap-3 px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 transition-all mb-8">
+                  <Link to="/teams/$teamId" params={{ teamId: String(playerTeam.id) } as any} className="flex items-center gap-3 px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 transition-all mb-8">
                     <TeamLogo team={playerTeam} size={24} />
                     <span className="text-[10px] font-black text-white uppercase italic tracking-widest">{playerTeam.name}</span>
                   </Link>

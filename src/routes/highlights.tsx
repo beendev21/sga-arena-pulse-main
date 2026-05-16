@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { motion } from "framer-motion";
-import { highlights } from "@/mocks/data";
+import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useCallback } from "react";
+import useApiController from "@/API/controler";
 import { HighlightCard } from "@/components/sga/HighlightCard";
 
 export const Route = createFileRoute("/highlights")({
@@ -8,6 +10,21 @@ export const Route = createFileRoute("/highlights")({
   component: H,
 });
 function H() {
+  const api = useApiController("Highlights");
+  const { data: raw, isLoading } = useQuery({
+    queryKey: ["highlights"],
+    queryFn: () => api.getAll()
+  });
+
+  const parse = useCallback((r: any) => {
+    if (!r) return [];
+    return Array.isArray(r) ? r : (r?.data || r?.$values || []);
+  }, []);
+
+  const highlights = useMemo(() => parse(raw), [raw, parse]);
+
+  if (isLoading) return <div className="p-20 text-center font-display uppercase animate-pulse italic">Recuperando registros de glória...</div>;
+
   return (
     <div className="relative min-h-screen bg-[#06070a] overflow-hidden">
       {/* Background Layers */}

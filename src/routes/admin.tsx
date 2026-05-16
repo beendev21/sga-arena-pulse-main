@@ -172,11 +172,32 @@ function Admin() {
 
   // Função real de exclusão que limpa o cache global
   const handleDelete = async (id: string, entity: string) => {
-    const ctrl = entity === "Tournaments" ? apiTournaments : entity === "Players" ? apiPlayers : entity === "Teams" ? apiTeams : apiMatches;
+    // Mapeamento de controladores baseado na entidade
+    const controllers: Record<string, any> = {
+      "Tournaments": apiTournaments,
+      "Players": apiPlayers,
+      "Teams": apiTeams,
+      "Matches": apiMatches,
+      "Highlights": apiHighlights,
+      "Gallery": apiGallery
+    };
+
+    const ctrl = controllers[entity] || apiMatches;
+
     if (confirm("Confirmar exclusão definitiva?")) {
-      await ctrl.deleteRecord(id);
-      queryClient.invalidateQueries({ queryKey: [entity.toLowerCase()] });
-      toast.success("Removido com sucesso!");
+      const res = await ctrl.deleteRecord(id);
+      if (res !== false) {
+        // Invalida a query específica para forçar o refetch
+        const queryKey = entity.toLowerCase();
+        queryClient.invalidateQueries({ queryKey: [queryKey] });
+        
+        // Se deletar um time ou uma partida, o ranking (teams) deve ser recalculado
+        if (entity === "Teams" || entity === "Matches") {
+          queryClient.invalidateQueries({ queryKey: ["teams"] });
+        }
+
+        toast.success("Removido com sucesso!");
+      }
     }
   };
 
@@ -318,7 +339,10 @@ function Admin() {
                         await apiTournaments.create(payload);
                         toast.success("Campeonato criado com sucesso!");
                         setIsCreatingTourney(false);
+                        
+                        // Gatilho de atualização automática
                         queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+                        queryClient.invalidateQueries({ queryKey: ["matches"] }); // Partidas podem mudar com novos torneios
                       } catch (err: any) {
                         console.error("Erro detalhado da API:", err);
                         toast.error(err.message || "Erro ao criar campeonato");
@@ -414,7 +438,11 @@ function Admin() {
                                if (m?.id) await apiMatches.update(m.id, payload);
                                else await apiMatches.create(payload);
                                
+                               // Gatilho de atualização automática para a visualização do bracket e lista de partidas
                                queryClient.invalidateQueries({ queryKey: ["matches"] });
+                               // Se a partida altera scores, o ranking dos times também muda
+                               queryClient.invalidateQueries({ queryKey: ["teams"] }); 
+
                                toast.success(`Slot ${pos} atualizado`);
                              } catch (err) {
                                toast.error("Erro ao salvar bracket");
@@ -548,6 +576,8 @@ function Admin() {
                         await apiTeams.create(payload);
                         toast.success("Equipe registrada!");
                         setIsCreatingTeam(false);
+                        
+                        // Gatilho de atualização automática (afeta squads e rankings)
                         queryClient.invalidateQueries({ queryKey: ["teams"] });
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao registrar time");
@@ -642,6 +672,8 @@ function Admin() {
                         await apiPlayers.create(payload);
                         toast.success("Jogador contratado!");
                         setIsCreatingPlayer(false);
+                        
+                        // Gatilho de atualização automática
                         queryClient.invalidateQueries({ queryKey: ["players"] });
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao criar jogador");
@@ -721,6 +753,8 @@ function Admin() {
                         await apiMatches.create(payload);
                         toast.success("Partida agendada!");
                         setIsCreatingMatch(false);
+                        
+                        // Gatilho de atualização automática
                         queryClient.invalidateQueries({ queryKey: ["matches"] });
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao agendar partida");

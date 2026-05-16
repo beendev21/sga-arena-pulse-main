@@ -1,59 +1,44 @@
-import { useEffect, useState } from "react";
+import { useMemo, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import useApiController from "../../API/controler";
 import { TeamLogo } from "./TeamLogo";
-import { useAuth } from "@/store/auth";
 
 export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: string }) {
-  const token = useAuth((s) => s.token);
-  const user = useAuth((s) => s.user);
-  const [data, setData] = useState<any[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const getPlayers = useApiController("Players");
   const getTeams = useApiController("Teams");
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [pRaw, tRaw] = await Promise.all([
-          getPlayers.getAll({ includeAuth: false }),
-          getTeams.getAll()
-        ]);
+  const { data: pRaw, isLoading: l1 } = useQuery({
+    queryKey: ["players"],
+    queryFn: () => getPlayers.getAll({ includeAuth: false })
+  });
 
-        // Função auxiliar para lidar com diferentes formatos de resposta (JSON puro ou envelopado)
-        const parseRes = (res: any) => {
-          if (Array.isArray(res)) return res;
-          if (res && typeof res === 'object') return res.data || res.$values || [];
-          return [];
-        };
+  const { data: tRaw, isLoading: l2 } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => getTeams.getAll()
+  });
 
-        const playerRes = parseRes(pRaw);
-        const teamRes = parseRes(tRaw);
+  const parse = useCallback((r: any) => {
+    if (!r) return [];
+    return Array.isArray(r) ? r : (r?.data || r?.$values || []);
+  }, []);
 
-        setTeams(teamRes);
-        const filtered = playerRes.filter((p: any) => {
-          if (!game) return true;
-          // Se o jogador não tiver o campo 'game', tentamos ver se o time dele tem. 
-          // Se ainda assim não tiver, mostramos (para evitar que o jogador suma do front)
-          const pGame = p.game?.toUpperCase();
-          const targetGame = game.toUpperCase();
-          
-          if (pGame === targetGame) return true;
-          
-          const team = teamRes?.find((t: any) => String(t.id) === String(p.teamId));
-          if (team && team.game?.toUpperCase() === targetGame) return true;
-          
-          return !p.game; // Se estiver sem jogo definido, aparece em todos para o Admin ver
-        });
-        setData(filtered);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [token, user, game]);
+  const players = useMemo(() => parse(pRaw), [pRaw, parse]);
+  const teams = useMemo(() => parse(tRaw), [tRaw, parse]);
 
-  if (loading) return <div className="p-8 text-center text-muted-foreground animate-pulse">Carregando estatísticas protegidas...</div>;
+  const filteredData = useMemo(() => {
+    return players.filter((p: any) => {
+      if (!game) return true;
+      const targetGame = game.toUpperCase();
+      if (p.game?.toUpperCase() === targetGame) return true;
+      
+      const team = teams.find((t: any) => String(t.id) === String(p.teamId));
+      if (team && team.game?.toUpperCase() === targetGame) return true;
+      
+      return !p.game;
+    }).slice(0, limit);
+  }, [players, teams, game, limit]);
+
+  if (l1 || l2) return <div className="p-8 text-center text-muted-foreground animate-pulse font-display uppercase tracking-widest italic">Acessando Dossiê de Atletas...</div>;
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60 bg-card-grad">
@@ -74,7 +59,7 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
           </tr>
         </thead>
         <tbody>
-          {data.slice(0, limit).map((p, i) => {
+          {filteredData.map((p, i) => {
             const team = teams.find(t => String(t.id) === String(p.teamId));
             
             const kills = p.kills || 0;

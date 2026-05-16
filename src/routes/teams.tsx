@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { teams } from "@/mocks/data";
+import { useQuery } from "@tanstack/react-query";
+import useApiController from "@/API/controler";
 import { TeamCard } from "@/components/sga/TeamCard";
 
 export const Route = createFileRoute("/teams")({
@@ -11,9 +12,25 @@ export const Route = createFileRoute("/teams")({
 
 function TeamsList() {
   const [game, setGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
+  const apiTeams = useApiController("Teams");
+
+  const { data: tRaw, isLoading } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => apiTeams.getAll()
+  });
+
+  const parse = useCallback((r: any) => {
+    if (!r) return [];
+    return Array.isArray(r) ? r : (r?.data || r?.$values || []);
+  }, []);
+
+  const teams = useMemo(() => parse(tRaw), [tRaw, parse]);
   
-  // Filtra os times baseado no jogo selecionado (considerando que o mock tenha o campo 'game')
-  const filteredTeams = teams.filter(t => (t as any).game === game || !((t as any).game));
+  const filteredTeams = useMemo(() => {
+    return teams.filter(t => (t as any).game?.toUpperCase() === game.toUpperCase());
+  }, [teams, game]);
+
+  if (isLoading) return <div className="p-20 text-center font-display uppercase animate-pulse italic">Escaneando frequenze da Arena...</div>;
 
   return (
     <div className="relative min-h-screen bg-[#06070a] overflow-hidden">

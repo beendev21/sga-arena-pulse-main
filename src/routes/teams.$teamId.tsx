@@ -1,26 +1,49 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { getTeam, getTeamPlayers, matches } from "@/mocks/data";
+import { useQuery } from "@tanstack/react-query";
+import useApiController from "@/API/controler";
 import { TeamLogo } from "@/components/sga/TeamLogo";
 import { MatchCard } from "@/components/sga/MatchCard";
 import { Trophy, TrendingUp, Target, Crosshair } from "lucide-react";
 import { StatsCard } from "@/components/sga/StatsCard";
+import { useMemo } from "react";
 
 export const Route = createFileRoute("/teams/$teamId")({ component: TeamPage });
 
 function TeamPage() {
   // Captura o parâmetro de ID da URL (ex: /teams/team-uuid).
   const { teamId } = Route.useParams();
+  const apiTeams = useApiController("Teams");
+  const apiPlayers = useApiController("Players");
+  const apiMatches = useApiController("Matches");
   
-  /**
-   * Pontos de Integração com API:
-   * getTeam(teamId) -> GET /api/teams/:id
-   * getTeamPlayers(team.id) -> GET /api/teams/:id/lineup
-   * matches filter -> GET /api/matches?teamId=:id
-   */
-  const team = getTeam(teamId);
+  const { data: team, isLoading: l1 } = useQuery({
+    queryKey: ["team", teamId],
+    queryFn: () => apiTeams.getById(teamId)
+  });
+
+  const { data: playersRaw, isLoading: l2 } = useQuery({
+    queryKey: ["players"],
+    queryFn: () => apiPlayers.getAll()
+  });
+
+  const { data: matchesRaw, isLoading: l3 } = useQuery({
+    queryKey: ["matches"],
+    queryFn: () => apiMatches.getAll()
+  });
+
+  const lineup = useMemo(() => {
+    const list = Array.isArray(playersRaw) ? playersRaw : (playersRaw?.$values || []);
+    return list.filter((p: any) => p.teamId === teamId);
+  }, [playersRaw, teamId]);
+
+  const recent = useMemo(() => {
+    const list = Array.isArray(matchesRaw) ? matchesRaw : (matchesRaw?.$values || []);
+    return list.filter((m: any) => m.teamAId === teamId || m.teamBId === teamId).slice(0, 5);
+  }, [matchesRaw, teamId]);
+
+  if (l1 || l2 || l3) return <div className="p-10 text-center font-display uppercase italic">Recuperando registros de equipe...</div>;
   if (!team) return <div className="p-10 text-center">Time não encontrado.</div>;
-  const lineup = getTeamPlayers(team.id);
-  const recent = matches.filter((m) => m.teamA.id === team.id || m.teamB.id === team.id).slice(0, 5);
+
   const wr = Math.round((team.wins / Math.max(team.wins + team.losses, 1)) * 100);
 
   return (

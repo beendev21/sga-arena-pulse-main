@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import { Trophy, Users, Swords, Flame, ChevronRight, Crown, Medal, Award } from "lucide-react";
-import { tournaments as mockTournaments, matches as mockMatches, lastTournament, teams as mockTeams } from "@/mocks/data";
 import { TournamentCard } from "@/components/sga/TournamentCard";
 import { MatchCard } from "@/components/sga/MatchCard";
 import { TeamLogo } from "@/components/sga/TeamLogo";
@@ -76,50 +76,51 @@ function Home() {
   const [rankingGame, setRankingGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
   const [playerStatsGame, setPlayerStatsGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
 
-  // Estados locais para dados vindos do banco de dados
-  const [tournaments, setTournaments] = useState<any[]>(mockTournaments);
-  const [matches, setMatches] = useState<any[]>(mockMatches);
-  const [teams, setTeams] = useState<any[]>(mockTeams);
-  const [loading, setLoading] = useState(true);
-  const getTournaments = useApiController("Tournaments");
-  const getMatches = useApiController("Matches");
-  const getTeams = useApiController("Teams");
+  const apiTournaments = useApiController("Tournaments");
+  const apiMatches = useApiController("Matches");
+  const apiTeams = useApiController("Teams");
 
-  useEffect(() => {
-    const syncWithBackend = async () => {
-      try {
-        const [tRes, mRes, tmRes] = await Promise.all([
-          getTournaments.getAll(),
-          getMatches.getAll(),
-          getTeams.getAll()
-        ]);
+  const { data: tRaw, isLoading: loadingT } = useQuery({ 
+    queryKey: ["tournaments"], 
+    queryFn: () => apiTournaments.getAll() 
+  });
+  const { data: mRaw, isLoading: loadingM } = useQuery({ 
+    queryKey: ["matches"], 
+    queryFn: () => apiMatches.getAll() 
+  });
+  const { data: tmRaw, isLoading: loadingTeams } = useQuery({ 
+    queryKey: ["teams"], 
+    queryFn: () => apiTeams.getAll() 
+  });
 
-        // Só atualiza se a resposta for um array válido
-        if (Array.isArray(tRes)) setTournaments(tRes);
-        if (Array.isArray(mRes)) setMatches(mRes);
-        if (Array.isArray(tmRes)) setTeams(tmRes);
-
-      } catch (err) {
-        console.error("Erro ao sincronizar Home com o servidor:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    syncWithBackend();
+  const parse = useCallback((r: any) => {
+    if (!r) return [];
+    return Array.isArray(r) ? r : (r?.data || r?.$values || []);
   }, []);
+
+  const tournaments = useMemo(() => parse(tRaw), [tRaw, parse]);
+  const matches = useMemo(() => parse(mRaw), [mRaw, parse]);
+  const teams = useMemo(() => parse(tmRaw), [tmRaw, parse]);
+
+  const loading = loadingT || loadingM || loadingTeams;
 
   // Filtros derivados dos estados sincronizados
   const live = useMemo(() => matches.filter((m) => m.status === "Ao vivo").slice(0, 4), [matches]);
   const upcoming = useMemo(() => matches.filter((m) => m.status === "Agendada").slice(0, 6), [matches]);
 
-  // Configuração dos cards informativos que irão rotacionar no Hero
-  const infoCards = [
+  const heroImages = useMemo(() => [
+    "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/67fbd4c273f3d5e92a18666c6379db09e74b7cda-1920x1080.jpg?accountingTag=VAL&auto=format&fit=fill&q=80&w=1541",
+    "https://www.esports.net/de/wp-content/uploads/sites/7/2025/11/Valve-Counter-Strike-2.jpg",
+    "https://cdn1.epicgames.com/offer/24b9b5e323bc40eea252a10cdd3b2f10/EGS_LeagueofLegends_RiotGames_S1_2560x1440-47eb328eac5ddd63ebd096ded7d0d5ab"
+  ], []);
+
+  // Calculamos infoCards antes do guard de loading para manter a ordem dos hooks estável
+  const infoCards = useMemo(() => [
     {
       type: "TORNEIO ATIVO",
       title: tournaments[0]?.name || "Carregando Evento...",
       status: "Em Andamento",
-      banner: tournaments[0]?.banner || mockTournaments[0].banner,
+      banner: tournaments[0]?.banner || "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop",
       stats: [
         { label: "Premiação Total", value: tournaments[0]?.prize || "..." },
         { label: "Vagas", value: tournaments[0] ? `${tournaments[0].teamsCount} / 16 Equipes` : "..." }
@@ -131,29 +132,23 @@ function Home() {
       status: "SGA Season 2024.1",
       banner: "https://www.esports.net/de/wp-content/uploads/sites/7/2025/11/Valve-Counter-Strike-2.jpg",
       stats: [
-        { label: "Equipe Alpha", value: teams[6]?.name || teams[0]?.name || "Pulse Elite" },
-        { label: "MVP Global", value: "Pulse.X" }
+        { label: "Líder do Ranking", value: teams[0]?.name || "Pulse Elite" },
+        { label: "ELO Atual", value: teams[0]?.elo || "..." }
       ]
     },
     {
-      type: "ESTATÍSTICAS",
-      title: "Domínio Global",
-      status: "Servidores Ativos",
+      type: "SISTEMA ARENA",
+      title: "Registros Oficiais",
+      status: "Base de Dados Sincronizada",
       banner: "https://cdn1.epicgames.com/offer/24b9b5e323bc40eea252a10cdd3b2f10/EGS_LeagueofLegends_RiotGames_S1_2560x1440-47eb328eac5ddd63ebd096ded7d0d5ab",
       stats: [
-        { label: "Agentes Ativos", value: "14.2k" },
-        { label: "Partidas Hoje", value: "842" }
+        { label: "Times Filiados", value: String(teams.length) },
+        { label: "Confrontos Totais", value: String(matches.length) }
       ]
     }
-  ];
+  ], [tournaments, teams, matches.length]);
 
   const currentInfo = infoCards[heroIndex];
-
-  const heroImages = [
-    "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/67fbd4c273f3d5e92a18666c6379db09e74b7cda-1920x1080.jpg?accountingTag=VAL&auto=format&fit=fill&q=80&w=1541",
-    "https://www.esports.net/de/wp-content/uploads/sites/7/2025/11/Valve-Counter-Strike-2.jpg",
-    "https://cdn1.epicgames.com/offer/24b9b5e323bc40eea252a10cdd3b2f10/EGS_LeagueofLegends_RiotGames_S1_2560x1440-47eb328eac5ddd63ebd096ded7d0d5ab"
-  ];
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -161,6 +156,9 @@ function Home() {
     }, 5000);
     return () => clearInterval(interval);
   }, [heroImages.length]);
+
+  // O Guard de renderização deve vir por ÚLTIMO, após todos os hooks
+  if (loading) return <div className="min-h-screen flex items-center justify-center font-display uppercase tracking-widest animate-pulse">Sincronizando com a Arena...</div>;
 
   return (
     <div>
@@ -212,9 +210,9 @@ function Home() {
               </Link>
             </div>
             <div className="mt-8 grid grid-cols-1 xs:grid-cols-3 gap-4 max-w-md">
-              <StatsCard label="Times" value="8" icon={Users} />
+              <StatsCard label="Times" value={teams.length} icon={Users} />
               <StatsCard label="Partidas" value={matches.length} icon={Swords} accent />
-              <StatsCard label="Prêmios" value="R$ 123k" icon={Trophy} />
+              <StatsCard label="Torneios" value={tournaments.length} icon={Trophy} />
             </div>
           </motion.div>
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.2 }}
@@ -432,11 +430,11 @@ function Home() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center md:items-end max-w-6xl mx-auto mt-10">
-            {[
-              { game: "VALORANT", team: teams[0], tourney: "VCT Ribeirão A", icon: Medal, height: "h-80", border: "border-valorant/20", bg: "bg-valorant/5", color: "text-valorant", banner: "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/67fbd4c273f3d5e92a18666c6379db09e74b7cda-1920x1080.jpg", mvp: "SGA.Breno" },
-              { game: "COUNTER-STRIKE 2", team: teams[6], tourney: "CS Prime RP", icon: Crown, height: "h-[28rem]", border: "border-cs2/20", bg: "bg-cs2/5", color: "text-cs2", banner: "https://www.esports.net/de/wp-content/uploads/sites/7/2025/11/Valve-Counter-Strike-2.jpg", mvp: "Pulse.X" },
-              { game: "LEAGUE OF LEGENDS", team: teams[1], tourney: "SGA League RP", icon: Award, height: "h-72", border: "border-lol/20", bg: "bg-lol/5", color: "text-lol", banner: "https://cdn1.epicgames.com/offer/24b9b5e323bc40eea252a10cdd3b2f10/EGS_LeagueofLegends_RiotGames_S1_2560x1440-47eb328eac5ddd63ebd096ded7d0d5ab", mvp: "RibeirãoKing" },
-            ].map(({ game, team, tourney, icon: Icon, height, border, bg, color, banner, mvp }) => (
+            {Array.from([
+              { game: "VALORANT", team: teams[0] || teams[1], tourney: "VCT Ribeirão A", icon: Medal, height: "h-80", border: "border-valorant/20", bg: "bg-valorant/5", color: "text-valorant", banner: "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/67fbd4c273f3d5e92a18666c6379db09e74b7cda-1920x1080.jpg", mvp: "SGA.Breno" },
+              { game: "COUNTER-STRIKE 2", team: teams[2] || teams[0], tourney: "CS Prime RP", icon: Crown, height: "h-[28rem]", border: "border-cs2/20", bg: "bg-cs2/5", color: "text-cs2", banner: "https://www.esports.net/de/wp-content/uploads/sites/7/2025/11/Valve-Counter-Strike-2.jpg", mvp: "Pulse.X" },
+              { game: "LEAGUE OF LEGENDS", team: teams[1] || teams[0], tourney: "SGA League RP", icon: Award, height: "h-72", border: "border-lol/20", bg: "bg-lol/5", color: "text-lol", banner: "https://cdn1.epicgames.com/offer/24b9b5e323bc40eea252a10cdd3b2f10/EGS_LeagueofLegends_RiotGames_S1_2560x1440-47eb328eac5ddd63ebd096ded7d0d5ab", mvp: "RibeirãoKing" },
+            ]).map(({ game, team, tourney, icon: Icon, height, border, bg, color, banner, mvp }) => team && (
               <motion.div 
                 key={game} 
                 initial={{ opacity: 0, scale: 0.9, y: 30 }}
@@ -476,7 +474,7 @@ function Home() {
 
                   <div className="mt-6">
                     <div className={`text-[10px] font-black uppercase tracking-[0.5em] ${color} mb-2 italic`}>{game}</div>
-                    <div className="font-display text-4xl md:text-6xl italic font-black uppercase text-white tracking-tighter leading-none group-hover:text-primary transition-all duration-300 drop-shadow-lg">{team.name}</div>
+                    <div className="font-display text-4xl md:text-6xl italic font-black uppercase text-white tracking-tighter leading-none group-hover:text-primary transition-all duration-300 drop-shadow-lg">{team?.name || "Equipe Alpha"}</div>
                   </div>
 
                   <div className="flex flex-col items-center mt-8 gap-3">

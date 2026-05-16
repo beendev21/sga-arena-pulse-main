@@ -28,11 +28,14 @@ function Login() {
     // Mock: Substitua por chamada à API de autenticação.
     // Adicionado o campo 'role' para que o sistema reconheça o nível de acesso Administrador.
     login(
-      { 
-        name: email.includes("willian") ? "Willian" : "Player", 
-        email, 
+      {
+        name: email.includes("willian") ? "Willian" : "Player",
+        email,
         role: email.includes("willian") ? "Administrador" : "Jogador",
-        avatar: "https://picsum.photos/seed/me/80/80" 
+        id: 0,
+        login: "",
+        isActive: false,
+        lastLoginAt: ""
       },
       "mock-token-123"
     );

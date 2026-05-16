@@ -1,12 +1,21 @@
 import { Link } from "@tanstack/react-router";
-import type { Team } from "@/mocks/data";
+interface Team {
+  id: string;
+  name: string;
+  tag: string;
+  elo: number;
+  wins: number;
+  losses: number;
+  trophies: number;
+  bannerColor: string;
+}
 import { TeamLogo } from "./TeamLogo";
 import { Trophy } from "lucide-react";
 
 export function TeamCard({ team, rank }: { team: Team; rank?: number }) {
   const wr = Math.round((team.wins / Math.max(team.wins + team.losses, 1)) * 100);
   return (
-    <Link to="/teams/$teamId" params={{ teamId: team.id }} className="group block">
+    <Link to="/teams/$teamId" params={{ teamId: String(team.id) } as any} className="group block">
       <div className="relative overflow-hidden rounded-xl border border-border/60 bg-card-grad p-4 hover:-translate-y-1 hover:shadow-neon transition-all">
         {rank !== undefined && (
           <div className="absolute top-2 right-2 font-display text-3xl text-muted-foreground/30 group-hover:text-primary/60">

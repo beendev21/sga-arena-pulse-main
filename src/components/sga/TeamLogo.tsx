@@ -1,4 +1,8 @@
-import type { Team } from "@/mocks/data";
+interface Team {
+  tag: string;
+  bannerColor: string;
+  logo?: string;
+}
 
 export function TeamLogo({ team, size = 40 }: { team: Team; size?: number }) {
   return (

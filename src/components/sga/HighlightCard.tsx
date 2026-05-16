@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { Play, X } from "lucide-react";
-import type { Highlight } from "@/mocks/data";
+
+interface Highlight {
+  id: string;
+  title: string;
+  thumbnail: string;
+  duration: string;
+  videoUrl: string;
+  player: string;
+}
 
 export function HighlightCard({ h }: { h: Highlight }) {
   const [open, setOpen] = useState(false);

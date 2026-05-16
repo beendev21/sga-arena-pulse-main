@@ -1,5 +1,15 @@
 import { Link } from "@tanstack/react-router";
-import type { Match } from "@/mocks/data";
+interface Match {
+  id: string;
+  tournamentName: string;
+  teamA: { id: string; name: string; tag: string; bannerColor: string };
+  teamB: { id: string; name: string; tag: string; bannerColor: string };
+  scoreA: number;
+  scoreB: number;
+  status: string;
+  startsAt: string;
+  map: string;
+}
 import { TeamLogo } from "./TeamLogo";
 import { StatusBadge } from "./StatusBadge";
 import { formatDateTimeBR } from "@/lib/dateUtils";
@@ -14,7 +24,7 @@ export function MatchCard({ m }: { m: Match }) {
 
   return (
     <Link
-      to="/matches/$id" params={{ id: m.id }}
+      to="/matches/$id" params={{ id: m.id } as any}
       className={`block rounded-lg border border-border/60 bg-card-grad p-4 transition-all ${
         isValorant ? "hover:bg-valorant/10 hover:border-valorant/40 hover:shadow-valorant" : 
         isCS2 ? "hover:bg-cs2/10 hover:border-cs2/40 hover:shadow-cs2" : 

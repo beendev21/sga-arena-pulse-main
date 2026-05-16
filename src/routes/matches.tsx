@@ -1,8 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { matches, type Match } from "@/mocks/data";
+import { useQuery } from "@tanstack/react-query";
+import useApiController from "@/API/controler";
 import { MatchCard } from "@/components/sga/MatchCard";
+
+interface Match {
+  id: string;
+  status: "Ao vivo" | "Agendada" | "Encerrada";
+  teamA: { name: string; tag: string; logo?: string };
+  teamB: { name: string; tag: string; logo?: string };
+  scoreA: number;
+  scoreB: number;
+  map: string;
+  startsAt: string;
+  tournamentName: string;
+}
 
 export const Route = createFileRoute("/matches")({
   head: () => ({ meta: [{ title: "Partidas — SGA" }, { name: "description", content: "Partidas ao vivo, agendadas e encerradas na SGA." }] }),
@@ -12,8 +25,20 @@ export const Route = createFileRoute("/matches")({
 const tabs: Match["status"][] = ["Ao vivo", "Agendada", "Encerrada"];
 
 function MatchesPage() {
+  const apiMatches = useApiController("Matches");
+  const { data: matchesRaw, isLoading } = useQuery({
+    queryKey: ["matches"],
+    queryFn: () => apiMatches.getAll()
+  });
+
+  const matches = useMemo(() => {
+    return Array.isArray(matchesRaw) ? matchesRaw : (matchesRaw?.$values || []);
+  }, [matchesRaw]);
+
   const [tab, setTab] = useState<Match["status"]>("Ao vivo");
   const list = matches.filter((m) => m.status === tab);
+
+  if (isLoading) return <div className="p-20 text-center font-display uppercase animate-pulse">Sincronizando satélites da Arena...</div>;
 
   return (
     <div className="relative min-h-screen bg-[#06070a] overflow-hidden">

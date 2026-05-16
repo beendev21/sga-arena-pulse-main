@@ -1,8 +1,17 @@
 import { Link } from "@tanstack/react-router";
 import { Calendar, Trophy, Users } from "lucide-react";
-import type { Tournament } from "@/mocks/data";
 import { StatusBadge } from "./StatusBadge";
 import { formatDateBR } from "@/lib/dateUtils";
+
+interface Tournament {
+  id: string;
+  name: string;
+  banner: string;
+  status: "Ao vivo" | "Inscrições" | "Inscrições abertas" | "Encerrado" | "Em breve";
+  teamsCount: number;
+  prize: string;
+  startDate: string;
+}
 
 export function TournamentCard({ t }: { t: Tournament }) {
   const name = t.name.toLowerCase();
@@ -11,7 +20,7 @@ export function TournamentCard({ t }: { t: Tournament }) {
   const isLoL = name.includes("league") || name.includes("lol");
 
   return (
-    <Link to="/tournaments/$id" params={{ id: t.id }} className="group block">
+    <Link to="/tournaments/$id" params={{ id: String(t.id) } as any} className="group block">
       <div className={`relative overflow-hidden rounded-xl border border-border/60 bg-card-grad transition-all hover:-translate-y-1 ${
         isValorant ? "hover:bg-valorant/10 hover:border-valorant/40 hover:shadow-valorant" : 
         isCS2 ? "hover:bg-cs2/10 hover:border-cs2/40 hover:shadow-cs2" : 

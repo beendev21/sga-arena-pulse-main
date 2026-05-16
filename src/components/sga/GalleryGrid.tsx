@@ -1,6 +1,23 @@
-import { gallery } from "@/mocks/data";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo, useCallback } from "react";
+import useApiController from "@/API/controler";
 
 export function GalleryGrid() {
+  const api = useApiController("Gallery");
+  const { data: raw, isLoading } = useQuery({
+    queryKey: ["gallery"],
+    queryFn: () => api.getAll()
+  });
+
+  const parse = useCallback((r: any) => {
+    if (!r) return [];
+    return Array.isArray(r) ? r : (r?.data || r?.$values || []);
+  }, []);
+
+  const gallery = useMemo(() => parse(raw), [raw, parse]);
+
+  if (isLoading) return <div className="p-10 text-center font-display uppercase opacity-20 animate-pulse italic">Acessando arquivos de imagem...</div>;
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       {gallery.map((src, i) => (

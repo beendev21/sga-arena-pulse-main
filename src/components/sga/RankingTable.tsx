@@ -1,30 +1,30 @@
-import { useEffect, useState } from "react";
+import { useMemo, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import useApiController from "../../API/controler";
 import { TeamLogo } from "./TeamLogo";
 import { Link } from "@tanstack/react-router";
-import { teams as mockTeams } from "@/mocks/data";
 
 export function RankingTable({ game }: { game: string }) {
-  const [teams, setTeams] = useState<any[]>(mockTeams);
-  const [loading, setLoading] = useState(true);
-  const getTeams = useApiController("Teams");
+  const api = useApiController("Teams");
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await getTeams.getAll();
-        const teamList = Array.isArray(res) ? res : (res?.data || res?.$values || []);
-        
-        const filtered = teamList.filter((t: any) => 
-          !game || t.game?.toUpperCase() === game.toUpperCase()
-        );
-        setTeams(filtered);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [game]);
+  const { data: raw, isLoading: loading } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => api.getAll()
+  });
+
+  const parse = useCallback((r: any) => {
+    if (!r) return [];
+    return Array.isArray(r) ? r : (r?.data || r?.$values || []);
+  }, []);
+
+  const teams = useMemo(() => {
+    const list = parse(raw);
+    const filtered = list.filter((t: any) => 
+      !game || t.game?.toUpperCase() === game.toUpperCase()
+    );
+    // Ordena por ELO para garantir que o ranking reflita a realidade competitiva
+    return [...filtered].sort((a: any, b: any) => (b.elo || 0) - (a.elo || 0));
+  }, [raw, game, parse]);
 
   if (loading) return <div className="p-8 text-center text-muted-foreground animate-pulse">Buscando ranking...</div>;
 
@@ -51,7 +51,7 @@ export function RankingTable({ game }: { game: string }) {
                   <span className={i < 3 ? "text-primary" : "text-muted-foreground"}>{i + 1}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <Link to="/teams/$teamId" params={{ teamId: t.id }} className="flex items-center gap-3 hover:text-primary">
+                  <Link to="/teams/$teamId" params={{ teamId: String(t.id) } as any} className="flex items-center gap-3 hover:text-primary">
                     <TeamLogo team={t} size={32} />
                     <span className="font-display">{t.name}</span>
                   </Link>
