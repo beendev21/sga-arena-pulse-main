@@ -37,8 +37,6 @@ const tabs = [
 ] as const;
 
 const createEmptyPlayer = () => ({
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
   name: "",
   avatarUrl: "https://picsum.photos/seed/sga/200/200",
   userId: 0,
@@ -722,7 +720,7 @@ function Admin() {
                           toast.success("Jogador contratado!");
                           setIsCreatingPlayer(false);
                           setNewPlayer(createEmptyPlayer());  
-                          
+
                           queryClient.invalidateQueries({ queryKey: ["players"] });
                         }
 
