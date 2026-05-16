@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import useApiController from "@/API/controler";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bracket } from "@/components/sga/Bracket";
-import { tournaments } from "@/mocks/data";
 
 export const Route = createFileRoute("/bracket")({
   head: () => ({ meta: [{ title: "Chaveamento — SGA" }, { name: "description", content: "Chaveamento do campeonato em formato profissional." }] }),
@@ -11,27 +12,21 @@ export const Route = createFileRoute("/bracket")({
 
 function BracketPage() {
   const [game, setGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
+  const { getAll: getTournaments } = useApiController("Tournaments");
+  const { getAll: getMatches } = useApiController("Matches");
+
+  const { data: tRaw = [] } = useQuery({ queryKey: ["tournaments"], queryFn: () => getTournaments() });
+  const { data: mRaw = [] } = useQuery({ queryKey: ["matches"], queryFn: () => getMatches() });
+
+  const tournamentsData = Array.isArray(tRaw) ? tRaw : tRaw?.$values || [];
+  const matchesData = Array.isArray(mRaw) ? mRaw : mRaw?.$values || [];
   
-  // Filtra os torneios do jogo selecionado
   const filteredTournaments = useMemo(() => {
-    return tournaments.filter(t => {
-      if (game === "VALORANT") return t.name.startsWith("VCT");
-      if (game === "COUNTER-STRIKE 2") return t.name.startsWith("CS Prime");
-      if (game === "LEAGUE OF LEGENDS") return t.name.startsWith("SGA League");
-      return false;
-    });
-  }, [game]);
+    return tournamentsData.filter((t: any) => t.game?.toUpperCase() === game.toUpperCase());
+  }, [game, tournamentsData]);
 
   const [selectedTourneyId, setSelectedTourneyId] = useState<string>(filteredTournaments[0]?.id || "");
-
-  // Atualiza o torneio selecionado quando o filtro de jogo mudar
-  useEffect(() => {
-    if (filteredTournaments.length > 0) {
-      setSelectedTourneyId(filteredTournaments[0].id);
-    } else {
-      setSelectedTourneyId("");
-    }
-  }, [filteredTournaments]);
+  const selectedMatches = useMemo(() => matchesData.filter((m: any) => m.tournamentId === selectedTourneyId), [matchesData, selectedTourneyId]);
 
   return (
     <div className="relative min-h-screen bg-[#06070a] overflow-hidden">
@@ -131,7 +126,7 @@ function BracketPage() {
               transition={{ duration: 0.4 }}
               className="rounded-none border border-white/5 bg-[#0a0a0c]/80 backdrop-blur-md shadow-2xl p-4 md:p-8 overflow-x-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent"
             >
-              <Bracket />
+              <Bracket matches={selectedMatches} />
             </motion.div>
           </AnimatePresence>
         </div>

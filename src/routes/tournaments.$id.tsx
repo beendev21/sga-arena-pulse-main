@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { getTournament, matches, teams, lastTournament } from "@/mocks/data";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import useApiController from "@/API/controler";
 import { StatusBadge } from "@/components/sga/StatusBadge";
 import { TeamLogo } from "@/components/sga/TeamLogo";
 import { MatchCard } from "@/components/sga/MatchCard";
@@ -13,17 +14,38 @@ export const Route = createFileRoute("/tournaments/$id")({ component: TPage });
 function TPage() {
   // O ID do torneio dita todo o conteúdo da página.
   const { id } = Route.useParams();
+  const { getById: getTourneyById } = useApiController("Tournaments");
+  const { getAll: getAllMatches } = useApiController("Matches");
+  const { getAll: getAllTeams } = useApiController("Teams");
 
-  /**
-   * Integração com API:
-   * Requisitar dados completos do torneio: GET /api/tournaments/:id
-   * As partidas (tMatches) devem ser filtradas no backend por performance: GET /api/matches?tournamentId=:id
-   */
-  const t = getTournament(id);
+  const { data: t, isLoading: loadingT } = useQuery({
+    queryKey: ["tournament", id],
+    queryFn: () => getTourneyById(id),
+  });
+
+  const { data: matchesRaw, isLoading: loadingM } = useQuery({
+    queryKey: ["matches"],
+    queryFn: () => getAllMatches(),
+  });
+
+  const { data: teamsRaw, isLoading: loadingTeams } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => getAllTeams(),
+  });
+
   const [activeTab, setActiveTab] = useState("geral");
 
+  const tMatches = useMemo(() => {
+    const list = Array.isArray(matchesRaw) ? matchesRaw : matchesRaw?.$values || [];
+    return list.filter((m: any) => m.tournamentId === id);
+  }, [matchesRaw, id]);
+
+  const tournamentTeams = useMemo(() => {
+    return Array.isArray(teamsRaw) ? teamsRaw : teamsRaw?.$values || [];
+  }, [teamsRaw]);
+
+  if (loadingT || loadingM || loadingTeams) return <div className="p-10 text-center">Carregando...</div>;
   if (!t) return <div className="p-10 text-center">Campeonato não encontrado.</div>;
-  const tMatches = matches.filter((m) => m.tournamentId === id);
 
   return (
     <div>
@@ -67,7 +89,7 @@ function TPage() {
               <section>
                 <h2 className="font-display text-2xl uppercase mb-4"><span className="text-primary">/</span> Times inscritos</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-                  {teams.map((tm) => (
+                  {tournamentTeams.map((tm: any) => (
                     <div key={tm.id} className="flex flex-col items-center gap-2 p-3 rounded-lg bg-card-grad border border-border/60">
                       <TeamLogo team={tm} size={48} />
                       <div className="text-xs text-center font-display truncate w-full">{tm.tag}</div>
@@ -76,14 +98,15 @@ function TPage() {
                 </div>
               </section>
 
-              {t.status === "Encerrado" && (
+              {t.status === "Encerrado" && tMatches.length > 0 && (
+                // Lógica dinâmica para exibir o campeão com base na última partida
                 <section>
                   <h2 className="font-display text-2xl uppercase mb-4"><span className="text-primary">/</span> Campeão</h2>
-                  <div className="inline-flex items-center gap-3 p-4 rounded-xl bg-neon shadow-neon">
-                    <TeamLogo team={lastTournament.podium[0].team} size={56} />
+                  <div className="inline-flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary/20">
+                    <Trophy className="w-8 h-8 text-primary" />
                     <div>
-                      <div className="font-display text-xl text-primary-foreground">{lastTournament.podium[0].team.name}</div>
-                      <div className="text-xs text-primary-foreground/80 uppercase tracking-widest">Campeão · MVP {lastTournament.podium[0].mvp?.nick}</div>
+                      <div className="font-display text-xl">Campeonato Finalizado</div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-widest">Confira o chaveamento para o resultado final</div>
                     </div>
                   </div>
                 </section>
@@ -94,7 +117,7 @@ function TPage() {
           {activeTab === "chaveamento" && (
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <h2 className="font-display text-2xl uppercase mb-4"><span className="text-primary">/</span> Chaveamento</h2>
-              <Bracket />
+              <Bracket matches={tMatches} />
             </section>
           )}
 

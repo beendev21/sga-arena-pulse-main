@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { highlights, gallery } from "@/mocks/data";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TeamLogo } from "@/components/sga/TeamLogo";
@@ -8,7 +8,6 @@ import { StatusBadge } from "@/components/sga/StatusBadge";
 import { Trophy, Users, Swords, Activity, Image as Img, Film, Plus, Search, Upload, Trash2, Pencil, ShieldAlert, ChevronRight, Crown, Save } from "lucide-react";
 import { StatsCard } from "@/components/sga/StatsCard";
 import { useAuth } from "@/store/auth";
-import { useDataStore } from "@/store/dataStore";
 import { toast } from "sonner";
 import useApiController from "../API/controler";
 import { motion } from "framer-motion";
@@ -50,17 +49,6 @@ function Admin() {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   
-  // Pegando dados e ações da Store Global com fallbacks de array vazio
-  const {
-    bracket, 
-    updateMatchScore 
-  } = useDataStore();
-
-  const [tournamentsData, setTournamentsData] = useState<any[]>([]);
-  const [playersData, setPlayersData] = useState<any[]>([]);
-  const [teamsData, setTeamsData] = useState<any[]>([]);
-  const [matchesData, setMatchesData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isCreatingTourney, setIsCreatingTourney] = useState(false);
   const [newTourney, setNewTourney] = useState({ 
     name: "", 
@@ -90,15 +78,39 @@ function Admin() {
     avatar: "https://picsum.photos/seed/sga/200/200",
     game: "COUNTER-STRIKE 2"
   });
-  const getTournaments = useApiController("Tournaments");
-  const createTournament = useApiController("Tournaments");
-  const getPlayers = useApiController("Players");
-  const createPlayer = useApiController("Players");
-  const getTeams = useApiController("Teams");
-  const createTeam = useApiController("Teams");
-  const getMatches = useApiController("Matches");
-  const updateMatch = useApiController("Matches");
-  const createMatch = useApiController("Matches");
+
+  const apiTournaments = useApiController("Tournaments");
+  const apiPlayers = useApiController("Players");
+  const apiTeams = useApiController("Teams");
+  const apiMatches = useApiController("Matches");
+  const apiHighlights = useApiController("Highlights");
+  const apiGallery = useApiController("Gallery");
+
+  const queryClient = useQueryClient();
+
+  // Sincronização Global via TanStack Query
+  const { data: tr, isLoading: l1 } = useQuery({ queryKey: ["tournaments"], queryFn: () => apiTournaments.getAll() });
+  const { data: pr, isLoading: l2 } = useQuery({ queryKey: ["players"], queryFn: () => apiPlayers.getAll() });
+  const { data: ter, isLoading: l3 } = useQuery({ queryKey: ["teams"], queryFn: () => apiTeams.getAll() });
+  const { data: mr, isLoading: l4 } = useQuery({ queryKey: ["matches"], queryFn: () => apiMatches.getAll() });
+  const { data: hr } = useQuery({ queryKey: ["highlights"], queryFn: () => apiHighlights.getAll() });
+  const { data: gr } = useQuery({ queryKey: ["gallery"], queryFn: () => apiGallery.getAll() });
+
+  const parse = (r: any) => {
+    if (!r) return [];
+    if (Array.isArray(r)) return r;
+    return r?.data || r?.$values || r?.value || r?.items || [];
+  };
+
+  const tournamentsData = useMemo(() => parse(tr), [tr]);
+  const playersData = useMemo(() => parse(pr), [pr]);
+  const teamsData = useMemo(() => parse(ter), [ter]);
+  const matchesData = useMemo(() => parse(mr), [mr]);
+  const highlightsData = useMemo(() => parse(hr), [hr]);
+  const galleryData = useMemo(() => parse(gr), [gr]);
+
+  const loading = l1 || l2 || l3 || l4;
+
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
   const [newMatch, setNewMatch] = useState({
     tournamentId: "",
@@ -112,43 +124,6 @@ function Admin() {
     bracketPosition: "" // Identificador do slot no chaveamento (vazio para partidas comuns)
   });
 
-  // Efeito para buscar campeonatos e jogadores do backend
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [tr, pr, ter, mr] = await Promise.all([
-          getTournaments.getAll(),
-          getPlayers.getAll(),
-          getTeams.getAll(),
-          getMatches.getAll()
-        ]);
-
-        const robustParse = (r: any) => {
-          if (!r) return [];
-          if (Array.isArray(r)) return r;
-          return r?.data || r?.$values || [];
-          const possible = r.data || r.$values || r.value || r.items || [];
-          return Array.isArray(possible) ? possible : [];
-        };
-
-        setTournamentsData(robustParse(tr));
-        setPlayersData(robustParse(pr));
-        setTeamsData(robustParse(ter));
-        setMatchesData(robustParse(mr));
-
-      } catch (err) {
-        console.error("Erro ao carregar dados do painel:", err);
-        setTournamentsData([]);
-        setPlayersData([]);
-        setTeamsData([]);
-        setMatchesData([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
-
   // Sincroniza o campeonato selecionado assim que os dados carregarem
   const [selectedTourney, setSelectedTourney] = useState("");
 
@@ -157,12 +132,6 @@ function Admin() {
       setSelectedTourney(tournamentsData[0].id);
     }
   }, [tournamentsData, selectedTourney]);
-
-  // Função auxiliar global para o componente garantir que o estado sempre receba um Array
-  const updateStateRobustly = (setter: Function, data: any) => {
-    const parsed = Array.isArray(data) ? data : (data?.data || data?.$values || []);
-    setter(parsed);
-  };
 
   // Guard de Autenticação Admin - Verificação dinâmica por Role (Administrador)
   // Posicionado após TODOS os Hooks para evitar o erro "Rendered more hooks than during the previous render"
@@ -201,6 +170,16 @@ function Admin() {
    */
   const fakeAct = (label: string) => () => toast.success(`${label} (mock)`);
 
+  // Função real de exclusão que limpa o cache global
+  const handleDelete = async (id: string, entity: string) => {
+    const ctrl = entity === "Tournaments" ? apiTournaments : entity === "Players" ? apiPlayers : entity === "Teams" ? apiTeams : apiMatches;
+    if (confirm("Confirmar exclusão definitiva?")) {
+      await ctrl.deleteRecord(id);
+      queryClient.invalidateQueries({ queryKey: [entity.toLowerCase()] });
+      toast.success("Removido com sucesso!");
+    }
+  };
+
   /**
    * Lógica de Paginação Client-Side.
    * Engenharia: Idealmente substituída por paginação Server-Side (API com limit/offset).
@@ -237,11 +216,11 @@ function Admin() {
     );
   }
 
-  function RowActions() {
+  function RowActions({ id, entity }: { id: string; entity: string }) {
     return (
       <div className="flex justify-end gap-1">
         <Button size="icon" variant="ghost" onClick={fakeAct("Editado")}><Pencil className="h-4 w-4" /></Button>
-        <Button size="icon" variant="ghost" onClick={fakeAct("Removido")}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+        <Button size="icon" variant="ghost" onClick={() => handleDelete(id, entity)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
       </div>
     );
   }
@@ -330,10 +309,16 @@ function Admin() {
                     <Button variant="ghost" onClick={() => setIsCreatingTourney(false)}>Cancelar</Button>
                     <Button className="bg-primary" onClick={async () => {
                       try {
-                        await createTournament.create(newTourney);
+                        // Payload Direto (Sem wrapper entity)
+                        const payload = {
+                          ...newTourney,
+                          startDate: (newTourney.startDate && newTourney.startDate !== "") ? new Date(newTourney.startDate).toISOString() : null,
+                          endDate: (newTourney.endDate && newTourney.endDate !== "") ? new Date(newTourney.endDate).toISOString() : null,
+                        };
+                        await apiTournaments.create(payload);
                         toast.success("Campeonato criado com sucesso!");
                         setIsCreatingTourney(false);
-                        updateStateRobustly(setTournamentsData, await getTournaments.getAll());
+                        queryClient.invalidateQueries({ queryKey: ["tournaments"] });
                       } catch (err: any) {
                         console.error("Erro detalhado da API:", err);
                         toast.error(err.message || "Erro ao criar campeonato");
@@ -356,7 +341,7 @@ function Admin() {
                         <td className="text-center">{t.teamsCount}</td>
                         <td className="text-center">{t.prize}</td>
                         <td className="text-center">{formatDateBR(t.startDate)}</td>
-                        <td className="px-4 py-3"><RowActions /></td>
+                        <td className="px-4 py-3"><RowActions id={t.id} entity="Tournaments" /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -417,11 +402,19 @@ function Admin() {
                            
                            const saveSlot = async (data: any) => {
                              try {
-                               if (m?.id) await updateMatch.update(m.id, { ...m, ...data });
-                               else await createMatch.create({ ...data, tournamentId: selectedTourney, bracketPosition: pos, status: "Agendada", startsAt: new Date().toISOString(), map: "TBD" });
+                               // Limpeza de Payload: Removemos objetos aninhados (teamA, teamB) que quebram o POST do backend
+                               const { teamA, teamB, tournament, ...existingMatchData } = m || {};
+
+                               const payload = {
+                                 entity: m?.id 
+                                   ? { ...existingMatchData, ...data }
+                                   : { ...data, tournamentId: selectedTourney, bracketPosition: pos, status: "Agendada", startsAt: new Date().toISOString(), map: "TBD" }
+                               };
+
+                               if (m?.id) await apiMatches.update(m.id, payload);
+                               else await apiMatches.create(payload);
                                
-                               const res = await getMatches.getAll();
-                               updateStateRobustly(setMatchesData, res);
+                               queryClient.invalidateQueries({ queryKey: ["matches"] });
                                toast.success(`Slot ${pos} atualizado`);
                              } catch (err) {
                                toast.error("Erro ao salvar bracket");
@@ -544,10 +537,18 @@ function Admin() {
                     <Button className="bg-neon text-black font-black" onClick={async () => {
                       try {
                         if(!newTeam.name || !newTeam.tag) throw new Error("Nome e TAG são obrigatórios.");
-                        await createTeam.create(newTeam);
+                        
+                        // Adicionando wrapper 'entity' e valores padrão para evitar erro 500 no DB
+                        const payload = {
+                          entity: {
+                            ...newTeam,
+                            wins: 0, losses: 0, trophies: 0, rounds_diff: 0
+                          }
+                        };
+                        await apiTeams.create(payload);
                         toast.success("Equipe registrada!");
                         setIsCreatingTeam(false);
-                        updateStateRobustly(setTeamsData, await getTeams.getAll());
+                        queryClient.invalidateQueries({ queryKey: ["teams"] });
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao registrar time");
                       }
@@ -569,7 +570,7 @@ function Admin() {
                         <td className="text-center text-success">{t.wins}</td>
                         <td className="text-center text-destructive">{t.losses}</td>
                         <td className="text-center">{t.trophies}</td>
-                        <td className="px-4 py-3"><RowActions /></td>
+                        <td className="px-4 py-3"><RowActions id={t.id} entity="Teams" /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -630,10 +631,18 @@ function Admin() {
                     <Button className="bg-primary font-black" onClick={async () => {
                       try {
                         if(!newPlayer.nick) throw new Error("O Nick é obrigatório.");
-                        await createPlayer.create(newPlayer);
+                        
+                        // Restaurando wrapper 'entity' para consistência com a API
+                        const payload = {
+                          entity: {
+                            ...newPlayer,
+                            kills: 0, deaths: 0, assists: 0, rating: 0, hs: 0
+                          }
+                        };
+                        await apiPlayers.create(payload);
                         toast.success("Jogador contratado!");
                         setIsCreatingPlayer(false);
-                        updateStateRobustly(setPlayersData, await getPlayers.getAll());
+                        queryClient.invalidateQueries({ queryKey: ["players"] });
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao criar jogador");
                       }
@@ -654,7 +663,7 @@ function Admin() {
                         <td className="text-center">{p.role}</td>
                         <td className="text-center">{(p.kills || 0)}/{(p.deaths || 0)}/{(p.assists || 0)}</td>
                         <td className="text-center text-primary font-display">{(p.rating || 0).toFixed(2)}</td>
-                        <td className="px-4 py-3"><RowActions /></td>
+                        <td className="px-4 py-3"><RowActions id={p.id} entity="Players" /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -705,10 +714,14 @@ function Admin() {
                     <Button className="bg-secondary text-black font-black" onClick={async () => {
                       try {
                         if(!newMatch.tournamentId || !newMatch.teamAId || !newMatch.teamBId) throw new Error("Preencha os campos obrigatórios");
-                        await createMatch.create(newMatch);
+                        const payload = {
+                          ...newMatch,
+                          startsAt: newMatch.startsAt ? new Date(newMatch.startsAt).toISOString() : new Date().toISOString(),
+                        };
+                        await apiMatches.create(payload);
                         toast.success("Partida agendada!");
                         setIsCreatingMatch(false);
-                        updateStateRobustly(setMatchesData, await getMatches.getAll());
+                        queryClient.invalidateQueries({ queryKey: ["matches"] });
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao agendar partida");
                       }
@@ -729,7 +742,7 @@ function Admin() {
                         <td className="text-center">{m.map}</td>
                         <td className="text-center">{m.scoreA} — {m.scoreB}</td>
                         <td className="text-center"><StatusBadge status={m.status} /></td>
-                        <td className="px-4 py-3"><RowActions /></td>
+                        <td className="px-4 py-3"><RowActions id={m.id} entity="Matches" /></td>
                       </tr>
                     ))}
                   </tbody>
@@ -744,12 +757,12 @@ function Admin() {
           <>
             <HeaderBar create="Novo highlight" />
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {highlights.map((h) => (
+              {highlightsData.map((h: any) => (
                 <div key={h.id} className="rounded-xl overflow-hidden border border-border/60 bg-card-grad">
                   <div className="relative aspect-video"><img src={h.thumbnail} className="h-full w-full object-cover" alt="" /><Film className="absolute top-2 right-2 h-5 w-5 text-primary" /></div>
                   <div className="p-3">
                     <div className="text-sm font-display truncate">{h.title}</div>
-                    <div className="mt-2 flex justify-end"><RowActions /></div>
+                    <div className="mt-2 flex justify-end"><RowActions id={h.id} entity="Highlights" /></div>
                   </div>
                 </div>
               ))}
@@ -761,12 +774,12 @@ function Admin() {
           <>
             <HeaderBar create="Adicionar imagem" />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {gallery.map((src, i) => (
+              {galleryData.map((src: string, i: number) => (
                 <div key={i} className="relative group rounded-lg overflow-hidden">
                   <img src={src} alt="" className="aspect-square w-full object-cover" />
                   <div className="absolute inset-0 bg-background/70 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
                     <Button size="icon" variant="ghost" onClick={fakeAct("Editado")}><Img className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={fakeAct("Removido")}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => handleDelete(String(i), "Gallery")}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                   </div>
                 </div>
               ))}

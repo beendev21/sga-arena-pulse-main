@@ -23,7 +23,17 @@ function Register() {
    */
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    login({ name: form.name, nick: form.nick, email: form.email, avatar: `https://picsum.photos/seed/${form.nick}/80/80` });
+    login(
+      {
+        name: form.name, email: form.email,
+        id: 0,
+        login: "",
+        role: "",
+        isActive: false,
+        lastLoginAt: ""
+      },
+      "mock-token-register"
+    );
     toast.success("Conta criada — boa sorte na arena!");
     nav({ to: "/" });
   };

@@ -1,11 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { players } from '@/mocks/data'
+import ApiService from '@/API/service'
 
 export const Route = createFileRoute('/api/Players')({
   server: {
     handlers: {
       GET: async () => {
-        return Response.json(players)
+        const data = await ApiService.get('api/Players')
+        return Response.json(data)
       },
     },
   },

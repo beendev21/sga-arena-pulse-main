@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getMatch, getPlayer, getTeamPlayers } from "@/mocks/data";
+import { useQuery } from "@tanstack/react-query";
+import useApiController from "@/API/controler";
 import { TeamLogo } from "@/components/sga/TeamLogo";
 import { StatusBadge } from "@/components/sga/StatusBadge";
 import { Crown, Map as MapIcon } from "lucide-react";
@@ -9,19 +10,28 @@ export const Route = createFileRoute("/matches/$id")({ component: MatchPage });
 function MatchPage() {
   // Extração de parâmetros da URL para busca de dados específicos.
   const { id } = Route.useParams();
+  const { getById: getMatchById } = useApiController("Matches");
+  const { getAll: getAllPlayers } = useApiController("Players");
 
-  /**
-   * Ponto de Integração com API:
-   * Atualmente os dados são buscados de mocks de forma síncrona.
-   * Em produção, utilize 'loaders' do TanStack Router ou 'useQuery'
-   * para buscar dados de: GET /api/matches/:id
-   */
-  const m = getMatch(id);
+  const { data: m, isLoading: loadingMatch } = useQuery({
+    queryKey: ["match", id],
+    queryFn: () => getMatchById(id),
+  });
+
+  const { data: playersRaw, isLoading: loadingPlayers } = useQuery({
+    queryKey: ["players"],
+    queryFn: () => getAllPlayers(),
+  });
+
+  if (loadingMatch || loadingPlayers) return <div className="p-10 text-center">Carregando dados da partida...</div>;
   if (!m) return <div className="p-10 text-center">Partida não encontrada.</div>;
-  const mvp = m.mvpId ? getPlayer(m.mvpId) : undefined;
+
+  const allPlayers = Array.isArray(playersRaw) ? playersRaw : playersRaw?.$values || [];
+
+  const mvp = m.mvpId ? allPlayers.find((p: any) => p.id === m.mvpId) : undefined;
   const winA = m.scoreA > m.scoreB;
-  const lineupA = getTeamPlayers(m.teamA.id).slice(0, 5);
-  const lineupB = getTeamPlayers(m.teamB.id).slice(0, 5);
+  const lineupA = allPlayers.filter((p: any) => p.teamId === m.teamA.id).slice(0, 5);
+  const lineupB = allPlayers.filter((p: any) => p.teamId === m.teamB.id).slice(0, 5);
 
   // Timeline: Lógica de negócio que deve vir do backend para garantir fidedignidade.
   const timeline = [
