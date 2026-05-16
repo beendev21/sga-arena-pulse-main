@@ -36,8 +36,18 @@ const tabs = [
   { k: "galeria", label: "Galeria" },
 ] as const;
 
+const createEmptyPlayer = () => ({
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  name: "",
+  avatarUrl: "https://picsum.photos/seed/sga/200/200",
+  userId: 0,
+  isProfilePublic: true,
+});
+
 function Admin() {
   const user = useAuth((s) => s.user);
+  const token = useAuth((s) => s.token);
   const nav = useNavigate();
 
   console.log("[SGA DEBUG] Usuário atual:", user?.email, "| Cargo:", user?.role);
@@ -70,18 +80,12 @@ function Admin() {
   });
 
   const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
-  const [newPlayer, setNewPlayer] = useState({
-    nick: "",
-    name: "",
-    role: "Duelista",
-    teamId: "",
-    avatar: "https://picsum.photos/seed/sga/200/200",
-    game: "COUNTER-STRIKE 2"
-  });
+  const [newPlayer, setNewPlayer] = useState(createEmptyPlayer());
 
   const apiTournaments = useApiController("Tournaments");
   const apiPlayers = useApiController("Players");
   const apiTeams = useApiController("Teams");
+  const apiUsers = useApiController("User");
   const apiMatches = useApiController("Matches");
   const apiHighlights = useApiController("Highlights");
   const apiGallery = useApiController("Gallery");
@@ -89,25 +93,57 @@ function Admin() {
   const queryClient = useQueryClient();
 
   // Sincronização Global via TanStack Query
-  const { data: tr, isLoading: l1 } = useQuery({ queryKey: ["tournaments"], queryFn: () => apiTournaments.getAll() });
-  const { data: pr, isLoading: l2 } = useQuery({ queryKey: ["players"], queryFn: () => apiPlayers.getAll() });
-  const { data: ter, isLoading: l3 } = useQuery({ queryKey: ["teams"], queryFn: () => apiTeams.getAll() });
-  const { data: mr, isLoading: l4 } = useQuery({ queryKey: ["matches"], queryFn: () => apiMatches.getAll() });
-  const { data: hr } = useQuery({ queryKey: ["highlights"], queryFn: () => apiHighlights.getAll() });
-  const { data: gr } = useQuery({ queryKey: ["gallery"], queryFn: () => apiGallery.getAll() });
+  const { data: tr, isLoading: l1 } = useQuery({ queryKey: ["tournaments", token], queryFn: () => apiTournaments.getAll() });
+  const { data: pr, isLoading: l2 } = useQuery({ queryKey: ["players", token], queryFn: () => apiPlayers.getAll(), enabled: !!token });
+  const { data: ter, isLoading: l3 } = useQuery({ queryKey: ["teams", token], queryFn: () => apiTeams.getAll() });
+  const { data: ur } = useQuery({ queryKey: ["users", token], queryFn: () => apiUsers.getAll(), enabled: !!token });
+  const { data: mr, isLoading: l4 } = useQuery({ queryKey: ["matches", token], queryFn: () => apiMatches.getAll() });
+  const { data: hr } = useQuery({ queryKey: ["highlights", token], queryFn: () => apiHighlights.getAll() });
+  const { data: gr } = useQuery({ queryKey: ["gallery", token], queryFn: () => apiGallery.getAll() });
 
   const parse = (r: any) => {
     if (!r) return [];
     if (Array.isArray(r)) return r;
-    return r?.data || r?.$values || r?.value || r?.items || [];
+
+    const list = r?.result;
+    if (Array.isArray(list)) return list;
+
+    return list?.$values || [];
   };
 
   const tournamentsData = useMemo(() => parse(tr), [tr]);
   const playersData = useMemo(() => parse(pr), [pr]);
   const teamsData = useMemo(() => parse(ter), [ter]);
+  const usersData = useMemo(() => parse(ur), [ur]);
   const matchesData = useMemo(() => parse(mr), [mr]);
   const highlightsData = useMemo(() => parse(hr), [hr]);
   const galleryData = useMemo(() => parse(gr), [gr]);
+
+  const linkedUserIds = useMemo(
+    () => new Set(playersData.map((player: any) => Number(player.userId)).filter(Boolean)),
+    [playersData]
+  );
+
+  const selectedUser = useMemo(
+    () => usersData.find((candidate: any) => Number(candidate.id) === Number(newPlayer.userId)),
+    [newPlayer.userId, usersData]
+  );
+
+  const getUserLabel = (candidate: any) => {
+    if (!candidate) return "Usuário sem identificação";
+    return candidate.login || candidate.email || `Usuário #${candidate.id}`;
+  };
+
+  const handlePlayerUserChange = (value: string) => {
+    const userId = Number(value) || 0;
+    const selected = usersData.find((candidate: any) => Number(candidate.id) === userId);
+
+    setNewPlayer((current) => ({
+      ...current,
+      userId,
+      name: selected?.login || current.name,
+    }));
+  };
 
   const loading = l1 || l2 || l3 || l4;
 
@@ -612,7 +648,7 @@ function Admin() {
         })()}
 
         {tab === "jogadores" && (() => {
-          const f = filt(playersData, "nick");
+          const f = filt(playersData, "name");
           const { items, pages } = paginate(f);
           return (
             <>
@@ -620,39 +656,48 @@ function Admin() {
                 <div className="mb-8 p-6 border border-primary/20 bg-primary/5 rounded-xl space-y-4">
                   <h3 className="font-display text-xl uppercase italic text-primary">Contratar Novo Atleta</h3>
                   <div className="grid md:grid-cols-4 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Nick</label>
-                      <Input placeholder="Nome de guerra" value={newPlayer.nick} onChange={e => setNewPlayer({...newPlayer, nick: e.target.value})} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Nome Real</label>
-                      <Input placeholder="Nome civil" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer, name: e.target.value})} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Função</label>
-                      <Input placeholder="Ex: IGL, AWP" value={newPlayer.role} onChange={e => setNewPlayer({...newPlayer, role: e.target.value})} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Equipe</label>
-                      <select 
+                    <div className="space-y-1 md:col-span-2">
+                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Usuário Vinculado</label>
+                      <select
                         className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                        value={newPlayer.teamId} 
-                        onChange={e => setNewPlayer({...newPlayer, teamId: e.target.value})}
+                        value={newPlayer.userId || ""}
+                        onChange={e => handlePlayerUserChange(e.target.value)}
                       >
-                        <option value="">Sem Equipe</option>
-                        {teamsData.map(tm => <option key={tm.id} value={tm.id}>{tm.name}</option>)}
+                        <option value="">Selecionar usuário para relacionar</option>
+                        {usersData.map((candidate: any) => {
+                          const candidateId = Number(candidate.id);
+                          const alreadyLinked = linkedUserIds.has(candidateId) && candidateId !== Number(newPlayer.userId);
+
+                          return (
+                            <option key={candidate.id} value={candidate.id} disabled={alreadyLinked}>
+                              {getUserLabel(candidate)}{candidate.email ? ` - ${candidate.email}` : ""}{alreadyLinked ? " (já vinculado)" : ""}
+                            </option>
+                          );
+                        })}
                       </select>
+                      {selectedUser && (
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                          {selectedUser.login || selectedUser.email || `ID ${selectedUser.id}`} · {selectedUser.email || `ROLE ${selectedUser.role}`}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Jogo</label>
-                      <select 
+                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Nome do Player</label>
+                      <Input placeholder="Ex: Igor Caetano" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer, name: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Avatar URL</label>
+                      <Input placeholder="https://..." value={newPlayer.avatarUrl} onChange={e => setNewPlayer({...newPlayer, avatarUrl: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Perfil Público</label>
+                      <select
                         className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                        value={newPlayer.game} 
-                        onChange={e => setNewPlayer({...newPlayer, game: e.target.value})}
+                        value={String(newPlayer.isProfilePublic)}
+                        onChange={e => setNewPlayer({...newPlayer, isProfilePublic: e.target.value === "true"})}
                       >
-                        <option value="COUNTER-STRIKE 2">CS2</option>
-                        <option value="VALORANT">VALORANT</option>
-                        <option value="LEAGUE OF LEGENDS">LoL</option>
+                        <option value="true">Sim</option>
+                        <option value="false">Não</option>
                       </select>
                     </div>
                   </div>
@@ -660,21 +705,28 @@ function Admin() {
                     <Button variant="ghost" onClick={() => setIsCreatingPlayer(false)}>Cancelar</Button>
                     <Button className="bg-primary font-black" onClick={async () => {
                       try {
-                        if(!newPlayer.nick) throw new Error("O Nick é obrigatório.");
+                        if(!newPlayer.userId) throw new Error("Selecione um usuário para vincular ao player.");
+                        if(!newPlayer.name.trim()) throw new Error("O nome do player é obrigatório.");
                         
-                        // Restaurando wrapper 'entity' para consistência com a API
                         const payload = {
-                          entity: {
-                            ...newPlayer,
-                            kills: 0, deaths: 0, assists: 0, rating: 0, hs: 0
-                          }
+                          ...newPlayer,
+                          name: newPlayer.name.trim(),
+                          avatarUrl: newPlayer.avatarUrl?.trim() || "https://picsum.photos/seed/sga/200/200",
+                          updatedAt: new Date().toISOString(),
                         };
-                        await apiPlayers.create(payload);
-                        toast.success("Jogador contratado!");
-                        setIsCreatingPlayer(false);
                         
-                        // Gatilho de atualização automática
-                        queryClient.invalidateQueries({ queryKey: ["players"] });
+                        var result = await apiPlayers.create(payload);
+
+                        if (result.result)
+                        {
+                          toast.success("Jogador contratado!");
+                          setIsCreatingPlayer(false);
+                          setNewPlayer(createEmptyPlayer());  
+                          
+                          queryClient.invalidateQueries({ queryKey: ["players"] });
+                        }
+
+                        toast.error("Erro ao criar jogador");
                       } catch (err: any) {
                         toast.error(err.message || "Erro ao criar jogador");
                       }
@@ -686,15 +738,20 @@ function Admin() {
               <div className="overflow-hidden rounded-xl border border-border/60 bg-card-grad">
                 <table className="w-full text-sm">
                   <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
-                    <tr><th className="px-4 py-3 text-left">Nick</th><th>Role</th><th>K/D/A</th><th>Rating</th><th /></tr>
+                    <tr><th className="px-4 py-3 text-left">Jogador</th><th>Usuário</th><th>Visibilidade</th><th>Criado em</th><th /></tr>
                   </thead>
                   <tbody>
                     {items.map((p) => (
                       <tr key={p.id} className="border-t border-border/40 hover:bg-muted/30 transition">
-                        <td className="px-4 py-3"><div className="flex items-center gap-2"><img src={p.avatar} className="h-7 w-7 rounded-full" alt="" /><span className="font-display">{p.nick}</span></div></td>
-                        <td className="text-center">{p.role}</td>
-                        <td className="text-center">{(p.kills || 0)}/{(p.deaths || 0)}/{(p.assists || 0)}</td>
-                        <td className="text-center text-primary font-display">{(p.rating || 0).toFixed(2)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <img src={p.avatarUrl && p.avatarUrl !== "null" ? p.avatarUrl : "https://picsum.photos/seed/sga/200/200"} className="h-7 w-7 rounded-full object-cover" alt="" />
+                            <span className="font-display">{p.name}</span>
+                          </div>
+                        </td>
+                        <td className="text-center">{getUserLabel(usersData.find((candidate: any) => Number(candidate.id) === Number(p.userId)))}</td>
+                        <td className="text-center">{p.isProfilePublic ? "Público" : "Privado"}</td>
+                        <td className="text-center">{formatDateBR(p.createdAt)}</td>
                         <td className="px-4 py-3"><RowActions id={p.id} entity="Players" /></td>
                       </tr>
                     ))}

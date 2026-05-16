@@ -1,9 +1,27 @@
+const getPersistedAuth = () => {
+  if (typeof window === 'undefined') return null;
+
+  const rawAuth = localStorage.getItem('auth-storage');
+  if (!rawAuth) return null;
+
+  try {
+    const parsedAuth = JSON.parse(rawAuth);
+    return parsedAuth?.state || null;
+  } catch {
+    return null;
+  }
+};
+
 export const getToken = () => {
-  return sessionStorage.getItem('token');
+  if (typeof window === 'undefined') return null;
+
+  return sessionStorage.getItem('token') || getPersistedAuth()?.token || null;
 };
 
 export const getUsername = () => {
-  return sessionStorage.getItem('username');
+  if (typeof window === 'undefined') return null;
+
+  return sessionStorage.getItem('username') || getPersistedAuth()?.user?.name || getPersistedAuth()?.user?.login || null;
 };
 
 export const setToken = (authData: any) => {
