@@ -43,6 +43,27 @@ const createEmptyPlayer = () => ({
   isProfilePublic: true,
 });
 
+const createEmptyTournament = () => ({
+  name: "",
+  description: "",
+  bannerUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop",
+  startDate: "",
+  endDate: "",
+  createdBy: "SGA_ADMIN",
+  format: "Eliminação Simples",
+  bracketType: "Single Elimination",
+  maxTeams: 0,
+  organizer: "Santos Games Arena",
+  rulebookUrl: "",
+  prizePool: 0,
+  region: "Brasil",
+  timezone: "UTC-3",
+  patchVersion: "Current",
+  rosterLockAt: "",
+  statusId: 0, 
+  gameId: 0,   
+});
+
 function Admin() {
   const user = useAuth((s) => s.user);
   const token = useAuth((s) => s.token);
@@ -58,15 +79,7 @@ function Admin() {
   const [page, setPage] = useState(1);
   
   const [isCreatingTourney, setIsCreatingTourney] = useState(false);
-  const [newTourney, setNewTourney] = useState({ 
-    name: "", 
-    prize: "", 
-    teamsCount: 16, 
-    startDate: "", 
-    endDate: "",
-    game: "COUNTER-STRIKE 2",
-    banner: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop" 
-  });
+  const [newTourney, setNewTourney] = useState(createEmptyTournament());
 
   const [isCreatingTeam, setIsCreatingTeam] = useState(false);
   const [newTeam, setNewTeam] = useState({
@@ -326,53 +339,76 @@ function Admin() {
               {isCreatingTourney && (
                 <div className="mb-8 p-6 border border-primary/20 bg-primary/5 rounded-xl space-y-4">
                   <h3 className="font-display text-xl uppercase italic text-primary">Configurar Novo Campeonato</h3>
-                  <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
                     <div className="space-y-1">
                       <label className="text-[9px] uppercase font-black text-muted-foreground italic">Nome</label>
                       <Input placeholder="Título do Evento" value={newTourney.name} onChange={e => setNewTourney({...newTourney, name: e.target.value})} />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Premiação</label>
-                      <Input placeholder="Ex: R$ 5.000" value={newTourney.prize} onChange={e => setNewTourney({...newTourney, prize: e.target.value})} />
+                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Premiação Total (Número)</label>
+                      <Input type="number" placeholder="Ex: 5000" value={newTourney.prizePool} onChange={e => setNewTourney({...newTourney, prizePool: Number(e.target.value)})} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[9px] uppercase font-black text-muted-foreground italic">Vagas</label>
-                      <Input type="number" value={newTourney.teamsCount} onChange={e => setNewTourney({...newTourney, teamsCount: parseInt(e.target.value) || 0})} />
+                      <Input type="number" value={newTourney.maxTeams} onChange={e => setNewTourney({...newTourney, maxTeams: parseInt(e.target.value) || 0})} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[9px] uppercase font-black text-muted-foreground italic">Início</label>
-                      <Input type="date" value={newTourney.startDate} onChange={e => setNewTourney({...newTourney, startDate: e.target.value})} />
+                      <Input type="datetime-local" value={newTourney.startDate} onChange={e => setNewTourney({...newTourney, startDate: e.target.value})} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[9px] uppercase font-black text-muted-foreground italic">Término</label>
-                      <Input type="date" value={newTourney.endDate} onChange={e => setNewTourney({...newTourney, endDate: e.target.value})} />
+                      <Input type="datetime-local" value={newTourney.endDate} onChange={e => setNewTourney({...newTourney, endDate: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Roster Lock</label>
+                      <Input type="datetime-local" value={newTourney.rosterLockAt} onChange={e => setNewTourney({...newTourney, rosterLockAt: e.target.value})} />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[9px] uppercase font-black text-muted-foreground italic">Jogo</label>
                       <select 
                         className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                        value={newTourney.game} 
-                        onChange={e => setNewTourney({...newTourney, game: e.target.value})}
+                        value={newTourney.gameId} 
+                        onChange={e => setNewTourney({...newTourney, gameId: Number(e.target.value)})}
                       >
-                        <option value="COUNTER-STRIKE 2">CS2</option>
-                        <option value="VALORANT">VALORANT</option>
-                        <option value="LEAGUE OF LEGENDS">LoL</option>
+                        <option value={0}>Selecionar Jogo...</option>
+                        <option value={1}>CS2</option>
+                        <option value={2}>VALORANT</option>
+                        <option value={3}>LoL</option>
                       </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Organizador</label>
+                      <Input placeholder="Ex: Santos Games" value={newTourney.organizer} onChange={e => setNewTourney({...newTourney, organizer: e.target.value})} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Descrição</label>
+                      <Input placeholder="Sobre o campeonato..." value={newTourney.description} onChange={e => setNewTourney({...newTourney, description: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">URL do Banner</label>
+                      <Input placeholder="https://..." value={newTourney.bannerUrl} onChange={e => setNewTourney({...newTourney, bannerUrl: e.target.value})} />
                     </div>
                   </div>
                   <div className="flex gap-2 justify-end">
                     <Button variant="ghost" onClick={() => setIsCreatingTourney(false)}>Cancelar</Button>
                     <Button className="bg-primary" onClick={async () => {
                       try {
-                        // Payload Direto (Sem wrapper entity)
                         const payload = {
                           ...newTourney,
                           startDate: (newTourney.startDate && newTourney.startDate !== "") ? new Date(newTourney.startDate).toISOString() : null,
                           endDate: (newTourney.endDate && newTourney.endDate !== "") ? new Date(newTourney.endDate).toISOString() : null,
+                          rosterLockAt: (newTourney.rosterLockAt && newTourney.rosterLockAt !== "") ? new Date(newTourney.rosterLockAt).toISOString() : null,
+                          createdBy: user?.name || "SGA_ADMIN",
+                          statusId: 1 // Planejado/Ativo por padrão
                         };
+
                         await apiTournaments.create(payload);
                         toast.success("Campeonato criado com sucesso!");
                         setIsCreatingTourney(false);
+                        setNewTourney(createEmptyTournament());
                         
                         // Gatilho de atualização automática
                         queryClient.invalidateQueries({ queryKey: ["tournaments"] });
