@@ -12,7 +12,7 @@ FROM node:22-bookworm-slim AS runner
 
 WORKDIR /app
 ENV NODE_ENV=production
-ENV VITE_ALLOWED_HOSTS=true
+ENV VITE_ALLOWED_HOSTS=false
 ENV __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=prime.santos-games.com
 
 COPY package.json package-lock.json ./
