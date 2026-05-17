@@ -177,6 +177,7 @@ const formatApiUtcTimestamp = (value?: string | Date | null) => {
 
 function Admin() {
   const user = useAuth((s) => s.user);
+  const isAdmin = useAuth((s) => s.isAdmin);
   const token = useAuth((s) => s.token);
   const nav = useNavigate();
 
@@ -867,7 +868,7 @@ function Admin() {
 
   // Guard de Autenticação Admin - Verificação dinâmica por Role (Administrador)
   // Posicionado após TODOS os Hooks para evitar o erro "Rendered more hooks than during the previous render"
-  if (!user || user.role !== "Administrador") {
+  if (!user || !isAdmin) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center bg-[#06070a] px-4">
         <motion.div
