@@ -1,13 +1,13 @@
 import { getToken } from "../Utils/auth";
 
 // Configuração da URL Base da API.
-// Prioriza variáveis de ambiente (compatível com Create React App e Vite) 
-// e usa a sua URL como fallback padrão.
+// Prioriza variáveis de ambiente (compatível com Create React App e Vite)
+// e usa a URL oficial da API como fallback padrão.
 const viteEnv = (import.meta as any).env || {};
 const processEnv = typeof process !== "undefined" ? (process.env as any) : {};
 const envUrl = viteEnv.VITE_API_URL || processEnv.VITE_API_URL || processEnv.REACT_APP_API_URL;
 
-const API_BASE_URL = (envUrl || "/").trim();
+const API_BASE_URL = (envUrl || "https://app.santos-games.com").trim();
 
 /**
  * Interface para erros da API, permitindo acessar o status HTTP
@@ -26,10 +26,6 @@ export interface ApiRequestOptions {
 const getFullUrl = (endpoint: string) => {
   if (/^https?:\/\//i.test(endpoint)) {
     return endpoint;
-  }
-
-  if (API_BASE_URL === "/") {
-    return endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   }
 
   return `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;

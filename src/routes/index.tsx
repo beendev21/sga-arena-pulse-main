@@ -11,6 +11,8 @@ import { PlayerStatsTable } from "@/components/sga/PlayerStatsTable";
 import { StatsCard } from "@/components/sga/StatsCard";
 import { Button } from "@/components/ui/button";
 import useApiController from "../API/controler";
+import { unwrapList } from "@/lib/api";
+import { buildPublicMatches } from "@/lib/publicApi";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -79,28 +81,51 @@ function Home() {
   const apiTournaments = useApiController("Tournaments");
   const apiMatches = useApiController("Matches");
   const apiTeams = useApiController("Teams");
+  const apiMatchTeams = useApiController("Matchteams");
+  const apiStatus = useApiController("Status");
+  const apiStages = useApiController("Stages");
 
   const { data: tRaw, isLoading: loadingT } = useQuery({ 
     queryKey: ["tournaments"], 
-    queryFn: () => apiTournaments.getAll() 
+    queryFn: () => apiTournaments.getAll({ includeAuth: false }) 
   });
   const { data: mRaw, isLoading: loadingM } = useQuery({ 
     queryKey: ["matches"], 
-    queryFn: () => apiMatches.getAll() 
+    queryFn: () => apiMatches.getAll({ includeAuth: false }) 
   });
   const { data: tmRaw, isLoading: loadingTeams } = useQuery({ 
     queryKey: ["teams"], 
-    queryFn: () => apiTeams.getAll() 
+    queryFn: () => apiTeams.getAll({ includeAuth: false }) 
+  });
+  const { data: mtRaw } = useQuery({
+    queryKey: ["matchteams"],
+    queryFn: () => apiMatchTeams.getAll({ includeAuth: false }),
+  });
+  const { data: srRaw } = useQuery({
+    queryKey: ["status"],
+    queryFn: () => apiStatus.getAll({ includeAuth: false }),
+  });
+  const { data: stRaw } = useQuery({
+    queryKey: ["stages"],
+    queryFn: () => apiStages.getAll({ includeAuth: false }),
   });
 
-  const parse = useCallback((r: any) => {
-    if (!r) return [];
-    return Array.isArray(r) ? r : (r?.result || []);
-  }, []);
+  const parse = useCallback((r: any) => unwrapList(r), []);
 
   const tournaments = useMemo(() => parse(tRaw), [tRaw, parse]);
-  const matches = useMemo(() => parse(mRaw), [mRaw, parse]);
   const teams = useMemo(() => parse(tmRaw), [tmRaw, parse]);
+  const matches = useMemo(
+    () =>
+      buildPublicMatches({
+        matchesRaw: mRaw,
+        matchTeamsRaw: mtRaw,
+        teamsRaw: tmRaw,
+        tournamentsRaw: tRaw,
+        statusRaw: srRaw,
+        stagesRaw: stRaw,
+      }),
+    [mRaw, mtRaw, tmRaw, tRaw, srRaw, stRaw],
+  );
 
   const loading = loadingT || loadingM || loadingTeams;
 

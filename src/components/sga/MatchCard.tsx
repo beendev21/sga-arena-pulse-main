@@ -1,23 +1,26 @@
 import { Link } from "@tanstack/react-router";
 interface Match {
   id: string;
-  tournamentName: string;
-  teamA: { id: string; name: string; tag: string; bannerColor: string };
-  teamB: { id: string; name: string; tag: string; bannerColor: string };
+  tournamentName?: string | null;
+  teamA?: { id?: string; name?: string; tag?: string; bannerColor?: string | null } | null;
+  teamB?: { id?: string; name?: string; tag?: string; bannerColor?: string | null } | null;
   scoreA: number;
   scoreB: number;
-  status: string;
-  startsAt: string;
-  map: string;
+  status?: string | null;
+  startsAt?: string | null;
+  map?: string | null;
 }
 import { TeamLogo } from "./TeamLogo";
 import { StatusBadge } from "./StatusBadge";
 import { formatDateTimeBR } from "@/lib/dateUtils";
 
 export function MatchCard({ m }: { m: Match }) {
-  const winnerA = m.status === "Encerrada" && m.scoreA > m.scoreB;
-  const winnerB = m.status === "Encerrada" && m.scoreB > m.scoreA;
-  const name = m.tournamentName.toLowerCase();
+  const teamA = m.teamA ?? { name: "Aguardando Time A", tag: "TBD" };
+  const teamB = m.teamB ?? { name: "Aguardando Time B", tag: "TBD" };
+  const tournamentName = String(m.tournamentName || "Campeonato").trim();
+  const winnerA = m.status === "Encerrada" && Number(m.scoreA) > Number(m.scoreB);
+  const winnerB = m.status === "Encerrada" && Number(m.scoreB) > Number(m.scoreA);
+  const name = tournamentName.toLowerCase();
   const isValorant = name.includes("vct") || name.includes("valorant");
   const isCS2 = !isValorant && (name.includes("cs") || name.includes("counter-strike"));
   const isLoL = name.includes("league") || name.includes("lol");
@@ -33,22 +36,24 @@ export function MatchCard({ m }: { m: Match }) {
       }`}
     >
       <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
-        <span className="uppercase tracking-widest">{m.tournamentName}</span>
+        <span className="uppercase tracking-widest">{tournamentName}</span>
         <StatusBadge status={m.status} />
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
         <div className={`flex items-center gap-3 ${winnerA ? "" : "opacity-80"}`}>
-          <TeamLogo team={m.teamA} size={44} />
+          <TeamLogo team={teamA} size={44} />
           <div className="min-w-0">
-            <div className="font-display text-sm md:text-base truncate">{m.teamA.name}</div>
-            <div className="text-xs text-muted-foreground">{m.teamA.tag}</div>
+            <div className="font-display text-sm md:text-base truncate">{teamA.name || "Aguardando Time A"}</div>
+            <div className="text-xs text-muted-foreground">{teamA.tag || "TBD"}</div>
           </div>
         </div>
         <div className="text-center">
           {m.status === "Agendada" ? (
             <div>
               <div className="text-[10px] uppercase tracking-widest text-muted-foreground">VS</div>
-              <div className="text-[10px] md:text-xs mt-1">{formatDateTimeBR(m.startsAt)}</div>
+              <div className="text-[10px] md:text-xs mt-1">
+                {m.startsAt ? formatDateTimeBR(m.startsAt) : "Data a confirmar"}
+              </div>
             </div>
           ) : (
             <div className="font-display text-2xl flex items-center gap-2">
@@ -57,14 +62,16 @@ export function MatchCard({ m }: { m: Match }) {
               <span className={winnerB ? "text-primary" : ""}>{m.scoreB}</span>
             </div>
           )}
-          <div className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">{m.map}</div>
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">
+            {m.map || "Bracket"}
+          </div>
         </div>
         <div className={`flex items-center gap-3 justify-end ${winnerB ? "" : "opacity-80"}`}>
           <div className="min-w-0 text-right">
-            <div className="font-display truncate">{m.teamB.name}</div>
-            <div className="text-xs text-muted-foreground">{m.teamB.tag}</div>
+            <div className="font-display truncate">{teamB.name || "Aguardando Time B"}</div>
+            <div className="text-xs text-muted-foreground">{teamB.tag || "TBD"}</div>
           </div>
-          <TeamLogo team={m.teamB} size={44} />
+          <TeamLogo team={teamB} size={44} />
         </div>
       </div>
     </Link>

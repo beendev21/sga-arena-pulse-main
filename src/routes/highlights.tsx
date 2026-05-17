@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useCallback } from "react";
 import useApiController from "@/API/controler";
 import { HighlightCard } from "@/components/sga/HighlightCard";
+import { unwrapList } from "@/lib/api";
 
 export const Route = createFileRoute("/highlights")({
   head: () => ({ meta: [{ title: "Highlights — SGA" }] }),
@@ -13,12 +14,11 @@ function H() {
   const api = useApiController("Highlights");
   const { data: raw, isLoading } = useQuery({
     queryKey: ["highlights"],
-    queryFn: () => api.getAll()
+    queryFn: () => api.getAll({ includeAuth: false })
   });
 
   const parse = useCallback((r: any) => {
-    if (!r) return [];
-    return Array.isArray(r) ? r : (r?.result || []);
+    return unwrapList(r);
   }, []);
 
   const highlights = useMemo(() => parse(raw), [raw, parse]);

@@ -3,25 +3,25 @@ import { useQuery } from "@tanstack/react-query";
 import useApiController from "../../API/controler";
 import { TeamLogo } from "./TeamLogo";
 import { Link } from "@tanstack/react-router";
+import { matchesGame, type GameLabel } from "@/lib/game";
+import { unwrapList } from "@/lib/api";
 
 export function RankingTable({ game }: { game: string }) {
   const api = useApiController("Teams");
 
   const { data: raw, isLoading: loading } = useQuery({
     queryKey: ["teams"],
-    queryFn: () => api.getAll()
+    queryFn: () => api.getAll({ includeAuth: false })
   });
 
-  const parse = useCallback((r: any) => {
-    if (!r) return [];
-    return Array.isArray(r) ? r : (r?.result || []);
-  }, []);
+  const parse = useCallback((r: any) => unwrapList(r), []);
 
   const teams = useMemo(() => {
     const list = parse(raw);
     const filtered = list.filter((t: any) => 
-      !game || t.game?.toUpperCase() === game.toUpperCase()
+      !game || matchesGame(t.game, game as GameLabel)
     );
+    if (filtered.length === 0) return [...list].sort((a: any, b: any) => (b.elo || 0) - (a.elo || 0));
     // Ordena por ELO para garantir que o ranking reflita a realidade competitiva
     return [...filtered].sort((a: any, b: any) => (b.elo || 0) - (a.elo || 0));
   }, [raw, game, parse]);

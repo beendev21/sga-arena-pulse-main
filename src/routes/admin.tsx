@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,9 +10,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { TeamLogo } from "@/components/sga/TeamLogo";
 import { StatusBadge } from "@/components/sga/StatusBadge";
-import { Trophy, Users, Swords, Activity, Image as Img, Film, Plus, Search, Upload, Trash2, Pencil, ShieldAlert, ChevronRight, Crown, Save, Eye } from "lucide-react";
+import {
+  Trophy,
+  Users,
+  Swords,
+  Activity,
+  Image as Img,
+  Film,
+  Plus,
+  Search,
+  Upload,
+  Trash2,
+  Pencil,
+  ShieldAlert,
+  ChevronRight,
+  Crown,
+  Save,
+  Eye,
+} from "lucide-react";
 import { StatsCard } from "@/components/sga/StatsCard";
 import { useAuth } from "@/store/auth";
 import { toast } from "sonner";
@@ -44,18 +62,32 @@ const tabs = [
   { k: "galeria", label: "Galeria" },
 ] as const;
 
-const createEmptyPlayer = () => ({
-  name: "",
-  avatarUrl: "https://picsum.photos/seed/sga/200/200",
-  userId: 0,
-  isProfilePublic: true,
-});
+  const createEmptyPlayer = () => ({
+    name: "",
+    avatarUrl: "https://picsum.photos/seed/sga/200/200",
+    userId: 0,
+    isProfilePublic: true,
+    kills: 0,
+    deaths: 0,
+    assists: 0,
+    adr: 0,
+    hsPercentage: 0,
+    firstKills: 0,
+    kast: 0,
+    acs: 0,
+  });
 
 const createEmptyTeam = () => ({
   name: "",
   description: "",
   tag: "",
   logoUrl: "",
+  bannerColor: "#f86d83",
+  gameId: 0,
+  elo: 0,
+  wins: 0,
+  losses: 0,
+  trophies: 0,
 });
 
 const createEmptyTeamParticipant = () => ({
@@ -67,10 +99,25 @@ const createEmptyTeamParticipant = () => ({
   isSubstitute: false,
 });
 
+const createEmptyTeamParticipantDraft = () => ({
+  id: 0,
+  roleId: 0,
+  playerId: 0,
+  playerName: "",
+  roleName: "",
+  isActive: true,
+  isStarter: true,
+  isCaptain: false,
+  isSubstitute: false,
+  joinedAt: "",
+  leftAt: null as string | null,
+});
+
 const createEmptyTournament = () => ({
   name: "",
   description: "",
-  bannerUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop",
+  bannerUrl:
+    "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop",
   startDate: "",
   endDate: "",
   createdBy: "SGA_ADMIN",
@@ -93,13 +140,15 @@ const createEmptyMatch = () => ({
   tournamentId: 0,
   statusId: 0,
   winnerTeamId: 0,
+  teamAId: 0,
+  teamBId: 0,
   gameId: 0,
   bestOf: 1,
   startedAt: "",
   finishedAt: "",
 });
 
-const BRACKET_ROUNDS = [
+const BRACKET_UPPER_ROUNDS = [
   {
     key: "quarters",
     title: "01. Quartas de Final",
@@ -126,26 +175,102 @@ const BRACKET_ROUNDS = [
   },
 ] as const;
 
-const BRACKET_PROGRESS_MAP: Record<string, { nextPosition: string; teamField: "teamAId" | "teamBId" }> = {
+const BRACKET_LOWER_ROUNDS = [
+  {
+    key: "lower-r1",
+    title: "04. Lower Bracket - Round 1",
+    accentClass: "text-valorant",
+    lineClass: "bg-valorant/40",
+    cardClass: "bg-valorant/5 border-valorant/10 hover:border-valorant/40",
+    positions: ["LB-1", "LB-2"],
+  },
+  {
+    key: "lower-r2",
+    title: "05. Lower Bracket - Round 2",
+    accentClass: "text-cs2",
+    lineClass: "bg-cs2/40",
+    cardClass: "bg-cs2/5 border-cs2/10 hover:border-cs2/40",
+    positions: ["LB-3", "LB-4"],
+  },
+  {
+    key: "lower-final",
+    title: "06. Lower Final",
+    accentClass: "text-primary",
+    lineClass: "bg-primary/40",
+    cardClass: "bg-primary/5 border-primary/10 hover:border-primary/40",
+    positions: ["LB-F"],
+  },
+] as const;
+
+const BRACKET_PROGRESS_MAP: Record<
+  string,
+  { nextPosition: string; teamField: "teamAId" | "teamBId" }
+> = {
   "QF-1": { nextPosition: "SF-1", teamField: "teamAId" },
   "QF-2": { nextPosition: "SF-1", teamField: "teamBId" },
   "QF-3": { nextPosition: "SF-2", teamField: "teamAId" },
   "QF-4": { nextPosition: "SF-2", teamField: "teamBId" },
   "SF-1": { nextPosition: "F-1", teamField: "teamAId" },
   "SF-2": { nextPosition: "F-1", teamField: "teamBId" },
+  "LB-1": { nextPosition: "LB-3", teamField: "teamAId" },
+  "LB-2": { nextPosition: "LB-4", teamField: "teamAId" },
+  "LB-3": { nextPosition: "LB-F", teamField: "teamAId" },
+  "LB-4": { nextPosition: "LB-F", teamField: "teamBId" },
+};
+
+const BRACKET_LOSER_PROGRESS_MAP: Record<
+  string,
+  { nextPosition: string; teamField: "teamAId" | "teamBId" }
+> = {
+  "QF-1": { nextPosition: "LB-1", teamField: "teamAId" },
+  "QF-2": { nextPosition: "LB-1", teamField: "teamBId" },
+  "QF-3": { nextPosition: "LB-2", teamField: "teamAId" },
+  "QF-4": { nextPosition: "LB-2", teamField: "teamBId" },
+  "SF-1": { nextPosition: "LB-3", teamField: "teamBId" },
+  "SF-2": { nextPosition: "LB-4", teamField: "teamBId" },
 };
 
 const BRACKET_PHASE_LABELS: Record<string, string> = {
   QF: "Quartas de Final",
   SF: "Semifinal",
   F: "Final",
+  LB: "Lower Bracket",
 };
 
 const BRACKET_STAGE_HINTS: Record<string, string[]> = {
   QF: ["quart", "quarter"],
   SF: ["semi", "semi-final", "semifinal"],
   F: ["final"],
+  LB: ["lower", "loser", "repesc", "repech"],
 };
+
+type AdminBracketRound = {
+  key: string;
+  title: string;
+  accentClass: string;
+  lineClass: string;
+  cardClass: string;
+  positions: readonly string[];
+};
+
+type AdminBracketPositionedMatch = {
+  position: string;
+  roundIndex: number;
+  positionIndex: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+const ADMIN_BRACKET_CARD_WIDTH = 285;
+const ADMIN_BRACKET_FINAL_CARD_WIDTH = 360;
+const ADMIN_BRACKET_CARD_HEIGHT = 220;
+const ADMIN_BRACKET_FINAL_CARD_HEIGHT = 248;
+const ADMIN_BRACKET_COLUMN_GAP = 155;
+const ADMIN_BRACKET_ROW_GAP = 108;
+const ADMIN_BRACKET_SECTION_PADDING_X = 130;
+const ADMIN_BRACKET_SECTION_PADDING_Y = 92;
 
 const BRACKET_STORAGE_KEY = "sga-admin-bracket-layouts";
 
@@ -175,6 +300,487 @@ const formatApiUtcTimestamp = (value?: string | Date | null) => {
   return date.toISOString();
 };
 
+const toDateTimeLocalValue = (value?: string | Date | null) => {
+  if (!value) return "";
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+function buildAdminBracketLayout(rounds: AdminBracketRound[]) {
+  const boardTopOffset = 66;
+  const positioned: AdminBracketPositionedMatch[] = [];
+  const roundLayouts = rounds.map((round, roundIndex) => {
+    const isFinalRound = round.key === "final" || round.key === "lower-final";
+    const cardWidth = isFinalRound ? ADMIN_BRACKET_FINAL_CARD_WIDTH : ADMIN_BRACKET_CARD_WIDTH;
+    const cardHeight = isFinalRound ? ADMIN_BRACKET_FINAL_CARD_HEIGHT : ADMIN_BRACKET_CARD_HEIGHT;
+    const columnWidth = isFinalRound ? 400 : 330;
+
+    return {
+      key: round.key,
+      title: round.title,
+      accentClass: round.accentClass,
+      lineClass: round.lineClass,
+      cardClass: round.cardClass,
+      roundIndex,
+      isFinalRound,
+      cardWidth,
+      cardHeight,
+      columnWidth,
+      x: ADMIN_BRACKET_SECTION_PADDING_X + roundIndex * (columnWidth + ADMIN_BRACKET_COLUMN_GAP),
+    };
+  });
+
+  for (const round of roundLayouts) {
+    for (
+      let positionIndex = 0;
+      positionIndex < rounds[round.roundIndex]!.positions.length;
+      positionIndex += 1
+    ) {
+      const position = rounds[round.roundIndex]!.positions[positionIndex]!;
+      let centerY =
+        positionIndex * (round.cardHeight + ADMIN_BRACKET_ROW_GAP) + round.cardHeight / 2;
+
+      if (round.roundIndex > 0) {
+        const prevRound = roundLayouts[round.roundIndex - 1];
+        const prevA = positioned.find(
+          (item) =>
+            item.roundIndex === round.roundIndex - 1 && item.positionIndex === positionIndex * 2,
+        );
+        const prevB = positioned.find(
+          (item) =>
+            item.roundIndex === round.roundIndex - 1 &&
+            item.positionIndex === positionIndex * 2 + 1,
+        );
+
+        if (prevA && prevB) {
+          centerY = (prevA.y + prevA.height / 2 + prevB.y + prevB.height / 2) / 2;
+        } else if (prevA) {
+          centerY = prevA.y + prevA.height / 2;
+        } else if (prevB) {
+          centerY = prevB.y + prevB.height / 2;
+        }
+
+        if (
+          prevRound?.roundIndex === round.roundIndex - 1 &&
+          rounds[prevRound.roundIndex]!.positions.length === 1
+        ) {
+          const prev = positioned.find((item) => item.roundIndex === round.roundIndex - 1);
+          if (prev) centerY = prev.y + prev.height / 2;
+        }
+      }
+
+      positioned.push({
+        position,
+        roundIndex: round.roundIndex,
+        positionIndex,
+        x: round.x,
+        y: boardTopOffset + centerY - round.cardHeight / 2,
+        width: round.cardWidth,
+        height: round.cardHeight,
+      });
+    }
+  }
+
+  const width =
+    roundLayouts.reduce((max, round) => Math.max(max, round.x + round.cardWidth), 0) +
+    ADMIN_BRACKET_SECTION_PADDING_X;
+  const height =
+    positioned.reduce((max, item) => Math.max(max, item.y + item.height), 0) +
+    ADMIN_BRACKET_SECTION_PADDING_Y;
+
+  return { positioned, roundLayouts, width, height };
+}
+
+function AdminBracketMatchCard({
+  match,
+  position,
+  positionIndex,
+  isLower,
+  isFinalRound,
+  cardClass,
+  getTeamById,
+  draggingTeam,
+  previewSlotKey,
+  setPreviewSlotKey,
+  setDraggingTeamId,
+  handleBracketDrop,
+  handleBracketRemove,
+  handleMatchWinner,
+  getBracketPhaseLabel,
+  getTournamentStatusLabel,
+  getTeamLabel,
+}: {
+  match: any;
+  position: string;
+  positionIndex: number;
+  isLower: boolean;
+  isFinalRound: boolean;
+  cardClass: string;
+  getTeamById: (id: number) => any;
+  draggingTeam: any;
+  previewSlotKey: string | null;
+  setPreviewSlotKey: Dispatch<SetStateAction<string | null>>;
+  setDraggingTeamId: Dispatch<SetStateAction<number | null>>;
+  handleBracketDrop: (
+    position: string,
+    teamField: "teamAId" | "teamBId",
+    teamId: number,
+  ) => Promise<void>;
+  handleBracketRemove: (position: string, teamField: "teamAId" | "teamBId") => Promise<void>;
+  handleMatchWinner: (position: string, teamField: "teamAId" | "teamBId") => Promise<void>;
+  getBracketPhaseLabel: (position: string) => string;
+  getTournamentStatusLabel: (statusId: number) => string;
+  getTeamLabel: (teamId: number) => string;
+}) {
+  const teamA = getTeamById(Number(match?.teamAId));
+  const teamB = getTeamById(Number(match?.teamBId));
+  const matchIsLocked = Number(match?.winnerTeamId) > 0;
+
+  const renderDropSlot = (teamField: "teamAId" | "teamBId", label: string, team: any) => (
+    <div
+      onDragEnter={() => {
+        if (matchIsLocked) return;
+        setPreviewSlotKey(`${position}:${teamField}`);
+      }}
+      onDragOver={(event) => {
+        if (matchIsLocked) return;
+        event.preventDefault();
+        setPreviewSlotKey(`${position}:${teamField}`);
+      }}
+      onDragLeave={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          return;
+        }
+        setPreviewSlotKey((current) => (current === `${position}:${teamField}` ? null : current));
+      }}
+      onDrop={(event) => {
+        if (matchIsLocked) return;
+        event.preventDefault();
+        const teamId = Number(event.dataTransfer.getData("text/team-id")) || 0;
+        setPreviewSlotKey(null);
+        setDraggingTeamId(null);
+        void handleBracketDrop(position, teamField, teamId);
+      }}
+      className={`min-h-[44px] border px-3 py-2 transition ${
+        team
+          ? "border-white/10 bg-black/60"
+          : "border-dashed border-white/15 bg-black/20 hover:border-primary/40"
+      } ${
+        previewSlotKey === `${position}:${teamField}` && draggingTeam
+          ? "border-primary bg-primary/10"
+          : ""
+      } ${matchIsLocked ? "cursor-not-allowed opacity-70" : ""}`}
+    >
+      <div className="mb-1 text-[8px] font-black uppercase tracking-[0.3em] text-white/20">
+        {label}
+      </div>
+      {previewSlotKey === `${position}:${teamField}` && draggingTeam ? (
+        <div className="flex items-center gap-3 opacity-80">
+          <TeamLogo
+            team={{
+              tag: draggingTeam.tag || draggingTeam.name?.slice(0, 3) || "SGA",
+              bannerColor: "#f86d83",
+            }}
+            size={28}
+          />
+          <div className="min-w-0">
+            <div className="truncate font-display text-sm uppercase italic text-white">
+              {draggingTeam.name}
+            </div>
+            <div className="text-[10px] uppercase tracking-widest text-primary">Preview</div>
+          </div>
+        </div>
+      ) : team ? (
+        <div className="flex items-center gap-3">
+          <TeamLogo
+            team={{
+              tag: team.tag || team.name?.slice(0, 3) || "SGA",
+              bannerColor: "#f86d83",
+            }}
+            size={28}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-display text-sm uppercase italic text-white">
+              {team.name}
+            </div>
+            <div className="text-[10px] uppercase tracking-widest text-white/35">
+              {team.tag || "Sem tag"}
+            </div>
+          </div>
+          {!matchIsLocked && (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 rounded-md border border-white/10 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-white/45 hover:border-destructive/40 hover:text-destructive"
+              onClick={() => void handleBracketRemove(position, teamField)}
+            >
+              <Trash2 className="h-3 w-3" />
+              Remover
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="text-xs text-white/35">
+          {matchIsLocked ? "Partida encerrada" : "Arraste um time para este slot"}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div
+      className={`relative border transition-all ${isFinalRound ? "p-5" : "p-4"} ${cardClass}`}
+      style={{
+        minWidth: isFinalRound ? ADMIN_BRACKET_FINAL_CARD_WIDTH : ADMIN_BRACKET_CARD_WIDTH,
+        minHeight: isFinalRound ? ADMIN_BRACKET_FINAL_CARD_HEIGHT : ADMIN_BRACKET_CARD_HEIGHT,
+      }}
+    >
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[8px] font-black uppercase tracking-widest text-white/30">
+            JOGO {positionIndex + 1}
+          </div>
+          <div className="mt-1 text-[10px] uppercase tracking-widest text-white/20">
+            {getBracketPhaseLabel(position)}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {match?.statusId ? (
+            <StatusBadge status={getTournamentStatusLabel(match.statusId)} />
+          ) : (
+            <span className="text-[9px] uppercase tracking-widest text-white/25">Pendente</span>
+          )}
+          <Save className="h-3 w-3 text-white/10" />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {renderDropSlot("teamAId", "Slot A", teamA)}
+        <div className="flex items-center gap-3 py-1">
+          <div className="h-px flex-1 bg-white/5" />
+          <span className="text-[7px] font-black italic tracking-tighter text-white/10">
+            VERSUS
+          </span>
+          <div className="h-px flex-1 bg-white/5" />
+        </div>
+        {renderDropSlot("teamBId", "Slot B", teamB)}
+      </div>
+
+      <div className="mt-3 space-y-2 border-t border-white/5 pt-3">
+        <div className="text-[9px] font-black uppercase tracking-[0.35em] italic text-white/30">
+          Quem ganhou?
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button
+            variant="outline"
+            disabled={!teamA || !teamB || matchIsLocked}
+            onClick={() => void handleMatchWinner(position, "teamAId")}
+            className={`justify-start py-2 text-xs ${
+              Number(match?.winnerTeamId) === Number(match?.teamAId) && teamA
+                ? "border-primary bg-primary/10 text-white"
+                : ""
+            }`}
+          >
+            {teamA ? teamA.name : "Aguardando Time A"}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!teamA || !teamB || matchIsLocked}
+            onClick={() => void handleMatchWinner(position, "teamBId")}
+            className={`justify-start py-2 text-xs ${
+              Number(match?.winnerTeamId) === Number(match?.teamBId) && teamB
+                ? "border-primary bg-primary/10 text-white"
+                : ""
+            }`}
+          >
+            {teamB ? teamB.name : "Aguardando Time B"}
+          </Button>
+        </div>
+
+        {Number(match?.winnerTeamId) > 0 && (
+          <div className="text-xs text-white/55">
+            Avançando:{" "}
+            <span className="font-display uppercase italic text-white">
+              {getTeamLabel(Number(match.winnerTeamId))}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdminBracketSection({
+  title,
+  subtitle,
+  rounds,
+  isLower,
+  effectiveBracketMatchMap,
+  getTeamById,
+  draggingTeam,
+  previewSlotKey,
+  setPreviewSlotKey,
+  setDraggingTeamId,
+  handleBracketDrop,
+  handleBracketRemove,
+  handleMatchWinner,
+  getBracketPhaseLabel,
+  getTournamentStatusLabel,
+  getTeamLabel,
+}: {
+  title: string;
+  subtitle: string;
+  rounds: AdminBracketRound[];
+  isLower: boolean;
+  effectiveBracketMatchMap: Map<string, any>;
+  getTeamById: (id: number) => any;
+  draggingTeam: any;
+  previewSlotKey: string | null;
+  setPreviewSlotKey: Dispatch<SetStateAction<string | null>>;
+  setDraggingTeamId: Dispatch<SetStateAction<number | null>>;
+  handleBracketDrop: (
+    position: string,
+    teamField: "teamAId" | "teamBId",
+    teamId: number,
+  ) => Promise<void>;
+  handleBracketRemove: (position: string, teamField: "teamAId" | "teamBId") => Promise<void>;
+  handleMatchWinner: (position: string, teamField: "teamAId" | "teamBId") => Promise<void>;
+  getBracketPhaseLabel: (position: string) => string;
+  getTournamentStatusLabel: (statusId: number) => string;
+  getTeamLabel: (teamId: number) => string;
+}) {
+  const layout = useMemo(() => buildAdminBracketLayout(rounds), [rounds]);
+  const boardWidth = Math.max(layout.width, 1700);
+
+  const lines = useMemo(() => {
+    const result: Array<{
+      key: string;
+      points: string;
+      stroke: string;
+      strokeWidth: number;
+      opacity: number;
+    }> = [];
+
+    for (const item of layout.positioned) {
+      const next = layout.positioned.find(
+        (candidate) =>
+          candidate.roundIndex === item.roundIndex + 1 &&
+          candidate.positionIndex === Math.floor(item.positionIndex / 2),
+      );
+
+      if (!next) continue;
+
+      const childX = item.x + item.width;
+      const childY = item.y + item.height / 2;
+      const parentX = next.x;
+      const parentY = next.y + next.height / 2;
+      const middleX = childX + ADMIN_BRACKET_COLUMN_GAP / 2;
+
+      result.push({
+        key: `${item.position}-${next.position}`,
+        points: [
+          `${childX},${childY}`,
+          `${middleX},${childY}`,
+          `${middleX},${parentY}`,
+          `${parentX},${parentY}`,
+        ].join(" "),
+        stroke: isLower ? "#ffffff" : "#ff6a00",
+        strokeWidth: isLower ? 2.6 : 3.2,
+        opacity: isLower ? 0.82 : 0.95,
+      });
+    }
+
+    return result;
+  }, [isLower, layout.positioned]);
+
+  return (
+    <section className="rounded-[32px] border border-white/5 bg-black/70 p-6 md:p-10">
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="text-[12px] font-black uppercase tracking-[0.42em] text-white">
+            {title}
+          </div>
+          <div className="text-sm uppercase tracking-[0.28em] text-white/35">{subtitle}</div>
+        </div>
+        <div className="h-px flex-1 bg-white/5" />
+      </div>
+
+      <div className="relative max-h-[72vh] w-full overflow-x-auto overflow-y-auto pb-6 pr-4">
+        <div className="relative" style={{ width: boardWidth, height: layout.height + 30 }}>
+          <svg
+            className="absolute inset-0 h-full w-full pointer-events-none"
+            viewBox={`0 0 ${boardWidth} ${layout.height + 30}`}
+            preserveAspectRatio="none"
+          >
+            {lines.map((line) => (
+              <polyline
+                key={line.key}
+                points={line.points}
+                fill="none"
+                stroke={line.stroke}
+                strokeWidth={line.strokeWidth}
+                strokeLinecap="square"
+                strokeLinejoin="miter"
+                opacity={line.opacity}
+              />
+            ))}
+          </svg>
+
+          {layout.roundLayouts.map((round) => (
+            <div
+              key={round.key}
+              className={`absolute whitespace-nowrap text-[18px] font-black uppercase tracking-tight ${round.accentClass}`}
+              style={{
+                left: round.x + round.cardWidth / 2,
+                top: 4,
+                transform: "translateX(-50%) translateY(-100%)",
+              }}
+            >
+              {round.title}
+            </div>
+          ))}
+
+          {layout.positioned.map((item) => {
+            const round = layout.roundLayouts[item.roundIndex]!;
+            const match = effectiveBracketMatchMap.get(item.position) as any;
+
+            return (
+              <div
+                key={item.position}
+                className="absolute"
+                style={{ left: item.x, top: item.y, width: item.width }}
+              >
+                <AdminBracketMatchCard
+                  match={match}
+                  position={item.position}
+                  positionIndex={item.positionIndex}
+                  isLower={isLower}
+                  isFinalRound={round.isFinalRound}
+                  cardClass={round.cardClass}
+                  getTeamById={getTeamById}
+                  draggingTeam={draggingTeam}
+                  previewSlotKey={previewSlotKey}
+                  setPreviewSlotKey={setPreviewSlotKey}
+                  setDraggingTeamId={setDraggingTeamId}
+                  handleBracketDrop={handleBracketDrop}
+                  handleBracketRemove={handleBracketRemove}
+                  handleMatchWinner={handleMatchWinner}
+                  getBracketPhaseLabel={getBracketPhaseLabel}
+                  getTournamentStatusLabel={getTournamentStatusLabel}
+                  getTeamLabel={getTeamLabel}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Admin() {
   const user = useAuth((s) => s.user);
   const isAdmin = useAuth((s) => s.isAdmin);
@@ -198,12 +804,32 @@ function Admin() {
   const [teamGameId, setTeamGameId] = useState(0);
   const [teamParticipants, setTeamParticipants] = useState([createEmptyTeamParticipant()]);
   const [viewingTeamId, setViewingTeamId] = useState<number | null>(null);
+  const [editingTeamId, setEditingTeamId] = useState<number | null>(null);
+  const [editTeamRosterHydrated, setEditTeamRosterHydrated] = useState(false);
+  const [editingEntity, setEditingEntity] = useState<
+    | { type: "tournament"; data: any }
+    | { type: "team"; data: any }
+    | { type: "player"; data: any }
+    | { type: "match"; data: any }
+    | null
+  >(null);
+  const [editTournamentDraft, setEditTournamentDraft] = useState(createEmptyTournament());
+  const [editTeamDraft, setEditTeamDraft] = useState(createEmptyTeam());
+  const [editTeamGameId, setEditTeamGameId] = useState(0);
+  const [editTeamParticipants, setEditTeamParticipants] = useState<
+    Array<ReturnType<typeof createEmptyTeamParticipantDraft>>
+  >([createEmptyTeamParticipantDraft()]);
+  const [editPlayerDraft, setEditPlayerDraft] = useState(createEmptyPlayer());
+  const [editPlayerStatsMatchId, setEditPlayerStatsMatchId] = useState(0);
+  const [editMatchDraft, setEditMatchDraft] = useState(createEmptyMatch());
 
   const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
   const [newPlayer, setNewPlayer] = useState(createEmptyPlayer());
   const [draggingTeamId, setDraggingTeamId] = useState<number | null>(null);
   const [previewSlotKey, setPreviewSlotKey] = useState<string | null>(null);
-  const [optimisticBracketSlots, setOptimisticBracketSlots] = useState<Record<string, Record<string, any>>>({});
+  const [optimisticBracketSlots, setOptimisticBracketSlots] = useState<
+    Record<string, Record<string, any>>
+  >({});
   const [isBracketLayoutHydrated, setIsBracketLayoutHydrated] = useState(false);
 
   const apiTournaments = useApiController("Tournaments");
@@ -211,6 +837,7 @@ function Admin() {
   const apiTeams = useApiController("Teams");
   const apiRoles = useApiController("Roles");
   const apiTeamParticipants = useApiController("TeamParticipants");
+  const apiPlayerMatchStats = useApiController("PlayerMatchStats");
   const apiUsers = useApiController("User");
   const apiGames = useApiController("Games");
   const apiStages = useApiController("Stages");
@@ -223,18 +850,66 @@ function Admin() {
   const queryClient = useQueryClient();
 
   // Sincronização Global via TanStack Query
-  const { data: tr, isLoading: l1 } = useQuery({ queryKey: ["tournaments", token], queryFn: () => apiTournaments.getAll() });
-  const { data: pr, isLoading: l2 } = useQuery({ queryKey: ["players", token], queryFn: () => apiPlayers.getAll(), enabled: !!token });
-  const { data: ter, isLoading: l3 } = useQuery({ queryKey: ["teams", token], queryFn: () => apiTeams.getAll() });
-  const { data: rr } = useQuery({ queryKey: ["roles", token], queryFn: () => apiRoles.getAll(), enabled: !!token });
-  const { data: tpr } = useQuery({ queryKey: ["team-participants", token], queryFn: () => apiTeamParticipants.getAll(), enabled: !!token });
-  const { data: ur } = useQuery({ queryKey: ["users", token], queryFn: () => apiUsers.getAll(), enabled: !!token });
-  const { data: gar } = useQuery({ queryKey: ["games", token], queryFn: () => apiGames.getAll(), enabled: !!token });
-  const { data: str } = useQuery({ queryKey: ["stages", token], queryFn: () => apiStages.getAll(), enabled: !!token });
-  const { data: sr } = useQuery({ queryKey: ["statuses", token], queryFn: () => apiStatus.getAll(), enabled: !!token });
-  const { data: mr, isLoading: l4 } = useQuery({ queryKey: ["matches", token], queryFn: () => apiMatches.getAll() });
-  const { data: hr } = useQuery({ queryKey: ["highlights", token], queryFn: () => apiHighlights.getAll() });
-  const { data: gr } = useQuery({ queryKey: ["gallery", token], queryFn: () => apiGallery.getAll() });
+  const { data: tr, isLoading: l1 } = useQuery({
+    queryKey: ["tournaments", token],
+    queryFn: () => apiTournaments.getAll(),
+  });
+  const { data: pr, isLoading: l2 } = useQuery({
+    queryKey: ["players", token],
+    queryFn: () => apiPlayers.getAll(),
+    enabled: !!token,
+  });
+  const { data: ter, isLoading: l3 } = useQuery({
+    queryKey: ["teams", token],
+    queryFn: () => apiTeams.getAll(),
+  });
+  const { data: rr } = useQuery({
+    queryKey: ["roles", token],
+    queryFn: () => apiRoles.getAll(),
+    enabled: !!token,
+  });
+  const { data: tpr } = useQuery({
+    queryKey: ["team-participants", token],
+    queryFn: () => apiTeamParticipants.getAll(),
+    enabled: !!token,
+  });
+  const { data: pmsr } = useQuery({
+    queryKey: ["player-match-stats", token],
+    queryFn: () => apiPlayerMatchStats.getAll(),
+    enabled: !!token,
+  });
+  const { data: ur } = useQuery({
+    queryKey: ["users", token],
+    queryFn: () => apiUsers.getAll(),
+    enabled: !!token,
+  });
+  const { data: gar } = useQuery({
+    queryKey: ["games", token],
+    queryFn: () => apiGames.getAll(),
+    enabled: !!token,
+  });
+  const { data: str } = useQuery({
+    queryKey: ["stages", token],
+    queryFn: () => apiStages.getAll(),
+    enabled: !!token,
+  });
+  const { data: sr } = useQuery({
+    queryKey: ["statuses", token],
+    queryFn: () => apiStatus.getAll(),
+    enabled: !!token,
+  });
+  const { data: mr, isLoading: l4 } = useQuery({
+    queryKey: ["matches", token],
+    queryFn: () => apiMatches.getAll(),
+  });
+  const { data: hr } = useQuery({
+    queryKey: ["highlights", token],
+    queryFn: () => apiHighlights.getAll(),
+  });
+  const { data: gr } = useQuery({
+    queryKey: ["gallery", token],
+    queryFn: () => apiGallery.getAll(),
+  });
 
   const parse = (r: any) => {
     if (!r) return [];
@@ -251,6 +926,7 @@ function Admin() {
   const teamsData = useMemo(() => parse(ter), [ter]);
   const rolesData = useMemo(() => parse(rr), [rr]);
   const teamParticipantsData = useMemo(() => parse(tpr), [tpr]);
+  const playerMatchStatsData = useMemo(() => parse(pmsr), [pmsr]);
   const usersData = useMemo(() => parse(ur), [ur]);
   const gamesData = useMemo(() => parse(gar), [gar]);
   const stagesData = useMemo(() => parse(str), [str]);
@@ -261,27 +937,45 @@ function Admin() {
 
   const linkedUserIds = useMemo(
     () => new Set(playersData.map((player: any) => Number(player.userId)).filter(Boolean)),
-    [playersData]
+    [playersData],
   );
 
   const selectedUser = useMemo(
     () => usersData.find((candidate: any) => Number(candidate.id) === Number(newPlayer.userId)),
-    [newPlayer.userId, usersData]
+    [newPlayer.userId, usersData],
   );
 
   const availableRoles = useMemo(
-    () => rolesData.filter((role: any) => !teamGameId || Number(role.gameId) === Number(teamGameId)),
-    [rolesData, teamGameId]
+    () =>
+      rolesData.filter((role: any) => !teamGameId || Number(role.gameId) === Number(teamGameId)),
+    [rolesData, teamGameId],
+  );
+
+  const editAvailableRoles = useMemo(
+    () =>
+      rolesData.filter(
+        (role: any) => !editTeamGameId || Number(role.gameId) === Number(editTeamGameId),
+      ),
+    [rolesData, editTeamGameId],
   );
 
   const linkedPlayerIdsInDraft = useMemo(
-    () => new Set(teamParticipants.map((participant) => Number(participant.playerId)).filter(Boolean)),
-    [teamParticipants]
+    () =>
+      new Set(teamParticipants.map((participant) => Number(participant.playerId)).filter(Boolean)),
+    [teamParticipants],
+  );
+
+  const linkedPlayerIdsInEditDraft = useMemo(
+    () =>
+      new Set(
+        editTeamParticipants.map((participant) => Number(participant.playerId)).filter(Boolean),
+      ),
+    [editTeamParticipants],
   );
 
   const viewingTeam = useMemo(
     () => teamsData.find((team: any) => Number(team.id) === Number(viewingTeamId)),
-    [teamsData, viewingTeamId]
+    [teamsData, viewingTeamId],
   );
 
   const viewingTeamParticipants = useMemo(() => {
@@ -290,8 +984,12 @@ function Admin() {
     return teamParticipantsData
       .filter((participant: any) => Number(participant.teamId) === Number(viewingTeamId))
       .map((participant: any) => {
-        const player = playersData.find((candidate: any) => Number(candidate.id) === Number(participant.playerId));
-        const role = rolesData.find((candidate: any) => Number(candidate.id) === Number(participant.roleId));
+        const player = playersData.find(
+          (candidate: any) => Number(candidate.id) === Number(participant.playerId),
+        );
+        const role = rolesData.find(
+          (candidate: any) => Number(candidate.id) === Number(participant.roleId),
+        );
 
         return {
           ...participant,
@@ -317,7 +1015,9 @@ function Admin() {
   };
 
   const getTournamentLabel = (tournamentId: number) => {
-    const tournament = tournamentsData.find((candidate: any) => Number(candidate.id) === Number(tournamentId));
+    const tournament = tournamentsData.find(
+      (candidate: any) => Number(candidate.id) === Number(tournamentId),
+    );
     return tournament?.name || `Campeonato #${tournamentId}`;
   };
 
@@ -331,13 +1031,560 @@ function Admin() {
     return team?.name || `Time #${teamId}`;
   };
 
+  const playerStatsById = useMemo(() => {
+    const map = new Map<number, { kills: number; deaths: number; assists: number; kda: number }>();
+
+    for (const stat of playerMatchStatsData) {
+      const playerId = Number(stat?.playerId);
+      if (!playerId) continue;
+
+      const current = map.get(playerId) || {
+        kills: 0,
+        deaths: 0,
+        assists: 0,
+        kda: 0,
+      };
+
+      current.kills += Number(stat?.kills) || 0;
+      current.deaths += Number(stat?.deaths) || 0;
+      current.assists += Number(stat?.assists) || 0;
+      current.kda = (current.kills + current.assists) / Math.max(current.deaths, 1);
+      map.set(playerId, current);
+    }
+
+    return map;
+  }, [playerMatchStatsData]);
+
+  const getPlayerTeam = (playerId: number) => {
+    const participant = teamParticipantsData.find(
+      (candidate: any) => Number(candidate.playerId) === Number(playerId),
+    );
+    if (!participant) return null;
+    return teamsData.find((candidate: any) => Number(candidate.id) === Number(participant.teamId)) || null;
+  };
+
+  const getPlayerTeamId = (playerId: number) => {
+    const participant = teamParticipantsData.find(
+      (candidate: any) => Number(candidate.playerId) === Number(playerId),
+    );
+    return Number(participant?.teamId) || 0;
+  };
+
+  const getLatestMatchForTeam = (teamId: number) => {
+    return [...matchesData]
+      .filter(
+        (match: any) =>
+          Number(match.teamAId) === Number(teamId) || Number(match.teamBId) === Number(teamId),
+      )
+      .sort((a: any, b: any) => {
+        const ta = new Date(a.startedAt || a.createdAt || a.updatedAt || 0).getTime();
+        const tb = new Date(b.startedAt || b.createdAt || b.updatedAt || 0).getTime();
+        return tb - ta;
+      })[0];
+  };
+
+  const getLatestStatsRecordForPlayer = (playerId: number) => {
+    return [...playerMatchStatsData]
+      .filter((entry: any) => Number(entry.playerId) === Number(playerId))
+      .sort((a: any, b: any) => {
+        const ta = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const tb = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return tb - ta;
+      })[0];
+  };
+
+  const editingPlayerTeamId = useMemo(() => {
+    if (editingEntity?.type !== "player") return 0;
+    return getPlayerTeamId(Number(editingEntity.data?.id) || 0);
+  }, [editingEntity, teamParticipantsData]);
+
+  const playerStatsMatchOptions = useMemo(() => {
+    if (!editingPlayerTeamId) return [];
+
+    return [...matchesData]
+      .filter(
+        (match: any) =>
+          Number(match.teamAId) === Number(editingPlayerTeamId) ||
+          Number(match.teamBId) === Number(editingPlayerTeamId),
+      )
+      .sort((a: any, b: any) => {
+        const ta = new Date(a.startedAt || a.createdAt || a.updatedAt || 0).getTime();
+        const tb = new Date(b.startedAt || b.createdAt || b.updatedAt || 0).getTime();
+        return tb - ta;
+      });
+  }, [editingPlayerTeamId, matchesData]);
+
+  const resolveMatchTeamId = (...candidates: any[]) => {
+    for (const candidate of candidates) {
+      const value = Number(candidate);
+      if (value) return value;
+    }
+
+    return 0;
+  };
+
+  const openTournamentEdit = (tournament: any) => {
+    setEditingEntity({ type: "tournament", data: tournament });
+    setEditTournamentDraft({
+      ...createEmptyTournament(),
+      name: String(tournament?.name || ""),
+      description: String(tournament?.description || ""),
+      bannerUrl: String(tournament?.bannerUrl || tournament?.banner || ""),
+      startDate: toDateTimeLocalValue(tournament?.startDate),
+      endDate: toDateTimeLocalValue(tournament?.endDate),
+      createdBy: String(tournament?.createdBy || "SGA_ADMIN"),
+      format: String(tournament?.format || "Eliminação Simples"),
+      bracketType: String(tournament?.bracketType || "Single Elimination"),
+      maxTeams: Number(tournament?.maxTeams) || 0,
+      organizer: String(tournament?.organizer || "Santos Games Arena"),
+      rulebookUrl: String(tournament?.rulebookUrl || ""),
+      prizePool: Number(tournament?.prizePool) || 0,
+      region: String(tournament?.region || "Brasil"),
+      timezone: String(tournament?.timezone || "UTC-3"),
+      patchVersion: String(tournament?.patchVersion || "Current"),
+      rosterLockAt: toDateTimeLocalValue(tournament?.rosterLockAt),
+      statusId: Number(tournament?.statusId) || 0,
+      gameId: Number(tournament?.gameId) || 0,
+    });
+  };
+
+  const openTeamEdit = (team: any) => {
+    setEditingTeamId(Number(team?.id) || null);
+    setEditTeamRosterHydrated(false);
+    setEditingEntity({ type: "team", data: team });
+    setEditTeamDraft({
+      ...createEmptyTeam(),
+      name: String(team?.name || ""),
+      description: String(team?.description || ""),
+      tag: String(team?.tag || ""),
+      logoUrl: String(team?.logoUrl || ""),
+      bannerColor: String(team?.bannerColor || "#f86d83"),
+      gameId: Number(team?.gameId) || 0,
+      elo: Number(team?.elo) || 0,
+      wins: Number(team?.wins) || 0,
+      losses: Number(team?.losses) || 0,
+      trophies: Number(team?.trophies) || 0,
+    });
+    setEditTeamGameId(Number(team?.gameId) || 0);
+    setEditTeamParticipants([createEmptyTeamParticipantDraft()]);
+  };
+
+  const openPlayerEdit = (player: any) => {
+    const latestStats = getLatestStatsRecordForPlayer(Number(player?.id) || 0);
+    const playerTeamId = getPlayerTeamId(Number(player?.id) || 0);
+    const inferredMatch = latestStats?.matchId
+      ? Number(latestStats.matchId)
+      : Number(getLatestMatchForTeam(playerTeamId)?.id) || 0;
+
+    setEditingEntity({ type: "player", data: player });
+    setEditPlayerDraft({
+      ...createEmptyPlayer(),
+      name: String(player?.name || ""),
+      avatarUrl: String(player?.avatarUrl || "https://picsum.photos/seed/sga/200/200"),
+      userId: Number(player?.userId) || 0,
+      isProfilePublic: Boolean(player?.isProfilePublic),
+      kills: Number(latestStats?.kills) || 0,
+      deaths: Number(latestStats?.deaths) || 0,
+      assists: Number(latestStats?.assists) || 0,
+      adr: Number(latestStats?.adr) || 0,
+      hsPercentage: Number(latestStats?.hsPercentage) || 0,
+      firstKills: Number(latestStats?.firstKills) || 0,
+      kast: Number(latestStats?.kast) || 0,
+      acs: Number(latestStats?.acs) || 0,
+    });
+    setEditPlayerStatsMatchId(inferredMatch);
+  };
+
+  const openMatchEdit = (match: any) => {
+    setEditingEntity({ type: "match", data: match });
+    setEditMatchDraft({
+      ...createEmptyMatch(),
+      stageId: Number(match?.stageId) || 0,
+      tournamentId: Number(match?.tournamentId) || 0,
+      statusId: Number(match?.statusId) || 0,
+      winnerTeamId: Number(match?.winnerTeamId) || 0,
+      teamAId: resolveMatchTeamId(
+        match?.teamAId,
+        match?.matchTeamAId,
+        match?.teamA?.id,
+        match?.teamA?.teamId,
+        match?.teams?.find?.(
+          (candidate: any) => String(candidate?.side || "").toUpperCase() === "A",
+        )?.teamId,
+      ),
+      teamBId: resolveMatchTeamId(
+        match?.teamBId,
+        match?.matchTeamBId,
+        match?.teamB?.id,
+        match?.teamB?.teamId,
+        match?.teams?.find?.(
+          (candidate: any) => String(candidate?.side || "").toUpperCase() === "B",
+        )?.teamId,
+      ),
+      gameId: Number(match?.gameId) || 0,
+      bestOf: Number(match?.bestOf) || 1,
+      startedAt: toDateTimeLocalValue(match?.startedAt),
+      finishedAt: toDateTimeLocalValue(match?.finishedAt),
+    });
+  };
+
+  const closeEditModal = () => {
+    setEditingEntity(null);
+    setEditTournamentDraft(createEmptyTournament());
+    setEditingTeamId(null);
+    setEditTeamRosterHydrated(false);
+    setEditPlayerDraft(createEmptyPlayer());
+    setEditPlayerStatsMatchId(0);
+  };
+
+  const updateEditTeamParticipant = (
+    index: number,
+    patch: Partial<ReturnType<typeof createEmptyTeamParticipantDraft>>,
+  ) => {
+    setEditTeamParticipants((current) =>
+      current.map((participant, participantIndex) =>
+        participantIndex === index ? { ...participant, ...patch } : participant,
+      ),
+    );
+  };
+
+  const addEditTeamParticipant = () => {
+    setEditTeamParticipants((current) => [...current, createEmptyTeamParticipantDraft()]);
+  };
+
+  const removeEditTeamParticipant = (index: number) => {
+    setEditTeamParticipants((current) => {
+      if (current.length === 1) return [createEmptyTeamParticipantDraft()];
+      return current.filter((_, participantIndex) => participantIndex !== index);
+    });
+  };
+
+  useEffect(() => {
+    if (editingEntity?.type !== "team" || !editingTeamId || editTeamRosterHydrated) return;
+
+    const currentParticipants = teamParticipantsData
+      .filter((participant: any) => Number(participant.teamId) === Number(editingTeamId))
+      .map((participant: any) => ({
+        id: Number(participant.id) || 0,
+        roleId: Number(participant.roleId) || 0,
+        playerId: Number(participant.playerId) || 0,
+        playerName:
+          playersData.find(
+            (candidate: any) => Number(candidate.id) === Number(participant.playerId),
+          )?.name ||
+          participant.player?.name ||
+          "",
+        roleName:
+          rolesData.find((candidate: any) => Number(candidate.id) === Number(participant.roleId))
+            ?.name ||
+          participant.role?.name ||
+          "",
+        isActive: Boolean(participant.isActive),
+        isStarter: Boolean(participant.isStarter),
+        isCaptain: Boolean(participant.isCaptain),
+        isSubstitute: Boolean(participant.isSubstitute),
+        joinedAt: participant.joinedAt || "",
+        leftAt: participant.leftAt || null,
+      }));
+
+    setEditTeamParticipants(
+      currentParticipants.length > 0 ? currentParticipants : [createEmptyTeamParticipantDraft()],
+    );
+    setEditTeamRosterHydrated(true);
+  }, [
+    editingEntity?.type,
+    editingTeamId,
+    editTeamRosterHydrated,
+    teamParticipantsData,
+    playersData,
+    rolesData,
+  ]);
+
+  const saveEdit = async () => {
+    if (!editingEntity) return;
+
+    try {
+      if (editingEntity.type === "tournament") {
+        if (!editTournamentDraft.name.trim()) {
+          throw new Error("O nome do campeonato é obrigatório.");
+        }
+        if (!editTournamentDraft.gameId) {
+          throw new Error("Selecione um jogo para o campeonato.");
+        }
+        if (!editTournamentDraft.statusId) {
+          throw new Error("Selecione o status do campeonato.");
+        }
+
+        const payload = {
+          id: Number(editingEntity.data?.id) || 0,
+          createdAt:
+            formatApiUtcTimestamp(editingEntity.data?.createdAt) ||
+            formatApiUtcTimestamp(new Date()),
+          updatedAt: formatApiUtcTimestamp(new Date()),
+          name: editTournamentDraft.name.trim(),
+          description: editTournamentDraft.description.trim() || null,
+          bannerUrl: editTournamentDraft.bannerUrl.trim() || null,
+          startDate: formatApiUtcTimestamp(editTournamentDraft.startDate),
+          endDate: formatApiUtcTimestamp(editTournamentDraft.endDate),
+          rosterLockAt: formatApiUtcTimestamp(editTournamentDraft.rosterLockAt),
+          createdBy:
+            editTournamentDraft.createdBy ||
+            user?.login ||
+            user?.name ||
+            user?.email ||
+            "SGA_ADMIN",
+          format: editTournamentDraft.format.trim() || null,
+          bracketType: editTournamentDraft.bracketType.trim() || null,
+          maxTeams: Number(editTournamentDraft.maxTeams) || null,
+          organizer: editTournamentDraft.organizer.trim() || null,
+          rulebookUrl: editTournamentDraft.rulebookUrl.trim() || null,
+          prizePool: Number(editTournamentDraft.prizePool) || null,
+          region: editTournamentDraft.region.trim() || null,
+          timezone: editTournamentDraft.timezone.trim() || null,
+          patchVersion: editTournamentDraft.patchVersion.trim() || null,
+          statusId: Number(editTournamentDraft.statusId) || null,
+          gameId: Number(editTournamentDraft.gameId) || null,
+        };
+
+        const result = await apiTournaments.update(Number(editingEntity.data?.id), payload);
+        if (result === false) {
+          throw new Error("Erro ao atualizar campeonato");
+        }
+
+        toast.success("Campeonato atualizado!");
+        queryClient.invalidateQueries({ queryKey: ["tournaments", token] });
+        queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+        queryClient.invalidateQueries({ queryKey: ["matches", token] });
+        queryClient.invalidateQueries({ queryKey: ["matches"] });
+        closeEditModal();
+        return;
+      }
+
+      if (editingEntity.type === "team") {
+        if (!editTeamDraft.name.trim() || !editTeamDraft.tag.trim()) {
+          throw new Error("Nome e TAG são obrigatórios.");
+        }
+
+        const payload = {
+          id: Number(editingEntity.data?.id) || 0,
+          createdAt:
+            formatApiUtcTimestamp(editingEntity.data?.createdAt) ||
+            formatApiUtcTimestamp(new Date()),
+          updatedAt: formatApiUtcTimestamp(new Date()),
+          name: editTeamDraft.name.trim(),
+          description: editTeamDraft.description.trim() || null,
+          tag: editTeamDraft.tag.trim() || null,
+          logoUrl: editTeamDraft.logoUrl.trim() || null,
+        };
+
+        const result = await apiTeams.update(Number(editingEntity.data?.id), payload);
+        if (result === false) {
+          throw new Error("Erro ao atualizar time");
+        }
+
+        const teamId = Number(editingEntity.data?.id);
+        const existingTeamParticipants = teamParticipantsData.filter(
+          (participant: any) => Number(participant.teamId) === teamId,
+        );
+        const draftById = new Map(
+          editTeamParticipants
+            .filter((participant) => participant.playerId && participant.roleId)
+            .map((participant) => [Number(participant.id) || 0, participant] as const),
+        );
+
+        await Promise.all(
+          editTeamParticipants.map(async (participant) => {
+            if (!participant.playerId || !participant.roleId) return null;
+
+            const currentParticipant = participant.id
+              ? existingTeamParticipants.find(
+                  (candidate: any) => Number(candidate.id) === Number(participant.id),
+                )
+              : null;
+
+            const createdAt =
+              formatApiUtcTimestamp(currentParticipant?.createdAt) ||
+              formatApiUtcTimestamp(participant.joinedAt) ||
+              formatApiUtcTimestamp(new Date());
+            const updatedAt = formatApiUtcTimestamp(new Date());
+
+            if (Number(participant.id) > 0) {
+              const participantPayload = {
+                id: Number(participant.id) || 0,
+                createdAt,
+                updatedAt,
+                teamId,
+                roleId: Number(participant.roleId) || 0,
+                playerId: Number(participant.playerId) || 0,
+                joinedAt:
+                  currentParticipant?.joinedAt ||
+                  participant.joinedAt ||
+                  formatApiUtcTimestamp(new Date()),
+                leftAt: null,
+                isActive: Boolean(participant.isActive),
+                isStarter: Boolean(participant.isStarter),
+                isCaptain: Boolean(participant.isCaptain),
+                isSubstitute: Boolean(participant.isSubstitute),
+              };
+              return apiTeamParticipants.update(Number(participant.id), participantPayload);
+            }
+
+            const participantPayload = {
+              roleId: Number(participant.roleId) || 0,
+              playerId: Number(participant.playerId) || 0,
+              teamId,
+              joinedAt:
+                participant.joinedAt ||
+                formatApiUtcTimestamp(new Date()),
+              leftAt: null,
+              isActive: Boolean(participant.isActive),
+              isStarter: Boolean(participant.isStarter),
+              isCaptain: Boolean(participant.isCaptain),
+              isSubstitute: Boolean(participant.isSubstitute),
+            };
+
+            return apiTeamParticipants.create(participantPayload);
+          }),
+        );
+
+        await Promise.all(
+          existingTeamParticipants
+            .filter((participant: any) => !draftById.has(Number(participant.id)))
+            .map((participant: any) => apiTeamParticipants.deleteRecord(Number(participant.id))),
+        );
+
+        toast.success("Time atualizado!");
+        queryClient.invalidateQueries({ queryKey: ["teams", token] });
+        queryClient.invalidateQueries({ queryKey: ["teams"] });
+        queryClient.invalidateQueries({ queryKey: ["team-participants", token] });
+        queryClient.invalidateQueries({ queryKey: ["players", token] });
+        queryClient.invalidateQueries({ queryKey: ["players"] });
+        closeEditModal();
+        return;
+      }
+
+      if (editingEntity.type === "player") {
+        if (!editPlayerDraft.name.trim()) {
+          throw new Error("O nome do player é obrigatório.");
+        }
+
+        const payload = {
+          id: Number(editingEntity.data?.id) || 0,
+          createdAt:
+            formatApiUtcTimestamp(editingEntity.data?.createdAt) ||
+            formatApiUtcTimestamp(new Date()),
+          updatedAt: formatApiUtcTimestamp(new Date()),
+          name: editPlayerDraft.name.trim(),
+          avatarUrl: editPlayerDraft.avatarUrl?.trim() || "https://picsum.photos/seed/sga/200/200",
+          userId: Number(editPlayerDraft.userId) || Number(editingEntity.data?.userId) || null,
+          isProfilePublic: Boolean(editPlayerDraft.isProfilePublic),
+        };
+
+        const result = await apiPlayers.update(Number(editingEntity.data?.id), payload);
+        if (result === false) {
+          throw new Error("Erro ao atualizar player");
+        }
+
+        const playerId = Number(editingEntity.data?.id) || 0;
+        const playerTeamId = getPlayerTeamId(playerId);
+        const selectedMatchId =
+          Number(editPlayerStatsMatchId) || Number(getLatestMatchForTeam(playerTeamId)?.id) || 0;
+        if (selectedMatchId) {
+          const existingStatsRecord = getLatestStatsRecordForPlayer(playerId);
+          const statsPayload = {
+            id: Number(existingStatsRecord?.id) || 0,
+            createdAt:
+              formatApiUtcTimestamp(existingStatsRecord?.createdAt) ||
+              formatApiUtcTimestamp(new Date()),
+            updatedAt: formatApiUtcTimestamp(new Date()),
+            playerId,
+            gameAccountId: Number(existingStatsRecord?.gameAccountId) || null,
+            matchId: selectedMatchId,
+            matchMapId: Number(existingStatsRecord?.matchMapId) || null,
+            kills: Number(editPlayerDraft.kills) || 0,
+            deaths: Number(editPlayerDraft.deaths) || 0,
+            assists: Number(editPlayerDraft.assists) || 0,
+            adr: Number(editPlayerDraft.adr) || 0,
+            hsPercentage: Number(editPlayerDraft.hsPercentage) || 0,
+            firstKills: Number(editPlayerDraft.firstKills) || 0,
+            kast: Number(editPlayerDraft.kast) || 0,
+            acs: Number(editPlayerDraft.acs) || 0,
+            roleName: existingStatsRecord?.roleName || null,
+            characterName: existingStatsRecord?.characterName || null,
+            statsJson: existingStatsRecord?.statsJson || null,
+          };
+
+          const statsResult = existingStatsRecord
+            ? await apiPlayerMatchStats.update(Number(existingStatsRecord.id), statsPayload)
+            : await apiPlayerMatchStats.create(statsPayload);
+          if (statsResult === false) {
+            throw new Error("Erro ao atualizar stats do player");
+          }
+        }
+
+        toast.success("Player atualizado!");
+        if (selectedMatchId) {
+          queryClient.invalidateQueries({ queryKey: ["player-match-stats", token] });
+          queryClient.invalidateQueries({ queryKey: ["player-match-stats"] });
+        } else {
+          toast.warning("Player salvo, mas não havia partida vinculada para gravar stats.");
+        }
+        queryClient.invalidateQueries({ queryKey: ["players", token] });
+        queryClient.invalidateQueries({ queryKey: ["players"] });
+        closeEditModal();
+        return;
+      }
+
+      if (editingEntity.type === "match") {
+        if (
+          !editMatchDraft.tournamentId ||
+          !editMatchDraft.stageId ||
+          !editMatchDraft.statusId ||
+          !editMatchDraft.gameId
+        ) {
+          throw new Error("Preencha campeonato, stage, status e jogo.");
+        }
+
+        const payload = {
+          ...editingEntity.data,
+          tournamentId: Number(editMatchDraft.tournamentId) || 0,
+          stageId: Number(editMatchDraft.stageId) || 0,
+          statusId: Number(editMatchDraft.statusId) || 0,
+          winnerTeamId: Number(editMatchDraft.winnerTeamId) || 0,
+          teamAId: Number(editMatchDraft.teamAId) || 0,
+          teamBId: Number(editMatchDraft.teamBId) || 0,
+          gameId: Number(editMatchDraft.gameId) || 0,
+          bestOf: Number(editMatchDraft.bestOf) || 1,
+          startedAt: formatApiUtcTimestamp(editMatchDraft.startedAt),
+          finishedAt: editMatchDraft.finishedAt
+            ? formatApiUtcTimestamp(editMatchDraft.finishedAt)
+            : null,
+          updatedAt: formatApiUtcTimestamp(new Date()),
+        };
+
+        const result = await apiMatches.update(Number(editingEntity.data?.id), payload);
+        if (result === false) {
+          throw new Error("Erro ao atualizar partida");
+        }
+
+        toast.success("Partida atualizada!");
+        queryClient.invalidateQueries({ queryKey: ["matches", token] });
+        queryClient.invalidateQueries({ queryKey: ["matches"] });
+        queryClient.invalidateQueries({ queryKey: ["bracket-matches", token, selectedTourney] });
+        closeEditModal();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar edição");
+    }
+  };
+
   const getTeamById = (teamId: number) => {
     return teamsData.find((candidate: any) => Number(candidate.id) === Number(teamId));
   };
 
   const draggingTeam = useMemo(
     () => (draggingTeamId ? getTeamById(draggingTeamId) : null),
-    [draggingTeamId, teamsData]
+    [draggingTeamId, teamsData],
   );
 
   const getStatusIdByLabel = (fragments: string[]) => {
@@ -360,11 +1607,14 @@ function Admin() {
     }));
   };
 
-  const updateTeamParticipant = (index: number, patch: Partial<(typeof teamParticipants)[number]>) => {
+  const updateTeamParticipant = (
+    index: number,
+    patch: Partial<(typeof teamParticipants)[number]>,
+  ) => {
     setTeamParticipants((current) =>
       current.map((participant, participantIndex) =>
-        participantIndex === index ? { ...participant, ...patch } : participant
-      )
+        participantIndex === index ? { ...participant, ...patch } : participant,
+      ),
     );
   };
 
@@ -401,20 +1651,37 @@ function Admin() {
   });
 
   const availableStages = useMemo(
-    () => stagesData.filter((stage: any) => !newMatch.tournamentId || Number(stage.tournamentId) === Number(newMatch.tournamentId)),
-    [newMatch.tournamentId, stagesData]
+    () =>
+      stagesData.filter(
+        (stage: any) =>
+          !newMatch.tournamentId || Number(stage.tournamentId) === Number(newMatch.tournamentId),
+      ),
+    [newMatch.tournamentId, stagesData],
   );
 
   const selectedTournament = useMemo(
-    () => tournamentsData.find((candidate: any) => Number(candidate.id) === Number(selectedTourney)),
-    [selectedTourney, tournamentsData]
+    () =>
+      tournamentsData.find((candidate: any) => Number(candidate.id) === Number(selectedTourney)),
+    [selectedTourney, tournamentsData],
   );
+
+  const selectedTournamentBracketType = String(
+    selectedTournament?.bracketType || selectedTournament?.format || "",
+  ).toLowerCase();
+  const isDoubleEliminationTournament =
+    selectedTournamentBracketType.includes("double") ||
+    selectedTournamentBracketType.includes("lower") ||
+    selectedTournamentBracketType.includes("dupla");
 
   const bracketMatchesByTournament = useMemo(() => {
     return parse(bmr).map((match: any) => {
       const teams = Array.isArray(match?.teams) ? match.teams : match?.teams?.$values || [];
-      const teamA = teams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "A");
-      const teamB = teams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "B");
+      const teamA = teams.find(
+        (candidate: any) => String(candidate?.side || "").toUpperCase() === "A",
+      );
+      const teamB = teams.find(
+        (candidate: any) => String(candidate?.side || "").toUpperCase() === "B",
+      );
       const winnerTeam = teams.find((candidate: any) => candidate?.isWinner);
 
       return {
@@ -434,19 +1701,22 @@ function Admin() {
 
   const bracketMatches = useMemo(
     () => bracketMatchesByTournament.filter((match: any) => match.bracketPosition),
-    [bracketMatchesByTournament]
+    [bracketMatchesByTournament],
   );
 
   const bracketMatchMap = useMemo(
     () => new Map(bracketMatches.map((match: any) => [String(match.bracketPosition), match])),
-    [bracketMatches]
+    [bracketMatches],
   );
 
   const effectiveBracketMatchMap = useMemo(() => {
     const nextMap = new Map(bracketMatchMap);
 
     Object.entries(optimisticBracketSlots).forEach(([position, patch]) => {
-      const currentMatch = (nextMap.get(position) as any) || { bracketPosition: position, tournamentId: Number(selectedTourney) || 0 };
+      const currentMatch = (nextMap.get(position) as any) || {
+        bracketPosition: position,
+        tournamentId: Number(selectedTourney) || 0,
+      };
       nextMap.set(position, { ...currentMatch, ...patch });
     });
 
@@ -458,9 +1728,9 @@ function Admin() {
       new Set(
         Array.from(effectiveBracketMatchMap.values())
           .flatMap((match: any) => [Number(match.teamAId), Number(match.teamBId)])
-          .filter(Boolean)
+          .filter(Boolean),
       ),
-    [effectiveBracketMatchMap]
+    [effectiveBracketMatchMap],
   );
 
   const bracketTeams = useMemo(() => {
@@ -475,17 +1745,17 @@ function Admin() {
 
   const scheduledStatusId = useMemo(
     () => getStatusIdByLabel(["agend", "abert", "penden"]) || Number(statusesData[0]?.id) || 0,
-    [statusesData]
+    [statusesData],
   );
 
   const activeStatusId = useMemo(
     () => getStatusIdByLabel(["ativo", "andam", "progres", "curso", "abert"]) || scheduledStatusId,
-    [scheduledStatusId, statusesData]
+    [scheduledStatusId, statusesData],
   );
 
   const finishedStatusId = useMemo(
     () => getStatusIdByLabel(["encerr", "conclu", "finaliz"]) || scheduledStatusId,
-    [scheduledStatusId, statusesData]
+    [scheduledStatusId, statusesData],
   );
 
   const getBracketPhaseLabel = (position: string) => {
@@ -514,7 +1784,9 @@ function Admin() {
     if (!matchId || !teamId) return null;
 
     try {
-      const response = await ApiService.get(`api/MatchTeams/GetTeamsByMatchAndTeamId?matchId=${matchId}&teamId=${teamId}`);
+      const response = await ApiService.get(
+        `api/MatchTeams/GetTeamsByMatchAndTeamId?matchId=${matchId}&teamId=${teamId}`,
+      );
       const entity = extractEntity(response);
 
       if (entity) return entity;
@@ -526,18 +1798,30 @@ function Admin() {
     }
   };
 
-  const saveBracketMatch = async (position: string, patch: Record<string, any>, successMessage?: string) => {
+  const saveBracketMatch = async (
+    position: string,
+    patch: Record<string, any>,
+    successMessage?: string,
+  ) => {
     const currentMatch = effectiveBracketMatchMap.get(position) as any;
-    const { teamA, teamB, tournament, stage, status, game, teams, winnerTeam, ...existingMatch } = currentMatch || {};
+    const { teamA, teamB, tournament, stage, status, game, teams, winnerTeam, ...existingMatch } =
+      currentMatch || {};
     const resolvedExistingStageId = Number(existingMatch?.stageId) || Number(stage?.id) || 0;
     const existingTeams = Array.isArray(teams) ? teams : [];
+    const existingTeamAEntry =
+      existingTeams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "A") ||
+      null;
+    const existingTeamBEntry =
+      existingTeams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "B") ||
+      null;
 
     const resolvedStartedAt =
       patch.startedAt === undefined
         ? existingMatch?.startedAt || formatApiUtcTimestamp(new Date())
         : patch.startedAt;
 
-    const resolvedFinishedAt = patch.finishedAt === undefined ? existingMatch?.finishedAt || null : patch.finishedAt;
+    const resolvedFinishedAt =
+      patch.finishedAt === undefined ? existingMatch?.finishedAt || null : patch.finishedAt;
 
     const payload = {
       ...existingMatch,
@@ -545,17 +1829,31 @@ function Admin() {
       bracketPosition: position,
       tournamentId: Number(existingMatch?.tournamentId) || Number(selectedTourney) || 0,
       statusId: Number(patch.statusId) || Number(existingMatch?.statusId) || scheduledStatusId,
-      gameId: Number(patch.gameId) || Number(existingMatch?.gameId) || Number(selectedTournament?.gameId) || Number(gamesData[0]?.id) || 0,
+      gameId:
+        Number(patch.gameId) ||
+        Number(existingMatch?.gameId) ||
+        Number(selectedTournament?.gameId) ||
+        Number(gamesData[0]?.id) ||
+        0,
       bestOf: Number(patch.bestOf) || Number(existingMatch?.bestOf) || 1,
       startedAt: formatApiUtcTimestamp(resolvedStartedAt),
       finishedAt: resolvedFinishedAt ? formatApiUtcTimestamp(resolvedFinishedAt) : null,
-      winnerTeamId: patch.winnerTeamId === undefined ? Number(existingMatch?.winnerTeamId) || 0 : Number(patch.winnerTeamId) || 0,
-      stageId: Number(patch.stageId) || resolvedExistingStageId || getStageIdForBracketPosition(position) || 0,
+      winnerTeamId:
+        patch.winnerTeamId === undefined
+          ? Number(existingMatch?.winnerTeamId) || 0
+          : Number(patch.winnerTeamId) || 0,
+      stageId:
+        Number(patch.stageId) ||
+        resolvedExistingStageId ||
+        getStageIdForBracketPosition(position) ||
+        0,
     };
 
     if (payload.stageId === 0) {
-      let fallbackStage = stagesData.find((s: any) => Number(s.tournamentId) === Number(selectedTourney));
-      
+      let fallbackStage = stagesData.find(
+        (s: any) => Number(s.tournamentId) === Number(selectedTourney),
+      );
+
       if (!fallbackStage && stagesData.length > 0) {
         fallbackStage = stagesData[0]; // Fallback extremo
       }
@@ -565,53 +1863,57 @@ function Admin() {
       }
     }
 
-    const resolvedTeamAId = Number(patch.teamAId) || Number(existingMatch?.teamAId) || 0;
-    const resolvedTeamBId = Number(patch.teamBId) || Number(existingMatch?.teamBId) || 0;
+    const resolvedTeamAId = Object.prototype.hasOwnProperty.call(patch, "teamAId")
+      ? Number(patch.teamAId) || 0
+      : Number(existingMatch?.teamAId) || 0;
+    const resolvedTeamBId = Object.prototype.hasOwnProperty.call(patch, "teamBId")
+      ? Number(patch.teamBId) || 0
+      : Number(existingMatch?.teamBId) || 0;
 
     if (!payload.tournamentId || !payload.statusId || !payload.gameId) {
       throw new Error("Cadastre o torneio, status e jogo antes de montar o chaveamento.");
     }
 
     const resolvedWinnerTeamId = Number(payload.winnerTeamId) || 0;
-    const teamAScore = patch.scoreA ?? existingMatch?.scoreA ?? existingTeams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "A")?.score ?? null;
-    const teamBScore = patch.scoreB ?? existingMatch?.scoreB ?? existingTeams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "B")?.score ?? null;
+    const teamAScore =
+      patch.scoreA ??
+      existingMatch?.scoreA ??
+      existingTeams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "A")
+        ?.score ??
+      null;
+    const teamBScore =
+      patch.scoreB ??
+      existingMatch?.scoreB ??
+      existingTeams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "B")
+        ?.score ??
+      null;
     const matchTeamsPayload = [
       resolvedTeamAId
         ? {
-          id:
-            Number(existingMatch?.matchTeamAId) ||
-            Number(existingTeams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "A")?.id) ||
-            0,
-          createdAt:
-            existingTeams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "A")?.createdAt ||
-            formatApiUtcTimestamp(new Date()),
-          updatedAt: formatApiUtcTimestamp(new Date()),
-          teamId: resolvedTeamAId,
-          side: "A",
-          score: teamAScore ?? 0,
-          isWinner: resolvedWinnerTeamId === resolvedTeamAId,
-        }
+            id: Number(existingMatch?.matchTeamAId) || Number(existingTeamAEntry?.id) || 0,
+            createdAt: existingTeamAEntry?.createdAt || formatApiUtcTimestamp(new Date()),
+            updatedAt: formatApiUtcTimestamp(new Date()),
+            teamId: resolvedTeamAId,
+            side: "A",
+            score: teamAScore ?? 0,
+            isWinner: resolvedWinnerTeamId === resolvedTeamAId,
+          }
         : null,
       resolvedTeamBId
         ? {
-          id:
-            Number(existingMatch?.matchTeamBId) ||
-            Number(existingTeams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "B")?.id) ||
-            0,
-          createdAt:
-            existingTeams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "B")?.createdAt ||
-            formatApiUtcTimestamp(new Date()),
-          updatedAt: formatApiUtcTimestamp(new Date()),
-          teamId: resolvedTeamBId,
-          side: "B",
-          score: teamBScore ?? 0,
-          isWinner: resolvedWinnerTeamId === resolvedTeamBId,
-        }
+            id: Number(existingMatch?.matchTeamBId) || Number(existingTeamBEntry?.id) || 0,
+            createdAt: existingTeamBEntry?.createdAt || formatApiUtcTimestamp(new Date()),
+            updatedAt: formatApiUtcTimestamp(new Date()),
+            teamId: resolvedTeamBId,
+            side: "B",
+            score: teamBScore ?? 0,
+            isWinner: resolvedWinnerTeamId === resolvedTeamBId,
+          }
         : null,
     ].filter(Boolean);
 
-    payload.teamAId = resolvedTeamAId || undefined;
-    payload.teamBId = resolvedTeamBId || undefined;
+    payload.teamAId = resolvedTeamAId || null;
+    payload.teamBId = resolvedTeamBId || null;
     payload.scoreA = teamAScore;
     payload.scoreB = teamBScore;
     delete payload.teams;
@@ -624,11 +1926,17 @@ function Admin() {
       ? await apiMatches.update(currentMatch.id, payload)
       : await apiMatches.create(payload);
 
-    const persistedMatchId = Number(currentMatch?.id) || Number(extractEntity(matchResponse)?.id) || 0;
+    const persistedMatchId =
+      Number(currentMatch?.id) || Number(extractEntity(matchResponse)?.id) || 0;
 
     if (!persistedMatchId) {
       throw new Error("Não foi possível identificar a partida para salvar os times.");
     }
+
+    const matchTeamsToDelete = [
+      !resolvedTeamAId && existingTeamAEntry?.id ? Number(existingTeamAEntry.id) : 0,
+      !resolvedTeamBId && existingTeamBEntry?.id ? Number(existingTeamBEntry.id) : 0,
+    ].filter(Boolean);
 
     await Promise.all(
       matchTeamsPayload.map(async (entry: any) => {
@@ -650,16 +1958,26 @@ function Admin() {
         return Number(persistedMatchTeam?.id) > 0
           ? apiMatchTeams.update(Number(persistedMatchTeam.id), matchTeamPayload)
           : apiMatchTeams.create(matchTeamPayload);
-      })
+      }),
     );
 
+    await Promise.all(
+      matchTeamsToDelete.map((matchTeamId) => apiMatchTeams.deleteRecord(matchTeamId)),
+    );
+
+    queryClient.invalidateQueries({ queryKey: ["matches", token] });
     queryClient.invalidateQueries({ queryKey: ["matches"] });
     queryClient.invalidateQueries({ queryKey: ["bracket-matches", token, selectedTourney] });
+    queryClient.invalidateQueries({ queryKey: ["teams", token] });
     queryClient.invalidateQueries({ queryKey: ["teams"] });
     toast.success(successMessage || `Slot ${position} atualizado`);
   };
 
-  const handleBracketDrop = async (position: string, teamField: "teamAId" | "teamBId", teamId: number) => {
+  const handleBracketDrop = async (
+    position: string,
+    teamField: "teamAId" | "teamBId",
+    teamId: number,
+  ) => {
     if (!teamId) return;
 
     const currentMatch = effectiveBracketMatchMap.get(position) as any;
@@ -670,8 +1988,10 @@ function Admin() {
       return;
     }
 
-    const teamAlreadyInCurrentMatch = Number(currentMatch?.teamAId) === teamId || Number(currentMatch?.teamBId) === teamId;
-    const teamAlreadyAssignedElsewhere = assignedBracketTeamIds.has(teamId) && !teamAlreadyInCurrentMatch;
+    const teamAlreadyInCurrentMatch =
+      Number(currentMatch?.teamAId) === teamId || Number(currentMatch?.teamBId) === teamId;
+    const teamAlreadyAssignedElsewhere =
+      assignedBracketTeamIds.has(teamId) && !teamAlreadyInCurrentMatch;
 
     if (teamAlreadyAssignedElsewhere) {
       toast.error("Este time já está em outro slot do chaveamento.");
@@ -691,7 +2011,11 @@ function Admin() {
     }));
 
     try {
-      await saveBracketMatch(position, { [teamField]: teamId, winnerTeamId: 0, finishedAt: null }, `Time alocado em ${position}`);
+      await saveBracketMatch(
+        position,
+        { [teamField]: teamId, winnerTeamId: 0, finishedAt: null },
+        `Time alocado em ${position}`,
+      );
     } catch (error: any) {
       setOptimisticBracketSlots((current) => {
         if (previousPatch) {
@@ -706,9 +2030,47 @@ function Admin() {
     }
   };
 
+  const handleBracketRemove = async (position: string, teamField: "teamAId" | "teamBId") => {
+    const currentMatch = effectiveBracketMatchMap.get(position) as any;
+    const matchIsLocked = Number(currentMatch?.winnerTeamId) > 0;
+
+    if (matchIsLocked) {
+      toast.error("Essa partida já foi decidida e não pode ter times removidos.");
+      return;
+    }
+
+    try {
+      setOptimisticBracketSlots((current) => ({
+        ...current,
+        [position]: {
+          ...current[position],
+          [teamField]: null,
+          winnerTeamId: 0,
+          finishedAt: null,
+          statusId: scheduledStatusId,
+        },
+      }));
+
+      await saveBracketMatch(
+        position,
+        {
+          [teamField]: null,
+          winnerTeamId: 0,
+          finishedAt: null,
+          statusId: scheduledStatusId,
+        },
+        `Time removido do ${position}`,
+      );
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao remover time do slot");
+    }
+  };
+
   const handleMatchWinner = async (position: string, teamField: "teamAId" | "teamBId") => {
     const currentMatch = effectiveBracketMatchMap.get(position) as any;
     const winnerTeamId = Number(currentMatch?.[teamField]) || 0;
+    const loserTeamField = teamField === "teamAId" ? "teamBId" : "teamAId";
+    const loserTeamId = Number(currentMatch?.[loserTeamField]) || 0;
 
     if (Number(currentMatch?.winnerTeamId) > 0) {
       toast.error("Essa partida já possui vencedor definido.");
@@ -722,6 +2084,9 @@ function Admin() {
 
     try {
       const nextSlot = BRACKET_PROGRESS_MAP[position];
+      const loserSlot = isDoubleEliminationTournament
+        ? BRACKET_LOSER_PROGRESS_MAP[position]
+        : undefined;
 
       await saveBracketMatch(
         position,
@@ -730,8 +2095,44 @@ function Admin() {
           statusId: finishedStatusId,
           finishedAt: formatApiUtcTimestamp(new Date()),
         },
-        `Vencedor definido em ${position}`
+        `Vencedor definido em ${position}`,
       );
+
+      if (loserSlot && loserTeamId) {
+        setOptimisticBracketSlots((current) => ({
+          ...current,
+          [loserSlot.nextPosition]: {
+            ...current[loserSlot.nextPosition],
+            [loserSlot.teamField]: loserTeamId,
+            winnerTeamId: 0,
+            bracketPosition: loserSlot.nextPosition,
+            tournamentId: Number(selectedTourney) || 0,
+            statusId: activeStatusId,
+            gameId: Number(selectedTournament?.gameId) || Number(gamesData[0]?.id) || 0,
+            bestOf: Number(currentMatch?.bestOf) || 1,
+            startedAt:
+              current[loserSlot.nextPosition]?.startedAt || formatApiUtcTimestamp(new Date()),
+            finishedAt: null,
+            stageId:
+              current[loserSlot.nextPosition]?.stageId ||
+              getStageIdForBracketPosition(loserSlot.nextPosition),
+          },
+        }));
+
+        await saveBracketMatch(
+          loserSlot.nextPosition,
+          {
+            [loserSlot.teamField]: loserTeamId,
+            winnerTeamId: 0,
+            statusId: activeStatusId,
+            bestOf: Number(currentMatch?.bestOf) || 1,
+            startedAt: formatApiUtcTimestamp(new Date()),
+            finishedAt: null,
+            stageId: getStageIdForBracketPosition(loserSlot.nextPosition),
+          },
+          `${getTeamLabel(loserTeamId)} caiu para ${loserSlot.nextPosition}`,
+        );
+      }
 
       if (nextSlot) {
         setOptimisticBracketSlots((current) => ({
@@ -745,9 +2146,12 @@ function Admin() {
             statusId: activeStatusId,
             gameId: Number(selectedTournament?.gameId) || Number(gamesData[0]?.id) || 0,
             bestOf: Number(currentMatch?.bestOf) || 1,
-            startedAt: current[nextSlot.nextPosition]?.startedAt || formatApiUtcTimestamp(new Date()),
+            startedAt:
+              current[nextSlot.nextPosition]?.startedAt || formatApiUtcTimestamp(new Date()),
             finishedAt: null,
-            stageId: current[nextSlot.nextPosition]?.stageId || getStageIdForBracketPosition(nextSlot.nextPosition),
+            stageId:
+              current[nextSlot.nextPosition]?.stageId ||
+              getStageIdForBracketPosition(nextSlot.nextPosition),
           },
         }));
 
@@ -762,7 +2166,7 @@ function Admin() {
             finishedAt: null,
             stageId: getStageIdForBracketPosition(nextSlot.nextPosition),
           },
-          `${getTeamLabel(winnerTeamId)} avançou para ${nextSlot.nextPosition}`
+          `${getTeamLabel(winnerTeamId)} avançou para ${nextSlot.nextPosition}`,
         );
       }
     } catch (error: any) {
@@ -814,7 +2218,9 @@ function Admin() {
         return !Object.entries(patch).every(([key, value]) => persistedMatch?.[key] === value);
       });
 
-      return nextEntries.length === Object.keys(current).length ? current : Object.fromEntries(nextEntries);
+      return nextEntries.length === Object.keys(current).length
+        ? current
+        : Object.fromEntries(nextEntries);
     });
   }, [bracketMatchMap]);
 
@@ -852,7 +2258,9 @@ function Admin() {
     setNewMatch((current) => {
       if (!current.stageId) return current;
 
-      const stageStillAvailable = availableStages.some((stage: any) => Number(stage.id) === Number(current.stageId));
+      const stageStillAvailable = availableStages.some(
+        (stage: any) => Number(stage.id) === Number(current.stageId),
+      );
       return stageStillAvailable ? current : { ...current, stageId: 0 };
     });
   }, [availableStages]);
@@ -860,9 +2268,11 @@ function Admin() {
   useEffect(() => {
     setTeamParticipants((current) =>
       current.map((participant) => {
-        const roleStillAvailable = availableRoles.some((role: any) => Number(role.id) === Number(participant.roleId));
+        const roleStillAvailable = availableRoles.some(
+          (role: any) => Number(role.id) === Number(participant.roleId),
+        );
         return roleStillAvailable ? participant : { ...participant, roleId: 0 };
-      })
+      }),
     );
   }, [availableRoles]);
 
@@ -880,10 +2290,14 @@ function Admin() {
           <div className="absolute -bottom-2 -right-2 w-6 h-6 border-b border-r border-primary group-hover:w-10 group-hover:h-10 transition-all" />
 
           <ShieldAlert className="w-16 h-16 text-primary mx-auto mb-6 animate-pulse" />
-          <h1 className="font-display text-4xl font-black italic uppercase text-white mb-4 tracking-tighter">Acesso Restrito</h1>
+          <h1 className="font-display text-4xl font-black italic uppercase text-white mb-4 tracking-tighter">
+            Acesso Restrito
+          </h1>
           <p className="text-muted-foreground mb-8 uppercase tracking-[0.2em] text-[10px] italic leading-relaxed">
             Identificação de nível Administrador necessária para acessar o núcleo de comando_ <br />
-            <span className="text-[8px] opacity-30 mt-2 block">Terminal restrito a usuários com permissão de gestão via API.</span>
+            <span className="text-[8px] opacity-30 mt-2 block">
+              Terminal restrito a usuários com permissão de gestão via API.
+            </span>
           </p>
           <Link to="/login">
             <Button className="bg-primary hover:bg-primary/90 w-full h-12 uppercase tracking-[0.2em] font-black italic shadow-neon">
@@ -907,12 +2321,12 @@ function Admin() {
   const handleDelete = async (id: string, entity: string) => {
     // Mapeamento de controladores baseado na entidade
     const controllers: Record<string, any> = {
-      "Tournaments": apiTournaments,
-      "Players": apiPlayers,
-      "Teams": apiTeams,
-      "Matches": apiMatches,
-      "Highlights": apiHighlights,
-      "Gallery": apiGallery
+      Tournaments: apiTournaments,
+      Players: apiPlayers,
+      Teams: apiTeams,
+      Matches: apiMatches,
+      Highlights: apiHighlights,
+      Gallery: apiGallery,
     };
 
     const ctrl = controllers[entity] || apiMatches;
@@ -922,10 +2336,12 @@ function Admin() {
       if (res !== false) {
         // Invalida a query específica para forçar o refetch
         const queryKey = entity.toLowerCase();
+        queryClient.invalidateQueries({ queryKey: [queryKey, token] });
         queryClient.invalidateQueries({ queryKey: [queryKey] });
 
         // Se deletar um time ou uma partida, o ranking (teams) deve ser recalculado
         if (entity === "Teams" || entity === "Matches") {
+          queryClient.invalidateQueries({ queryKey: ["teams", token] });
           queryClient.invalidateQueries({ queryKey: ["teams"] });
         }
 
@@ -952,10 +2368,27 @@ function Admin() {
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Filtrar..." value={q} onChange={(e) => setQ(e.target.value)} className="pl-8" />
+          <Input
+            placeholder="Filtrar..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="pl-8"
+          />
         </div>
-        <Button variant="outline" onClick={fakeAct("Upload realizado")}><Upload className="h-4 w-4 mr-1" /> Upload</Button>
-        <Button className="bg-neon shadow-neon" onClick={onCreate || (create.includes("partida") ? () => setIsCreatingMatch(true) : () => setIsCreatingTourney(true))}><Plus className="h-4 w-4 mr-1" /> {create}</Button>
+        <Button variant="outline" onClick={fakeAct("Upload realizado")}>
+          <Upload className="h-4 w-4 mr-1" /> Upload
+        </Button>
+        <Button
+          className="bg-neon shadow-neon"
+          onClick={
+            onCreate ||
+            (create.includes("partida")
+              ? () => setIsCreatingMatch(true)
+              : () => setIsCreatingTourney(true))
+          }
+        >
+          <Plus className="h-4 w-4 mr-1" /> {create}
+        </Button>
       </div>
     );
   }
@@ -963,18 +2396,38 @@ function Admin() {
   function Pagination({ pages }: { pages: number }) {
     return (
       <div className="mt-4 flex items-center justify-end gap-2 text-sm">
-        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
-        <span className="text-muted-foreground">{page} / {pages}</span>
-        <Button variant="outline" size="sm" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page <= 1}
+          onClick={() => setPage((p) => p - 1)}
+        >
+          Anterior
+        </Button>
+        <span className="text-muted-foreground">
+          {page} / {pages}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={page >= pages}
+          onClick={() => setPage((p) => p + 1)}
+        >
+          Próxima
+        </Button>
       </div>
     );
   }
 
-  function RowActions({ id, entity }: { id: string; entity: string }) {
+  function RowActions({ id, entity, onEdit }: { id: string; entity: string; onEdit?: () => void }) {
     return (
       <div className="flex justify-end gap-1">
-        <Button size="icon" variant="ghost" onClick={fakeAct("Editado")}><Pencil className="h-4 w-4" /></Button>
-        <Button size="icon" variant="ghost" onClick={() => handleDelete(id, entity)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+        <Button size="icon" variant="ghost" onClick={onEdit || fakeAct("Editado")}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button size="icon" variant="ghost" onClick={() => handleDelete(id, entity)}>
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
       </div>
     );
   }
@@ -983,11 +2436,15 @@ function Admin() {
    * Helper de Filtragem Local.
    * Integração: O filtro 'q' deve ser enviado como parâmetro para a API em ambientes produtivos.
    */
-  const filt = (arr: any[], key: string) => arr.filter((x) => String(x[key]).toLowerCase().includes(q.toLowerCase()));
+  const filt = (arr: any[], key: string) =>
+    arr.filter((x) => String(x[key]).toLowerCase().includes(q.toLowerCase()));
 
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-10">
-      <Dialog open={viewingTeamId !== null} onOpenChange={(open) => !open && setViewingTeamId(null)}>
+      <Dialog
+        open={viewingTeamId !== null}
+        onOpenChange={(open) => !open && setViewingTeamId(null)}
+      >
         <DialogContent className="max-w-3xl border-white/10 bg-[#0a0a0c] text-white">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl uppercase italic">
@@ -1005,24 +2462,45 @@ function Admin() {
               </div>
             )}
             {viewingTeamParticipants.map((participant: any) => (
-              <div key={participant.id} className="grid grid-cols-[1.4fr_1fr_1fr] gap-3 border border-white/10 bg-white/5 p-4">
+              <div
+                key={participant.id}
+                className="grid grid-cols-[1.4fr_1fr_1fr] gap-3 border border-white/10 bg-white/5 p-4"
+              >
                 <div>
-                  <div className="font-display text-lg">{participant.player?.name || `Player #${participant.playerId}`}</div>
+                  <div className="font-display text-lg">
+                    {participant.player?.name || `Player #${participant.playerId}`}
+                  </div>
                   <div className="text-[10px] uppercase tracking-widest text-white/40">
                     Entrou em {formatDateBR(participant.joinedAt)}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-widest text-white/40 mb-1">Role</div>
+                  <div className="text-[10px] uppercase tracking-widest text-white/40 mb-1">
+                    Role
+                  </div>
                   <div>{participant.role?.name || `Role #${participant.roleId}`}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-widest text-white/40 mb-1">Status</div>
+                  <div className="text-[10px] uppercase tracking-widest text-white/40 mb-1">
+                    Status
+                  </div>
                   <div className="flex flex-wrap gap-2 text-[10px] uppercase">
-                    {participant.isStarter && <span className="border border-primary/40 px-2 py-1 text-primary">Titular</span>}
-                    {participant.isCaptain && <span className="border border-warning/40 px-2 py-1 text-warning">Capitão</span>}
-                    {participant.isSubstitute && <span className="border border-neon/40 px-2 py-1 text-neon">Reserva</span>}
-                    {participant.isActive && <span className="border border-success/40 px-2 py-1 text-success">Ativo</span>}
+                    {participant.isStarter && (
+                      <span className="border border-primary/40 px-2 py-1 text-primary">
+                        Titular
+                      </span>
+                    )}
+                    {participant.isCaptain && (
+                      <span className="border border-warning/40 px-2 py-1 text-warning">
+                        Capitão
+                      </span>
+                    )}
+                    {participant.isSubstitute && (
+                      <span className="border border-neon/40 px-2 py-1 text-neon">Reserva</span>
+                    )}
+                    {participant.isActive && (
+                      <span className="border border-success/40 px-2 py-1 text-success">Ativo</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1031,9 +2509,1038 @@ function Admin() {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={editingEntity !== null}
+        onOpenChange={(open) => {
+          if (!open) closeEditModal();
+        }}
+      >
+        <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-[calc(100vw-2.5rem)] md:w-[min(92vw,56rem)] max-h-[90vh] overflow-hidden box-border border-white/10 bg-[#0a0a0c] text-white flex flex-col p-4 sm:p-5">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl uppercase italic">
+              {editingEntity?.type === "tournament"
+                ? "Editar campeonato"
+                : editingEntity?.type === "team"
+                  ? "Editar time"
+                  : editingEntity?.type === "player"
+                    ? "Editar player"
+                    : "Editar partida"}
+            </DialogTitle>
+            <DialogDescription className="text-white/50 uppercase tracking-widest text-[10px]">
+              {editingEntity?.type === "tournament"
+                ? "Altera os dados do campeonato e salva direto na API."
+                : editingEntity?.type === "team"
+                  ? "Altera os dados do time e salva direto na API."
+                  : editingEntity?.type === "player"
+                    ? "Altera os dados do player e salva direto na API."
+                    : "Altera os dados da partida e salva direto na API."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingEntity?.type === "tournament" && (
+            <div className="grid gap-4 overflow-y-auto pr-1 max-h-[calc(90vh-10rem)] min-w-0">
+              <div className="grid md:grid-cols-2 gap-4 min-w-0">
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Nome
+                  </label>
+                  <Input
+                    value={editTournamentDraft.name}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({ ...current, name: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Descrição
+                  </label>
+                  <Textarea
+                    value={editTournamentDraft.description}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({
+                        ...current,
+                        description: e.target.value,
+                      }))
+                    }
+                    className="min-h-[88px] resize-y bg-black/40 border-white/10"
+                  />
+                </div>
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Banner URL
+                  </label>
+                  <Input
+                    value={editTournamentDraft.bannerUrl}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({
+                        ...current,
+                        bannerUrl: e.target.value,
+                      }))
+                    }
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Jogo
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={editTournamentDraft.gameId}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({
+                        ...current,
+                        gameId: Number(e.target.value) || 0,
+                      }))
+                    }
+                  >
+                    <option value={0}>Selecionar jogo</option>
+                    {gamesData.map((game: any) => (
+                      <option key={game.id} value={game.id}>
+                        {game.name || game.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Status
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={editTournamentDraft.statusId}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({
+                        ...current,
+                        statusId: Number(e.target.value) || 0,
+                      }))
+                    }
+                  >
+                    <option value={0}>Selecionar status</option>
+                    {statusesData.map((status: any) => (
+                      <option key={status.id} value={status.id}>
+                        {status.name || status.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Tipo de Chaveamento
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={editTournamentDraft.bracketType}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({
+                        ...current,
+                        bracketType: e.target.value,
+                      }))
+                    }
+                  >
+                    <option value="Single Elimination">Eliminação Simples</option>
+                    <option value="Double Elimination">Eliminação Dupla</option>
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Formato
+                  </label>
+                  <Input
+                    value={editTournamentDraft.format}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({ ...current, format: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Premiação
+                  </label>
+                  <Input
+                    type="number"
+                    value={editTournamentDraft.prizePool}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({
+                        ...current,
+                        prizePool: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Vagas
+                  </label>
+                  <Input
+                    type="number"
+                    value={editTournamentDraft.maxTeams}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({
+                        ...current,
+                        maxTeams: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Organizador
+                  </label>
+                  <Input
+                    value={editTournamentDraft.organizer}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({
+                        ...current,
+                        organizer: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Região
+                  </label>
+                  <Input
+                    value={editTournamentDraft.region}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({ ...current, region: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Timezone
+                  </label>
+                  <Input
+                    value={editTournamentDraft.timezone}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({
+                        ...current,
+                        timezone: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Patch
+                  </label>
+                  <Input
+                    value={editTournamentDraft.patchVersion}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({
+                        ...current,
+                        patchVersion: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Roster Lock
+                  </label>
+                  <Input
+                    type="datetime-local"
+                    value={editTournamentDraft.rosterLockAt}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({
+                        ...current,
+                        rosterLockAt: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Início
+                  </label>
+                  <Input
+                    type="datetime-local"
+                    value={editTournamentDraft.startDate}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({
+                        ...current,
+                        startDate: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Fim
+                  </label>
+                  <Input
+                    type="datetime-local"
+                    value={editTournamentDraft.endDate}
+                    onChange={(e) =>
+                      setEditTournamentDraft((current) => ({ ...current, endDate: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={closeEditModal}>
+                  Cancelar
+                </Button>
+                <Button className="bg-neon text-black font-black" onClick={saveEdit}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar alterações
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {editingEntity?.type === "team" && (
+            <div className="grid gap-4 overflow-y-auto pr-1 max-h-[calc(90vh-10rem)] min-w-0">
+              <div className="grid md:grid-cols-2 gap-4 min-w-0">
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Nome
+                  </label>
+                  <Input
+                    value={editTeamDraft.name}
+                    onChange={(e) =>
+                      setEditTeamDraft((current) => ({ ...current, name: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    TAG
+                  </label>
+                  <Input
+                    value={editTeamDraft.tag}
+                    onChange={(e) =>
+                      setEditTeamDraft((current) => ({ ...current, tag: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Jogo
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={editTeamDraft.gameId}
+                    onChange={(e) =>
+                      setEditTeamDraft((current) => ({
+                        ...current,
+                        gameId: Number(e.target.value) || 0,
+                      }))
+                    }
+                  >
+                    <option value={0}>Selecione um jogo</option>
+                    {gamesData.map((game: any) => (
+                      <option key={game.id} value={game.id}>
+                        {game.name || game.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Descrição
+                  </label>
+                  <Textarea
+                    value={editTeamDraft.description}
+                    onChange={(e) =>
+                      setEditTeamDraft((current) => ({ ...current, description: e.target.value }))
+                    }
+                    className="min-h-[88px] resize-y bg-black/40 border-white/10"
+                  />
+                </div>
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Logo URL
+                  </label>
+                  <Input
+                    value={editTeamDraft.logoUrl}
+                    onChange={(e) =>
+                      setEditTeamDraft((current) => ({ ...current, logoUrl: e.target.value }))
+                    }
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Banner Color
+                  </label>
+                  <Input
+                    value={editTeamDraft.bannerColor}
+                    onChange={(e) =>
+                      setEditTeamDraft((current) => ({ ...current, bannerColor: e.target.value }))
+                    }
+                    placeholder="#f86d83"
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    ELO
+                  </label>
+                  <Input
+                    type="number"
+                    value={editTeamDraft.elo}
+                    onChange={(e) =>
+                      setEditTeamDraft((current) => ({
+                        ...current,
+                        elo: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Wins
+                  </label>
+                  <Input
+                    type="number"
+                    value={editTeamDraft.wins}
+                    onChange={(e) =>
+                      setEditTeamDraft((current) => ({
+                        ...current,
+                        wins: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Losses
+                  </label>
+                  <Input
+                    type="number"
+                    value={editTeamDraft.losses}
+                    onChange={(e) =>
+                      setEditTeamDraft((current) => ({
+                        ...current,
+                        losses: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Troféus
+                  </label>
+                  <Input
+                    type="number"
+                    value={editTeamDraft.trophies}
+                    onChange={(e) =>
+                      setEditTeamDraft((current) => ({
+                        ...current,
+                        trophies: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="border border-white/10 bg-black/20 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <h4 className="text-[10px] uppercase tracking-[0.3em] font-black text-white/70 italic">
+                    Formação do Time
+                  </h4>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="flex h-10 rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                      value={editTeamGameId}
+                      onChange={(e) => setEditTeamGameId(Number(e.target.value))}
+                    >
+                      <option value={0}>Selecionar jogo dos roles...</option>
+                      {gamesData.map((game: any) => (
+                        <option key={game.id} value={game.id}>
+                          {game.name || game.title}
+                        </option>
+                      ))}
+                    </select>
+                    <Button type="button" variant="outline" onClick={addEditTeamParticipant}>
+                      Adicionar player
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {editTeamParticipants.map((participant, index) => (
+                    <div
+                      key={participant.id || index}
+                      className="grid md:grid-cols-[1.8fr_1fr_auto_auto_auto_auto_auto] gap-3 items-center border border-white/5 p-3 min-w-0"
+                    >
+                      <div className="space-y-1 min-w-0">
+                        <select
+                          className="flex h-12 w-full rounded-md border border-input bg-black/40 px-3 py-3 text-base focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          value={participant.playerId || ""}
+                          onChange={(e) => {
+                            const playerId = Number(e.target.value) || 0;
+                            const playerName =
+                              playersData.find(
+                                (candidate: any) => Number(candidate.id) === playerId,
+                              )?.name || "";
+                            updateEditTeamParticipant(index, { playerId, playerName });
+                          }}
+                        >
+                          <option value="">Selecionar player...</option>
+                          {playersData.map((player: any) => {
+                            const playerId = Number(player.id);
+                            const selectedElsewhere =
+                              linkedPlayerIdsInEditDraft.has(playerId) &&
+                              playerId !== Number(participant.playerId);
+                            return (
+                              <option
+                                key={player.id}
+                                value={player.id}
+                                disabled={selectedElsewhere}
+                              >
+                                {player.name}
+                                {selectedElsewhere ? " (já escalado)" : ""}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <div className="text-[10px] uppercase tracking-widest text-white/40 truncate">
+                          {participant.playerName ||
+                            playersData.find(
+                              (candidate: any) =>
+                                Number(candidate.id) === Number(participant.playerId),
+                            )?.name ||
+                            "Player não resolvido"}
+                        </div>
+                      </div>
+                      <select
+                        className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                        value={participant.roleId || ""}
+                        onChange={(e) => {
+                          const roleId = Number(e.target.value) || 0;
+                          const roleName =
+                            editAvailableRoles.find(
+                              (candidate: any) => Number(candidate.id) === roleId,
+                            )?.name || "";
+                          updateEditTeamParticipant(index, { roleId, roleName });
+                        }}
+                        disabled={!editTeamGameId}
+                      >
+                        <option value="">Selecionar role...</option>
+                        {editAvailableRoles.map((role: any) => (
+                          <option key={role.id} value={role.id}>
+                            {role.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="text-[10px] uppercase tracking-widest text-white/40 md:col-span-2">
+                        {participant.roleName ||
+                          editAvailableRoles.find(
+                            (candidate: any) => Number(candidate.id) === Number(participant.roleId),
+                          )?.name ||
+                          "Role não resolvida"}
+                      </div>
+                      <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={participant.isStarter}
+                          onChange={(e) =>
+                            updateEditTeamParticipant(index, {
+                              isStarter: e.target.checked,
+                              isSubstitute: e.target.checked ? false : participant.isSubstitute,
+                            })
+                          }
+                        />{" "}
+                        Titular
+                      </label>
+                      <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={participant.isCaptain}
+                          onChange={(e) =>
+                            updateEditTeamParticipant(index, { isCaptain: e.target.checked })
+                          }
+                        />{" "}
+                        Capitão
+                      </label>
+                      <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={participant.isSubstitute}
+                          onChange={(e) =>
+                            updateEditTeamParticipant(index, {
+                              isSubstitute: e.target.checked,
+                              isStarter: e.target.checked ? false : participant.isStarter,
+                            })
+                          }
+                        />{" "}
+                        Reserva
+                      </label>
+                      <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={participant.isActive}
+                          onChange={(e) =>
+                            updateEditTeamParticipant(index, { isActive: e.target.checked })
+                          }
+                        />{" "}
+                        Ativo
+                      </label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => removeEditTeamParticipant(index)}
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={closeEditModal}>
+                  Cancelar
+                </Button>
+                <Button className="bg-neon text-black font-black" onClick={saveEdit}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar alterações
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {editingEntity?.type === "player" && (
+            <div className="grid gap-4 overflow-y-auto pr-1 max-h-[calc(90vh-10rem)] min-w-0">
+              <div className="grid md:grid-cols-2 gap-4 min-w-0">
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Nome
+                  </label>
+                  <Input
+                    value={editPlayerDraft.name}
+                    onChange={(e) =>
+                      setEditPlayerDraft((current) => ({ ...current, name: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Avatar URL
+                  </label>
+                  <Input
+                    value={editPlayerDraft.avatarUrl}
+                    onChange={(e) =>
+                      setEditPlayerDraft((current) => ({ ...current, avatarUrl: e.target.value }))
+                    }
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Usuário vinculado
+                  </label>
+                  <Input
+                    value={getUserLabel(
+                      usersData.find(
+                        (candidate: any) => Number(candidate.id) === Number(editPlayerDraft.userId),
+                      ),
+                    )}
+                    disabled
+                    className="bg-black/40 border-white/10"
+                  />
+                </div>
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Partida vinculada aos stats
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={editPlayerStatsMatchId}
+                    onChange={(e) => setEditPlayerStatsMatchId(Number(e.target.value) || 0)}
+                  >
+                    <option value={0}>Selecionar partida</option>
+                    {playerStatsMatchOptions.map((match: any) => (
+                      <option key={match.id} value={match.id}>
+                        {getTournamentLabel(Number(match.tournamentId))} - {match.bracketPosition || `Partida #${match.id}`}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                    Os stats ficam em `PlayerMatchStats`. Selecione a partida que você quer atualizar.
+                  </p>
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Kills
+                  </label>
+                  <Input
+                    type="number"
+                    value={editPlayerDraft.kills}
+                    onChange={(e) =>
+                      setEditPlayerDraft((current) => ({
+                        ...current,
+                        kills: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Deaths
+                  </label>
+                  <Input
+                    type="number"
+                    value={editPlayerDraft.deaths}
+                    onChange={(e) =>
+                      setEditPlayerDraft((current) => ({
+                        ...current,
+                        deaths: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Assists
+                  </label>
+                  <Input
+                    type="number"
+                    value={editPlayerDraft.assists}
+                    onChange={(e) =>
+                      setEditPlayerDraft((current) => ({
+                        ...current,
+                        assists: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    ADR
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={editPlayerDraft.adr}
+                    onChange={(e) =>
+                      setEditPlayerDraft((current) => ({
+                        ...current,
+                        adr: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    HS%
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={editPlayerDraft.hsPercentage}
+                    onChange={(e) =>
+                      setEditPlayerDraft((current) => ({
+                        ...current,
+                        hsPercentage: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    First Kills
+                  </label>
+                  <Input
+                    type="number"
+                    value={editPlayerDraft.firstKills}
+                    onChange={(e) =>
+                      setEditPlayerDraft((current) => ({
+                        ...current,
+                        firstKills: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    KAST
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={editPlayerDraft.kast}
+                    onChange={(e) =>
+                      setEditPlayerDraft((current) => ({
+                        ...current,
+                        kast: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    ACS
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={editPlayerDraft.acs}
+                    onChange={(e) =>
+                      setEditPlayerDraft((current) => ({
+                        ...current,
+                        acs: Number(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Perfil público
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={String(editPlayerDraft.isProfilePublic)}
+                    onChange={(e) =>
+                      setEditPlayerDraft((current) => ({
+                        ...current,
+                        isProfilePublic: e.target.value === "true",
+                      }))
+                    }
+                  >
+                    <option value="true">Sim</option>
+                    <option value="false">Não</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={closeEditModal}>
+                  Cancelar
+                </Button>
+                <Button className="bg-neon text-black font-black" onClick={saveEdit}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar alterações
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {editingEntity?.type === "match" && (
+            <div className="grid gap-4 overflow-y-auto pr-1 max-h-[calc(90vh-10rem)] min-w-0">
+              <div className="grid md:grid-cols-2 gap-4 min-w-0">
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Campeonato
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={editMatchDraft.tournamentId}
+                    onChange={(e) =>
+                      setEditMatchDraft((current) => ({
+                        ...current,
+                        tournamentId: Number(e.target.value) || 0,
+                      }))
+                    }
+                  >
+                    <option value={0}>Selecionar campeonato</option>
+                    {tournamentsData.map((t: any) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Stage
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={editMatchDraft.stageId}
+                    onChange={(e) =>
+                      setEditMatchDraft((current) => ({
+                        ...current,
+                        stageId: Number(e.target.value) || 0,
+                      }))
+                    }
+                  >
+                    <option value={0}>Selecionar stage</option>
+                    {stagesData
+                      .filter(
+                        (stage: any) =>
+                          !stage.tournamentId ||
+                          Number(stage.tournamentId) === Number(editMatchDraft.tournamentId),
+                      )
+                      .map((stage: any) => (
+                        <option key={stage.id} value={stage.id}>
+                          {stage.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Status
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={editMatchDraft.statusId}
+                    onChange={(e) =>
+                      setEditMatchDraft((current) => ({
+                        ...current,
+                        statusId: Number(e.target.value) || 0,
+                      }))
+                    }
+                  >
+                    <option value={0}>Selecionar status</option>
+                    {statusesData.map((status: any) => (
+                      <option key={status.id} value={status.id}>
+                        {status.name || status.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Jogo
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={editMatchDraft.gameId}
+                    onChange={(e) =>
+                      setEditMatchDraft((current) => ({
+                        ...current,
+                        gameId: Number(e.target.value) || 0,
+                      }))
+                    }
+                  >
+                    <option value={0}>Selecionar jogo</option>
+                    {gamesData.map((game: any) => (
+                      <option key={game.id} value={game.id}>
+                        {game.name || game.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Melhor de
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={editMatchDraft.bestOf}
+                    onChange={(e) =>
+                      setEditMatchDraft((current) => ({
+                        ...current,
+                        bestOf: Number(e.target.value) || 1,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Time A
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={editMatchDraft.teamAId}
+                    onChange={(e) =>
+                      setEditMatchDraft((current) => ({
+                        ...current,
+                        teamAId: Number(e.target.value) || 0,
+                      }))
+                    }
+                  >
+                    <option value={0}>Selecionar time A</option>
+                    {teamsData.map((team: any) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-1 md:col-span-2">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Time B
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={editMatchDraft.teamBId}
+                    onChange={(e) =>
+                      setEditMatchDraft((current) => ({
+                        ...current,
+                        teamBId: Number(e.target.value) || 0,
+                      }))
+                    }
+                  >
+                    <option value={0}>Selecionar time B</option>
+                    {teamsData.map((team: any) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Vencedor
+                  </label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                    value={editMatchDraft.winnerTeamId}
+                    onChange={(e) =>
+                      setEditMatchDraft((current) => ({
+                        ...current,
+                        winnerTeamId: Number(e.target.value) || 0,
+                      }))
+                    }
+                  >
+                    <option value={0}>Definir depois</option>
+                    {teamsData.map((team: any) => (
+                      <option key={team.id} value={team.id}>
+                        {team.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Início
+                  </label>
+                  <Input
+                    type="datetime-local"
+                    value={editMatchDraft.startedAt}
+                    onChange={(e) =>
+                      setEditMatchDraft((current) => ({ ...current, startedAt: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                    Fim
+                  </label>
+                  <Input
+                    type="datetime-local"
+                    value={editMatchDraft.finishedAt}
+                    onChange={(e) =>
+                      setEditMatchDraft((current) => ({ ...current, finishedAt: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={closeEditModal}>
+                  Cancelar
+                </Button>
+                <Button className="bg-neon text-black font-black" onClick={saveEdit}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar alterações
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
-          <img src="https://santos-games.com/encontre-um-time/assets/sga-logo-B5SOul8E.png" alt="SGA Logo" className="h-12 w-auto" />
+          <img
+            src="https://santos-games.com/encontre-um-time/assets/sga-logo-B5SOul8E.png"
+            alt="SGA Logo"
+            className="h-12 w-auto"
+          />
           <h1 className="font-display text-3xl uppercase tracking-widest">Painel de controle</h1>
         </div>
       </div>
@@ -1049,9 +3556,20 @@ function Admin() {
       {/* Sistema de Tabulação por Estado */}
       <div className="mt-8 flex flex-wrap gap-1 border-b border-border/60">
         {tabs.map((t) => (
-          <button key={t.k} onClick={() => { setTab(t.k); setPage(1); }}
-            className={`px-4 py-2 text-xs uppercase tracking-widest -mb-px border-b-2 transition ${tab === t.k ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}>{t.label}</button>
+          <button
+            key={t.k}
+            onClick={() => {
+              setTab(t.k);
+              setPage(1);
+            }}
+            className={`px-4 py-2 text-xs uppercase tracking-widest -mb-px border-b-2 transition ${
+              tab === t.k
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t.label}
+          </button>
         ))}
       </div>
 
@@ -1060,143 +3578,284 @@ function Admin() {
             Blocos de Renderização Condicional por Aba.
             Pontos de Integração: Cada 'f' (filtro) consome dados de '@/mocks/data'.
         */}
-        {tab === "campeonatos" && (() => {
-          const f = filt(tournamentsData, "name");
-          const { items, pages } = paginate(f);
-          return (
-            <>
-              {isCreatingTourney && (
-                <div className="mb-8 p-6 border border-primary/20 bg-primary/5 rounded-xl space-y-4">
-                  <h3 className="font-display text-xl uppercase italic text-primary">Configurar Novo Campeonato</h3>
-                  <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Nome</label>
-                      <Input placeholder="Título do Evento" value={newTourney.name} onChange={e => setNewTourney({ ...newTourney, name: e.target.value })} />
+        {tab === "campeonatos" &&
+          (() => {
+            const f = filt(tournamentsData, "name");
+            const { items, pages } = paginate(f);
+            return (
+              <>
+                {isCreatingTourney && (
+                  <div className="mb-8 p-6 border border-primary/20 bg-primary/5 rounded-xl space-y-4">
+                    <h3 className="font-display text-xl uppercase italic text-primary">
+                      Configurar Novo Campeonato
+                    </h3>
+                    <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Nome
+                        </label>
+                        <Input
+                          placeholder="Título do Evento"
+                          value={newTourney.name}
+                          onChange={(e) => setNewTourney({ ...newTourney, name: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Premiação Total (Número)
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="Ex: 5000"
+                          value={newTourney.prizePool}
+                          onChange={(e) =>
+                            setNewTourney({ ...newTourney, prizePool: Number(e.target.value) })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Vagas
+                        </label>
+                        <Input
+                          type="number"
+                          value={newTourney.maxTeams}
+                          onChange={(e) =>
+                            setNewTourney({
+                              ...newTourney,
+                              maxTeams: parseInt(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Início
+                        </label>
+                        <Input
+                          type="datetime-local"
+                          value={newTourney.startDate}
+                          onChange={(e) =>
+                            setNewTourney({ ...newTourney, startDate: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Término
+                        </label>
+                        <Input
+                          type="datetime-local"
+                          value={newTourney.endDate}
+                          onChange={(e) =>
+                            setNewTourney({ ...newTourney, endDate: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Roster Lock
+                        </label>
+                        <Input
+                          type="datetime-local"
+                          value={newTourney.rosterLockAt}
+                          onChange={(e) =>
+                            setNewTourney({ ...newTourney, rosterLockAt: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Jogo
+                        </label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          value={newTourney.gameId}
+                          onChange={(e) =>
+                            setNewTourney({ ...newTourney, gameId: Number(e.target.value) })
+                          }
+                        >
+                          <option value={0}>Selecionar Jogo...</option>
+                          {gamesData.map((game: any) => (
+                            <option key={game.id} value={game.id}>
+                              {game.name || game.title}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Tipo de Chaveamento
+                        </label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          value={newTourney.bracketType}
+                          onChange={(e) =>
+                            setNewTourney({ ...newTourney, bracketType: e.target.value })
+                          }
+                        >
+                          <option value="Single Elimination">Eliminação Simples</option>
+                          <option value="Double Elimination">Eliminação Dupla</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Status
+                        </label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          value={newTourney.statusId}
+                          onChange={(e) =>
+                            setNewTourney({ ...newTourney, statusId: Number(e.target.value) })
+                          }
+                        >
+                          <option value={0}>Selecionar Status...</option>
+                          {statusesData.map((status: any) => (
+                            <option key={status.id} value={status.id}>
+                              {status.name || status.title}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Organizador
+                        </label>
+                        <Input
+                          placeholder="Ex: Santos Games"
+                          value={newTourney.organizer}
+                          onChange={(e) =>
+                            setNewTourney({ ...newTourney, organizer: e.target.value })
+                          }
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Premiação Total (Número)</label>
-                      <Input type="number" placeholder="Ex: 5000" value={newTourney.prizePool} onChange={e => setNewTourney({ ...newTourney, prizePool: Number(e.target.value) })} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Descrição
+                        </label>
+                        <Input
+                          placeholder="Sobre o campeonato..."
+                          value={newTourney.description}
+                          onChange={(e) =>
+                            setNewTourney({ ...newTourney, description: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          URL do Banner
+                        </label>
+                        <Input
+                          placeholder="https://..."
+                          value={newTourney.bannerUrl}
+                          onChange={(e) =>
+                            setNewTourney({ ...newTourney, bannerUrl: e.target.value })
+                          }
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Vagas</label>
-                      <Input type="number" value={newTourney.maxTeams} onChange={e => setNewTourney({ ...newTourney, maxTeams: parseInt(e.target.value) || 0 })} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Início</label>
-                      <Input type="datetime-local" value={newTourney.startDate} onChange={e => setNewTourney({ ...newTourney, startDate: e.target.value })} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Término</label>
-                      <Input type="datetime-local" value={newTourney.endDate} onChange={e => setNewTourney({ ...newTourney, endDate: e.target.value })} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Roster Lock</label>
-                      <Input type="datetime-local" value={newTourney.rosterLockAt} onChange={e => setNewTourney({ ...newTourney, rosterLockAt: e.target.value })} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Jogo</label>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                        value={newTourney.gameId}
-                        onChange={e => setNewTourney({ ...newTourney, gameId: Number(e.target.value) })}
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="ghost" onClick={() => setIsCreatingTourney(false)}>
+                        Cancelar
+                      </Button>
+                      <Button
+                        className="bg-primary"
+                        onClick={async () => {
+                          try {
+                            if (!newTourney.name.trim())
+                              throw new Error("O nome do campeonato é obrigatório.");
+                            if (!newTourney.gameId)
+                              throw new Error("Selecione um jogo para o campeonato.");
+                            if (!newTourney.statusId)
+                              throw new Error("Selecione o status do campeonato.");
+
+                            const payload = {
+                              name: newTourney.name.trim(),
+                              description: newTourney.description.trim() || null,
+                              bannerUrl: newTourney.bannerUrl.trim() || null,
+                              startDate: formatApiUtcTimestamp(newTourney.startDate),
+                              endDate: formatApiUtcTimestamp(newTourney.endDate),
+                              rosterLockAt: formatApiUtcTimestamp(newTourney.rosterLockAt),
+                              createdBy: user?.login || user?.name || user?.email || "SGA_ADMIN",
+                              format: newTourney.format.trim() || null,
+                              bracketType: newTourney.bracketType.trim() || null,
+                              maxTeams: Number(newTourney.maxTeams) || null,
+                              organizer: newTourney.organizer.trim() || null,
+                              rulebookUrl: newTourney.rulebookUrl.trim() || null,
+                              prizePool: Number(newTourney.prizePool) || null,
+                              region: newTourney.region.trim() || null,
+                              timezone: newTourney.timezone.trim() || null,
+                              patchVersion: newTourney.patchVersion.trim() || null,
+                              statusId: Number(newTourney.statusId) || null,
+                              gameId: Number(newTourney.gameId) || null,
+                            };
+
+                            const result = await apiTournaments.create(payload);
+                            if (!result?.result && result !== true && result !== null) {
+                              throw new Error("Erro ao criar campeonato");
+                            }
+
+                            toast.success("Campeonato criado com sucesso!");
+                            setIsCreatingTourney(false);
+                            setNewTourney(createEmptyTournament());
+
+                            // Gatilho de atualização automática
+                            queryClient.invalidateQueries({ queryKey: ["tournaments", token] });
+                            queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+                            queryClient.invalidateQueries({ queryKey: ["matches", token] }); // Partidas podem mudar com novos torneios
+                            queryClient.invalidateQueries({ queryKey: ["matches"] });
+                          } catch (err: any) {
+                            console.error("Erro detalhado da API:", err);
+                            toast.error(err.message || "Erro ao criar campeonato");
+                          }
+                        }}
                       >
-                        <option value={0}>Selecionar Jogo...</option>
-                        {gamesData.map((game: any) => (
-                          <option key={game.id} value={game.id}>{game.name || game.title}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Status</label>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                        value={newTourney.statusId}
-                        onChange={e => setNewTourney({ ...newTourney, statusId: Number(e.target.value) })}
-                      >
-                        <option value={0}>Selecionar Status...</option>
-                        {statusesData.map((status: any) => (
-                          <option key={status.id} value={status.id}>{status.name || status.title}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Organizador</label>
-                      <Input placeholder="Ex: Santos Games" value={newTourney.organizer} onChange={e => setNewTourney({ ...newTourney, organizer: e.target.value })} />
+                        Salvar
+                      </Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Descrição</label>
-                      <Input placeholder="Sobre o campeonato..." value={newTourney.description} onChange={e => setNewTourney({ ...newTourney, description: e.target.value })} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">URL do Banner</label>
-                      <Input placeholder="https://..." value={newTourney.bannerUrl} onChange={e => setNewTourney({ ...newTourney, bannerUrl: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="ghost" onClick={() => setIsCreatingTourney(false)}>Cancelar</Button>
-                    <Button className="bg-primary" onClick={async () => {
-                      try {
-                        if (!newTourney.name.trim()) throw new Error("O nome do campeonato é obrigatório.");
-                        if (!newTourney.gameId) throw new Error("Selecione um jogo para o campeonato.");
-                        if (!newTourney.statusId) throw new Error("Selecione o status do campeonato.");
-
-                        const payload = {
-                          ...newTourney,
-                          name: newTourney.name.trim(),
-                          description: newTourney.description.trim(),
-                          bannerUrl: newTourney.bannerUrl.trim(),
-                          startDate: formatApiTimestamp(newTourney.startDate),
-                          endDate: formatApiTimestamp(newTourney.endDate),
-                          rosterLockAt: formatApiTimestamp(newTourney.rosterLockAt),
-                          createdBy: user?.login || user?.name || user?.email || "SGA_ADMIN",
-                        };
-
-                        const result = await apiTournaments.create(payload);
-                        if (!result?.result && result !== true && result !== null) {
-                          throw new Error("Erro ao criar campeonato");
-                        }
-
-                        toast.success("Campeonato criado com sucesso!");
-                        setIsCreatingTourney(false);
-                        setNewTourney(createEmptyTournament());
-
-                        // Gatilho de atualização automática
-                        queryClient.invalidateQueries({ queryKey: ["tournaments"] });
-                        queryClient.invalidateQueries({ queryKey: ["matches"] }); // Partidas podem mudar com novos torneios
-                      } catch (err: any) {
-                        console.error("Erro detalhado da API:", err);
-                        toast.error(err.message || "Erro ao criar campeonato");
-                      }
-                    }}>Salvar</Button>
-                  </div>
-                </div>
-              )}
-              <HeaderBar create="Novo campeonato" />
-              <div className="overflow-x-auto rounded-xl border border-border/60 bg-card-grad">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
-                    <tr><th className="px-4 py-3 text-left">Nome</th><th className="text-left">Status</th><th>Times</th><th>Premiação</th><th>Início</th><th /></tr>
-                  </thead>
-                  <tbody>
-                    {items.map((t) => (
-                      <tr key={t.id} className="border-t border-border/40 hover:bg-muted/30">
-                        <td className="px-4 py-3 font-display">{t.name}</td>
-                        <td><StatusBadge status={getTournamentStatusLabel(t.statusId)} /></td>
-                        <td className="text-center">{t.maxTeams}</td>
-                        <td className="text-center">{t.prizePool}</td>
-                        <td className="text-center">{formatDateBR(t.startDate)}</td>
-                        <td className="px-4 py-3"><RowActions id={t.id} entity="Tournaments" /></td>
+                )}
+                <HeaderBar create="Novo campeonato" />
+                <div className="overflow-x-auto rounded-xl border border-border/60 bg-card-grad">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Nome</th>
+                        <th className="text-left">Status</th>
+                        <th>Times</th>
+                        <th>Premiação</th>
+                        <th>Início</th>
+                        <th />
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <Pagination pages={pages} />
-            </>
-          );
-        })()}
+                    </thead>
+                    <tbody>
+                      {items.map((t) => (
+                        <tr key={t.id} className="border-t border-border/40 hover:bg-muted/30">
+                          <td className="px-4 py-3 font-display">{t.name}</td>
+                          <td>
+                            <StatusBadge status={getTournamentStatusLabel(t.statusId)} />
+                          </td>
+                          <td className="text-center">{t.maxTeams}</td>
+                          <td className="text-center">{t.prizePool}</td>
+                          <td className="text-center">{formatDateBR(t.startDate)}</td>
+                          <td className="px-4 py-3">
+                            <RowActions
+                              id={t.id}
+                              entity="Tournaments"
+                              onEdit={() => openTournamentEdit(t)}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination pages={pages} />
+              </>
+            );
+          })()}
 
         {tab === "chaveamentos" && (
           <div className="animate-in fade-in duration-700 space-y-6">
@@ -1206,8 +3865,12 @@ function Admin() {
                   <Swords className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-display text-2xl uppercase italic font-black text-white leading-none">Gestão de <span className="text-primary">Chaveamentos</span></h3>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest italic mt-1">Playoff_Matrix_Control // Protocol_9.9</p>
+                  <h3 className="font-display text-2xl uppercase italic font-black text-white leading-none">
+                    Gestão de <span className="text-primary">Chaveamentos</span>
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest italic mt-1">
+                    Playoff_Matrix_Control // Protocol_9.9
+                  </p>
                 </div>
               </div>
             </div>
@@ -1215,28 +3878,37 @@ function Admin() {
             <div className="grid lg:grid-cols-[400px_1fr] gap-8 items-start">
               {/* Lista de Seleção */}
               <div className="space-y-4">
-                <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] italic">Tournament_Stream</span>
+                <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] italic">
+                  Tournament_Stream
+                </span>
                 <div className="grid gap-2">
-                  {tournamentsData.map(t => (
+                  {tournamentsData.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => setSelectedTourney(t.id)}
                       className={`p-4 text-left border transition-all relative group ${selectedTourney === t.id ? "bg-primary/10 border-primary/40 shadow-[0_0_15px_rgba(248,109,131,0.1)]" : "bg-white/5 border-white/5 hover:bg-white/10"}`}
                     >
-                      <div className="text-sm font-display uppercase italic font-bold tracking-tight">{t.name}</div>
+                      <div className="text-sm font-display uppercase italic font-bold tracking-tight">
+                        {t.name}
+                      </div>
                       <div className="flex items-center justify-between mt-1">
                         <StatusBadge status={getTournamentStatusLabel(t.statusId)} />
                       </div>
-                      {selectedTourney === t.id && <div className="absolute right-0 top-0 bottom-0 w-1 bg-primary" />}
+                      {selectedTourney === t.id && (
+                        <div className="absolute right-0 top-0 bottom-0 w-1 bg-primary" />
+                      )}
                     </button>
                   ))}
                 </div>
 
                 <div className="border border-white/10 bg-white/5 p-4 space-y-3">
                   <div>
-                    <div className="text-[9px] font-black uppercase tracking-[0.35em] text-white/30 italic">Times Disponíveis</div>
+                    <div className="text-[9px] font-black uppercase tracking-[0.35em] text-white/30 italic">
+                      Times Disponíveis
+                    </div>
                     <div className="text-xs text-white/50 mt-2">
-                      Arraste um time para um slot vazio. O pool usa os times disponíveis no painel e bloqueia duplicidades no mesmo chaveamento.
+                      Arraste um time para um slot vazio. O pool usa os times disponíveis no painel
+                      e bloqueia duplicidades no mesmo chaveamento.
                     </div>
                   </div>
                   <div className="grid gap-2 max-h-[420px] overflow-y-auto pr-1">
@@ -1258,12 +3930,26 @@ function Admin() {
                           }}
                           className={`flex items-center gap-3 border px-3 py-3 transition ${isAssigned ? "cursor-not-allowed border-white/5 bg-black/20 opacity-40" : "cursor-grab border-white/10 bg-black/30 hover:border-primary/40 hover:bg-primary/5 active:cursor-grabbing"}`}
                         >
-                          <TeamLogo team={{ tag: team.tag || team.name?.slice(0, 3) || "SGA", bannerColor: "#f86d83" }} size={32} />
+                          <TeamLogo
+                            team={{
+                              tag: team.tag || team.name?.slice(0, 3) || "SGA",
+                              bannerColor: "#f86d83",
+                            }}
+                            size={32}
+                          />
                           <div className="min-w-0 flex-1">
-                            <div className="truncate font-display text-sm uppercase italic text-white">{team.name}</div>
-                            <div className="truncate text-[10px] uppercase tracking-widest text-white/35">{team.tag || "Sem tag"}</div>
+                            <div className="truncate font-display text-sm uppercase italic text-white">
+                              {team.name}
+                            </div>
+                            <div className="truncate text-[10px] uppercase tracking-widest text-white/35">
+                              {team.tag || "Sem tag"}
+                            </div>
                           </div>
-                          {isAssigned && <span className="text-[9px] font-black uppercase tracking-widest text-warning">Em uso</span>}
+                          {isAssigned && (
+                            <span className="text-[9px] font-black uppercase tracking-widest text-warning">
+                              Em uso
+                            </span>
+                          )}
                         </div>
                       );
                     })}
@@ -1280,553 +3966,855 @@ function Admin() {
                     </div>
                   )}
 
-                  {selectedTournament && BRACKET_ROUNDS.map((round) => (
-                    <div key={round.key} className="space-y-6">
-                      <h4 className={`text-[10px] font-black uppercase tracking-[0.4em] italic flex items-center gap-3 ${round.accentClass}`}>
-                        <div className={`w-8 h-px ${round.lineClass}`} /> {round.title}
-                      </h4>
-
-                      <div className={`grid gap-4 ${round.positions.length > 1 ? "md:grid-cols-2" : "md:grid-cols-1 max-w-xl"}`}>
-                        {round.positions.map((position) => {
-                          const match = effectiveBracketMatchMap.get(position) as any;
-                          const teamA = getTeamById(Number(match?.teamAId));
-                          const teamB = getTeamById(Number(match?.teamBId));
-                          const matchIsLocked = Number(match?.winnerTeamId) > 0;
-
-                          const renderDropSlot = (teamField: "teamAId" | "teamBId", label: string, team: any) => (
-                            <div
-                              onDragEnter={() => {
-                                if (matchIsLocked) return;
-                                setPreviewSlotKey(`${position}:${teamField}`);
-                              }}
-                              onDragOver={(event) => {
-                                if (matchIsLocked) return;
-                                event.preventDefault();
-                                setPreviewSlotKey(`${position}:${teamField}`);
-                              }}
-                              onDragLeave={(event) => {
-                                if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
-                                setPreviewSlotKey((current) => (current === `${position}:${teamField}` ? null : current));
-                              }}
-                              onDrop={(event) => {
-                                if (matchIsLocked) return;
-                                event.preventDefault();
-                                const teamId = Number(event.dataTransfer.getData("text/team-id")) || 0;
-                                setPreviewSlotKey(null);
-                                setDraggingTeamId(null);
-                                void handleBracketDrop(position, teamField, teamId);
-                              }}
-                              className={`min-h-16 border px-3 py-3 transition ${team ? "border-white/10 bg-black/40" : "border-dashed border-white/15 bg-black/20 hover:border-primary/40"} ${previewSlotKey === `${position}:${teamField}` && draggingTeam ? "border-primary bg-primary/10" : ""} ${matchIsLocked ? "cursor-not-allowed opacity-70" : ""}`}
-                            >
-                              <div className="text-[8px] font-black uppercase tracking-[0.3em] text-white/20 mb-2">{label}</div>
-                              {previewSlotKey === `${position}:${teamField}` && draggingTeam ? (
-                                <div className="flex items-center gap-3 opacity-80">
-                                  <TeamLogo team={{ tag: draggingTeam.tag || draggingTeam.name?.slice(0, 3) || "SGA", bannerColor: "#f86d83" }} size={28} />
-                                  <div className="min-w-0">
-                                    <div className="truncate font-display text-sm uppercase italic text-white">{draggingTeam.name}</div>
-                                    <div className="text-[10px] uppercase tracking-widest text-primary">Preview</div>
-                                  </div>
-                                </div>
-                              ) : team ? (
-                                <div className="flex items-center gap-3">
-                                  <TeamLogo team={{ tag: team.tag || team.name?.slice(0, 3) || "SGA", bannerColor: "#f86d83" }} size={28} />
-                                  <div className="min-w-0">
-                                    <div className="truncate font-display text-sm uppercase italic text-white">{team.name}</div>
-                                    <div className="text-[10px] uppercase tracking-widest text-white/35">{team.tag || "Sem tag"}</div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="text-xs text-white/35">{matchIsLocked ? "Partida encerrada" : "Arraste um time para este slot"}</div>
-                              )}
-                            </div>
-                          );
-
-                          return (
-                            <div key={position} className={`p-4 border transition-all relative ${round.cardClass}`}>
-                              <div className="flex justify-between items-start gap-3 mb-4">
-                                <div>
-                                  <div className="text-[8px] font-black text-white/30 tracking-widest uppercase">Slot {position}</div>
-                                  <div className="text-[10px] uppercase tracking-widest text-white/20 mt-1">
-                                    {getBracketPhaseLabel(position)}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  {match?.statusId ? <StatusBadge status={getTournamentStatusLabel(match.statusId)} /> : <span className="text-[9px] uppercase tracking-widest text-white/25">Pendente</span>}
-                                  <Save className="w-3 h-3 text-white/10" />
-                                </div>
-                              </div>
-
-                              <div className="space-y-3">
-                                {renderDropSlot("teamAId", "Slot A", teamA)}
-                                <div className="flex items-center gap-4 py-1">
-                                  <div className="h-px flex-1 bg-white/5" />
-                                  <span className="text-[8px] font-black text-white/10 italic tracking-tighter">VERSUS</span>
-                                  <div className="h-px flex-1 bg-white/5" />
-                                </div>
-                                {renderDropSlot("teamBId", "Slot B", teamB)}
-                              </div>
-
-                              <div className="mt-4 border-t border-white/5 pt-4 space-y-3">
-                                <div className="text-[9px] font-black uppercase tracking-[0.35em] text-white/30 italic">Quem ganhou?</div>
-                                <div className="grid sm:grid-cols-2 gap-2">
-                                  <Button
-                                    variant="outline"
-                                    disabled={!teamA || !teamB || matchIsLocked}
-                                    onClick={() => void handleMatchWinner(position, "teamAId")}
-                                    className={`justify-start ${Number(match?.winnerTeamId) === Number(match?.teamAId) && teamA ? "border-primary bg-primary/10 text-white" : ""}`}
-                                  >
-                                    {teamA ? teamA.name : "Aguardando Time A"}
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    disabled={!teamA || !teamB || matchIsLocked}
-                                    onClick={() => void handleMatchWinner(position, "teamBId")}
-                                    className={`justify-start ${Number(match?.winnerTeamId) === Number(match?.teamBId) && teamB ? "border-primary bg-primary/10 text-white" : ""}`}
-                                  >
-                                    {teamB ? teamB.name : "Aguardando Time B"}
-                                  </Button>
-                                </div>
-
-                                {Number(match?.winnerTeamId) > 0 && (
-                                  <div className="text-xs text-white/55">
-                                    Avançando: <span className="font-display uppercase italic text-white">{getTeamLabel(Number(match.winnerTeamId))}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                  {selectedTournament && isDoubleEliminationTournament && (
+                    <div className="border border-valorant/20 bg-valorant/5 p-4 text-xs text-white/60 uppercase tracking-widest italic">
+                      Este campeonato usa lower bracket. As rodadas finais aparecem abaixo do
+                      chaveamento principal.
                     </div>
-                  ))}
+                  )}
+
+                  {selectedTournament && (
+                    <div className="space-y-10">
+                      <AdminBracketSection
+                        title="UPPER"
+                        subtitle="Chave principal"
+                        rounds={BRACKET_UPPER_ROUNDS}
+                        isLower={false}
+                        effectiveBracketMatchMap={effectiveBracketMatchMap}
+                        getTeamById={getTeamById}
+                        draggingTeam={draggingTeam}
+                        previewSlotKey={previewSlotKey}
+                        setPreviewSlotKey={setPreviewSlotKey}
+                        setDraggingTeamId={setDraggingTeamId}
+                        handleBracketDrop={handleBracketDrop}
+                        handleBracketRemove={handleBracketRemove}
+                        handleMatchWinner={handleMatchWinner}
+                        getBracketPhaseLabel={getBracketPhaseLabel}
+                        getTournamentStatusLabel={getTournamentStatusLabel}
+                        getTeamLabel={getTeamLabel}
+                      />
+
+                      {isDoubleEliminationTournament && (
+                        <div className="space-y-4">
+                          <div className="border border-valorant/20 bg-valorant/5 p-4 text-xs text-white/60 uppercase tracking-widest italic">
+                            Este campeonato usa lower bracket. As rodadas finais aparecem abaixo do
+                            chaveamento principal.
+                          </div>
+
+                          <AdminBracketSection
+                            title="LOWER"
+                            subtitle="Repescagem"
+                            rounds={BRACKET_LOWER_ROUNDS}
+                            isLower
+                            effectiveBracketMatchMap={effectiveBracketMatchMap}
+                            getTeamById={getTeamById}
+                            draggingTeam={draggingTeam}
+                            previewSlotKey={previewSlotKey}
+                            setPreviewSlotKey={setPreviewSlotKey}
+                            setDraggingTeamId={setDraggingTeamId}
+                            handleBracketDrop={handleBracketDrop}
+                            handleBracketRemove={handleBracketRemove}
+                            handleMatchWinner={handleMatchWinner}
+                            getBracketPhaseLabel={getBracketPhaseLabel}
+                            getTournamentStatusLabel={getTournamentStatusLabel}
+                            getTeamLabel={getTeamLabel}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {tab === "times" && (() => {
-          const f = filt(teamsData, "name");
-          const { items, pages } = paginate(f);
-          return (
-            <>
-              {isCreatingTeam && (
-                <div className="mb-8 p-6 border border-neon/20 bg-neon/5 rounded-xl space-y-4">
-                  <h3 className="font-display text-xl uppercase italic text-neon">Registrar Nova Equipe</h3>
-                  <div className="grid md:grid-cols-4 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Nome da Equipe</label>
-                      <Input placeholder="Ex: Pulse Elite" value={newTeam.name} onChange={e => setNewTeam({ ...newTeam, name: e.target.value })} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Descrição</label>
-                      <Input placeholder="Ex: Organização competitiva" value={newTeam.description} onChange={e => setNewTeam({ ...newTeam, description: e.target.value })} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">TAG</label>
-                      <Input placeholder="Ex: PULSE" value={newTeam.tag} onChange={e => setNewTeam({ ...newTeam, tag: e.target.value })} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Logo URL</label>
-                      <Input placeholder="https://cdn..." value={newTeam.logoUrl} onChange={e => setNewTeam({ ...newTeam, logoUrl: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="border border-white/10 bg-black/20 p-4 space-y-4">
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <h4 className="text-[10px] uppercase tracking-[0.3em] font-black text-white/70 italic">Formação Inicial</h4>
-                      <div className="flex items-center gap-2">
-                        <select
-                          className="flex h-10 rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                          value={teamGameId}
-                          onChange={e => setTeamGameId(Number(e.target.value))}
-                        >
-                          <option value={0}>Selecionar jogo dos roles...</option>
-                          {gamesData.map((game: any) => (
-                            <option key={game.id} value={game.id}>{game.name || game.title}</option>
-                          ))}
-                        </select>
-                        <Button type="button" variant="outline" onClick={addTeamParticipant}>Adicionar player</Button>
+        {tab === "times" &&
+          (() => {
+            const f = filt(teamsData, "name");
+            const { items, pages } = paginate(f);
+            return (
+              <>
+                {isCreatingTeam && (
+                  <div className="mb-8 p-6 border border-neon/20 bg-neon/5 rounded-xl space-y-4">
+                    <h3 className="font-display text-xl uppercase italic text-neon">
+                      Registrar Nova Equipe
+                    </h3>
+                    <div className="grid md:grid-cols-4 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Nome da Equipe
+                        </label>
+                        <Input
+                          placeholder="Ex: Pulse Elite"
+                          value={newTeam.name}
+                          onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Descrição
+                        </label>
+                        <Input
+                          placeholder="Ex: Organização competitiva"
+                          value={newTeam.description}
+                          onChange={(e) => setNewTeam({ ...newTeam, description: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          TAG
+                        </label>
+                        <Input
+                          placeholder="Ex: PULSE"
+                          value={newTeam.tag}
+                          onChange={(e) => setNewTeam({ ...newTeam, tag: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Logo URL
+                        </label>
+                        <Input
+                          placeholder="https://cdn..."
+                          value={newTeam.logoUrl}
+                          onChange={(e) => setNewTeam({ ...newTeam, logoUrl: e.target.value })}
+                        />
                       </div>
                     </div>
-                    <div className="space-y-3">
-                      {teamParticipants.map((participant, index) => (
-                        <div key={index} className="grid md:grid-cols-[1.3fr_1fr_auto_auto_auto_auto_auto] gap-3 items-center border border-white/5 p-3">
+                    <div className="border border-white/10 bg-black/20 p-4 space-y-4">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <h4 className="text-[10px] uppercase tracking-[0.3em] font-black text-white/70 italic">
+                          Formação Inicial
+                        </h4>
+                        <div className="flex items-center gap-2">
                           <select
-                            className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                            value={participant.playerId || ""}
-                            onChange={e => updateTeamParticipant(index, { playerId: Number(e.target.value) || 0 })}
+                            className="flex h-10 rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                            value={teamGameId}
+                            onChange={(e) => setTeamGameId(Number(e.target.value))}
                           >
-                            <option value="">Selecionar player...</option>
-                            {playersData.map((player: any) => {
-                              const playerId = Number(player.id);
-                              const selectedElsewhere = linkedPlayerIdsInDraft.has(playerId) && playerId !== Number(participant.playerId);
-                              return (
-                                <option key={player.id} value={player.id} disabled={selectedElsewhere}>
-                                  {player.name}{selectedElsewhere ? " (já escalado)" : ""}
-                                </option>
-                              );
-                            })}
-                          </select>
-                          <select
-                            className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                            value={participant.roleId || ""}
-                            onChange={e => updateTeamParticipant(index, { roleId: Number(e.target.value) || 0 })}
-                            disabled={!teamGameId}
-                          >
-                            <option value="">Selecionar role...</option>
-                            {availableRoles.map((role: any) => (
-                              <option key={role.id} value={role.id}>{role.name}</option>
+                            <option value={0}>Selecionar jogo dos roles...</option>
+                            {gamesData.map((game: any) => (
+                              <option key={game.id} value={game.id}>
+                                {game.name || game.title}
+                              </option>
                             ))}
                           </select>
-                          <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                            <input type="checkbox" checked={participant.isStarter} onChange={e => updateTeamParticipant(index, { isStarter: e.target.checked, isSubstitute: e.target.checked ? false : participant.isSubstitute })} /> Titular
-                          </label>
-                          <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                            <input type="checkbox" checked={participant.isCaptain} onChange={e => updateTeamParticipant(index, { isCaptain: e.target.checked })} /> Capitão
-                          </label>
-                          <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                            <input type="checkbox" checked={participant.isSubstitute} onChange={e => updateTeamParticipant(index, { isSubstitute: e.target.checked, isStarter: e.target.checked ? false : participant.isStarter })} /> Reserva
-                          </label>
-                          <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                            <input type="checkbox" checked={participant.isActive} onChange={e => updateTeamParticipant(index, { isActive: e.target.checked })} /> Ativo
-                          </label>
-                          <Button type="button" variant="ghost" onClick={() => removeTeamParticipant(index)}>Remover</Button>
+                          <Button type="button" variant="outline" onClick={addTeamParticipant}>
+                            Adicionar player
+                          </Button>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="ghost" onClick={() => setIsCreatingTeam(false)}>Cancelar</Button>
-                    <Button className="bg-neon text-black font-black" onClick={async () => {
-                      try {
-                        if (!newTeam.name || !newTeam.tag) throw new Error("Nome e TAG são obrigatórios.");
-
-                        const payload = {
-                          ...newTeam,
-                          name: newTeam.name.trim(),
-                          description: newTeam.description.trim(),
-                          tag: newTeam.tag.trim(),
-                          logoUrl: newTeam.logoUrl.trim(),
-                        };
-                        const result = await apiTeams.create(payload);
-                        const createdTeam = extractEntity(result);
-                        if (!createdTeam?.id) {
-                          throw new Error("Erro ao registrar time");
-                        }
-
-                        const participantsToCreate = teamParticipants.filter((participant) => participant.playerId && participant.roleId);
-
-                        for (const participant of participantsToCreate) {
-                          const participantPayload = {
-                            roleId: participant.roleId,
-                            playerId: participant.playerId,
-                            teamId: createdTeam.id,
-                            joinedAt: formatApiTimestamp(new Date()),
-                            leftAt: null,
-                            isActive: participant.isActive,
-                            isStarter: participant.isStarter,
-                            isCaptain: participant.isCaptain,
-                            isSubstitute: participant.isSubstitute,
-                          };
-
-                          const participantResult = await apiTeamParticipants.create(participantPayload);
-                          if (!participantResult?.result && participantResult !== true && participantResult !== null) {
-                            throw new Error("Time criado, mas houve erro ao vincular jogadores.");
-                          }
-                        }
-
-                        toast.success("Equipe registrada!");
-                        setIsCreatingTeam(false);
-                        setNewTeam(createEmptyTeam());
-                        setTeamParticipants([createEmptyTeamParticipant()]);
-
-                        // Gatilho de atualização automática (afeta squads e rankings)
-                        queryClient.invalidateQueries({ queryKey: ["teams"] });
-                        queryClient.invalidateQueries({ queryKey: ["players"] });
-                      } catch (err: any) {
-                        toast.error(err.message || "Erro ao registrar time");
-                      }
-                    }}>Finalizar Registro</Button>
-                  </div>
-                </div>
-              )}
-              <HeaderBar create="Novo time" onCreate={() => setIsCreatingTeam(true)} />
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-card-grad">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
-                    <tr><th className="px-4 py-3 text-left">Time</th><th>Tag</th><th>Descrição</th><th>Criado em</th><th /></tr>
-                  </thead>
-                  <tbody>
-                    {items.map((t) => (
-                      <tr key={t.id} className="border-t border-border/40 hover:bg-muted/30">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {t.logoUrl ? (
-                              <img src={t.logoUrl} alt={t.name} className="h-7 w-7 rounded-full object-cover" />
-                            ) : (
-                              <TeamLogo team={{ tag: t.tag, bannerColor: "#f86d83" }} size={28} />
-                            )}
-                            <span className="font-display">{t.name}</span>
-                          </div>
-                        </td>
-                        <td className="text-center text-primary font-display">{t.tag}</td>
-                        <td className="text-center">{t.description || "-"}</td>
-                        <td className="text-center">{formatDateBR(t.createdAt)}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-1">
-                            <Button size="icon" variant="ghost" onClick={() => setViewingTeamId(Number(t.id))}>
-                              <Eye className="h-4 w-4" />
+                      </div>
+                      <div className="space-y-3">
+                        {teamParticipants.map((participant, index) => (
+                          <div
+                            key={index}
+                            className="grid md:grid-cols-[1.8fr_1fr_auto_auto_auto_auto_auto] gap-3 items-center border border-white/5 p-3"
+                          >
+                            <select
+                              className="flex h-12 w-full rounded-md border border-input bg-black/40 px-3 py-3 text-base focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                              value={participant.playerId || ""}
+                              onChange={(e) =>
+                                updateTeamParticipant(index, {
+                                  playerId: Number(e.target.value) || 0,
+                                })
+                              }
+                            >
+                              <option value="">Selecionar player...</option>
+                              {playersData.map((player: any) => {
+                                const playerId = Number(player.id);
+                                const selectedElsewhere =
+                                  linkedPlayerIdsInDraft.has(playerId) &&
+                                  playerId !== Number(participant.playerId);
+                                return (
+                                  <option
+                                    key={player.id}
+                                    value={player.id}
+                                    disabled={selectedElsewhere}
+                                  >
+                                    {player.name}
+                                    {selectedElsewhere ? " (já escalado)" : ""}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                            <select
+                              className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                              value={participant.roleId || ""}
+                              onChange={(e) =>
+                                updateTeamParticipant(index, {
+                                  roleId: Number(e.target.value) || 0,
+                                })
+                              }
+                              disabled={!teamGameId}
+                            >
+                              <option value="">Selecionar role...</option>
+                              {availableRoles.map((role: any) => (
+                                <option key={role.id} value={role.id}>
+                                  {role.name}
+                                </option>
+                              ))}
+                            </select>
+                            <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={participant.isStarter}
+                                onChange={(e) =>
+                                  updateTeamParticipant(index, {
+                                    isStarter: e.target.checked,
+                                    isSubstitute: e.target.checked
+                                      ? false
+                                      : participant.isSubstitute,
+                                  })
+                                }
+                              />{" "}
+                              Titular
+                            </label>
+                            <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={participant.isCaptain}
+                                onChange={(e) =>
+                                  updateTeamParticipant(index, { isCaptain: e.target.checked })
+                                }
+                              />{" "}
+                              Capitão
+                            </label>
+                            <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={participant.isSubstitute}
+                                onChange={(e) =>
+                                  updateTeamParticipant(index, {
+                                    isSubstitute: e.target.checked,
+                                    isStarter: e.target.checked ? false : participant.isStarter,
+                                  })
+                                }
+                              />{" "}
+                              Reserva
+                            </label>
+                            <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={participant.isActive}
+                                onChange={(e) =>
+                                  updateTeamParticipant(index, { isActive: e.target.checked })
+                                }
+                              />{" "}
+                              Ativo
+                            </label>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => removeTeamParticipant(index)}
+                            >
+                              Remover
                             </Button>
-                            <Button size="icon" variant="ghost" onClick={fakeAct("Editado")}><Pencil className="h-4 w-4" /></Button>
-                            <Button size="icon" variant="ghost" onClick={() => handleDelete(t.id, "Teams")}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <Pagination pages={pages} />
-            </>
-          );
-        })()}
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="ghost" onClick={() => setIsCreatingTeam(false)}>
+                        Cancelar
+                      </Button>
+                      <Button
+                        className="bg-neon text-black font-black"
+                        onClick={async () => {
+                          try {
+                            if (!newTeam.name || !newTeam.tag)
+                              throw new Error("Nome e TAG são obrigatórios.");
 
-        {tab === "jogadores" && (() => {
-          const f = filt(playersData, "name");
-          const { items, pages } = paginate(f);
-          return (
-            <>
-              {isCreatingPlayer && (
-                <div className="mb-8 p-6 border border-primary/20 bg-primary/5 rounded-xl space-y-4">
-                  <h3 className="font-display text-xl uppercase italic text-primary">Contratar Novo Atleta</h3>
-                  <div className="grid md:grid-cols-4 gap-4">
-                    <div className="space-y-1 md:col-span-2">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Usuário Vinculado</label>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                        value={newPlayer.userId || ""}
-                        onChange={e => handlePlayerUserChange(e.target.value)}
+                            const payload = {
+                              name: newTeam.name.trim(),
+                              description: newTeam.description.trim() || null,
+                              tag: newTeam.tag.trim() || null,
+                              logoUrl: newTeam.logoUrl.trim() || null,
+                            };
+                            const result = await apiTeams.create(payload);
+                            const createdTeam = extractEntity(result);
+                            if (!createdTeam?.id) {
+                              throw new Error("Erro ao registrar time");
+                            }
+
+                            const participantsToCreate = teamParticipants.filter(
+                              (participant) => participant.playerId && participant.roleId,
+                            );
+
+                            for (const participant of participantsToCreate) {
+                              const participantPayload = {
+                                roleId: participant.roleId,
+                                playerId: participant.playerId,
+                                teamId: createdTeam.id,
+                                joinedAt: formatApiTimestamp(new Date()),
+                                leftAt: null,
+                                isActive: participant.isActive,
+                                isStarter: participant.isStarter,
+                                isCaptain: participant.isCaptain,
+                                isSubstitute: participant.isSubstitute,
+                              };
+
+                              const participantResult =
+                                await apiTeamParticipants.create(participantPayload);
+                              if (
+                                !participantResult?.result &&
+                                participantResult !== true &&
+                                participantResult !== null
+                              ) {
+                                throw new Error(
+                                  "Time criado, mas houve erro ao vincular jogadores.",
+                                );
+                              }
+                            }
+
+                            toast.success("Equipe registrada!");
+                            setIsCreatingTeam(false);
+                            setNewTeam(createEmptyTeam());
+                            setTeamParticipants([createEmptyTeamParticipant()]);
+
+                            // Gatilho de atualização automática (afeta squads e rankings)
+                            queryClient.invalidateQueries({ queryKey: ["teams", token] });
+                            queryClient.invalidateQueries({ queryKey: ["teams"] });
+                            queryClient.invalidateQueries({ queryKey: ["players", token] });
+                            queryClient.invalidateQueries({ queryKey: ["players"] });
+                          } catch (err: any) {
+                            toast.error(err.message || "Erro ao registrar time");
+                          }
+                        }}
                       >
-                        <option value="">Selecionar usuário para relacionar</option>
-                        {usersData.map((candidate: any) => {
-                          const candidateId = Number(candidate.id);
-                          const alreadyLinked = linkedUserIds.has(candidateId) && candidateId !== Number(newPlayer.userId);
+                        Finalizar Registro
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <HeaderBar create="Novo time" onCreate={() => setIsCreatingTeam(true)} />
+                <div className="overflow-hidden rounded-xl border border-border/60 bg-card-grad">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Time</th>
+                        <th>Tag</th>
+                        <th>Descrição</th>
+                        <th>Criado em</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((t) => (
+                        <tr key={t.id} className="border-t border-border/40 hover:bg-muted/30">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              {t.logoUrl ? (
+                                <img
+                                  src={t.logoUrl}
+                                  alt={t.name}
+                                  className="h-7 w-7 rounded-full object-cover"
+                                />
+                              ) : (
+                                <TeamLogo team={{ tag: t.tag, bannerColor: "#f86d83" }} size={28} />
+                              )}
+                              <span className="font-display">{t.name}</span>
+                            </div>
+                          </td>
+                          <td className="text-center text-primary font-display">{t.tag}</td>
+                          <td className="text-center">{t.description || "-"}</td>
+                          <td className="text-center">{formatDateBR(t.createdAt)}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => setViewingTeamId(Number(t.id))}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button size="icon" variant="ghost" onClick={() => openTeamEdit(t)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleDelete(t.id, "Teams")}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination pages={pages} />
+              </>
+            );
+          })()}
 
-                          return (
-                            <option key={candidate.id} value={candidate.id} disabled={alreadyLinked}>
-                              {getUserLabel(candidate)}{candidate.email ? ` - ${candidate.email}` : ""}{alreadyLinked ? " (já vinculado)" : ""}
+        {tab === "jogadores" &&
+          (() => {
+            const f = filt(playersData, "name");
+            const { items, pages } = paginate(f);
+            return (
+              <>
+                {isCreatingPlayer && (
+                  <div className="mb-8 p-6 border border-primary/20 bg-primary/5 rounded-xl space-y-4">
+                    <h3 className="font-display text-xl uppercase italic text-primary">
+                      Contratar Novo Atleta
+                    </h3>
+                    <div className="grid md:grid-cols-4 gap-4">
+                      <div className="space-y-1 md:col-span-2">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Usuário Vinculado
+                        </label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          value={newPlayer.userId || ""}
+                          onChange={(e) => handlePlayerUserChange(e.target.value)}
+                        >
+                          <option value="">Selecionar usuário para relacionar</option>
+                          {usersData.map((candidate: any) => {
+                            const candidateId = Number(candidate.id);
+                            const alreadyLinked =
+                              linkedUserIds.has(candidateId) &&
+                              candidateId !== Number(newPlayer.userId);
+
+                            return (
+                              <option
+                                key={candidate.id}
+                                value={candidate.id}
+                                disabled={alreadyLinked}
+                              >
+                                {getUserLabel(candidate)}
+                                {candidate.email ? ` - ${candidate.email}` : ""}
+                                {alreadyLinked ? " (já vinculado)" : ""}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        {selectedUser && (
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                            {selectedUser.login || selectedUser.email || `ID ${selectedUser.id}`} ·{" "}
+                            {selectedUser.email || `ROLE ${selectedUser.role}`}
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Nome do Player
+                        </label>
+                        <Input
+                          placeholder="Ex: Igor Caetano"
+                          value={newPlayer.name}
+                          onChange={(e) => setNewPlayer({ ...newPlayer, name: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Avatar URL
+                        </label>
+                        <Input
+                          placeholder="https://..."
+                          value={newPlayer.avatarUrl}
+                          onChange={(e) =>
+                            setNewPlayer({ ...newPlayer, avatarUrl: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Perfil Público
+                        </label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          value={String(newPlayer.isProfilePublic)}
+                          onChange={(e) =>
+                            setNewPlayer({
+                              ...newPlayer,
+                              isProfilePublic: e.target.value === "true",
+                            })
+                          }
+                        >
+                          <option value="true">Sim</option>
+                          <option value="false">Não</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="ghost" onClick={() => setIsCreatingPlayer(false)}>
+                        Cancelar
+                      </Button>
+                      <Button
+                        className="bg-primary font-black"
+                        onClick={async () => {
+                          try {
+                            if (!newPlayer.userId)
+                              throw new Error("Selecione um usuário para vincular ao player.");
+                            if (!newPlayer.name.trim())
+                              throw new Error("O nome do player é obrigatório.");
+
+                            const payload = {
+                              name: newPlayer.name.trim(),
+                              avatarUrl:
+                                newPlayer.avatarUrl?.trim() ||
+                                "https://picsum.photos/seed/sga/200/200",
+                              userId: Number(newPlayer.userId) || null,
+                              isProfilePublic: Boolean(newPlayer.isProfilePublic),
+                            };
+
+                            const result = await apiPlayers.create(payload);
+
+                            if (result?.result || result === true || result === null) {
+                              toast.success("Jogador contratado!");
+                              setIsCreatingPlayer(false);
+                              setNewPlayer(createEmptyPlayer());
+
+                              queryClient.invalidateQueries({ queryKey: ["players", token] });
+                              queryClient.invalidateQueries({ queryKey: ["players"] });
+                              return;
+                            }
+
+                            toast.error("Erro ao criar jogador");
+                          } catch (err: any) {
+                            toast.error(err.message || "Erro ao criar jogador");
+                          }
+                        }}
+                      >
+                        Salvar Perfil
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <HeaderBar create="Novo jogador" onCreate={() => setIsCreatingPlayer(true)} />
+                <div className="overflow-hidden rounded-xl border border-border/60 bg-card-grad">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Jogador</th>
+                        <th>Time</th>
+                        <th>KDA</th>
+                        <th>Usuário</th>
+                        <th>Visibilidade</th>
+                        <th>Criado em</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((p) => (
+                        <tr
+                          key={p.id}
+                          className="border-t border-border/40 hover:bg-muted/30 transition"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <img
+                                src={
+                                  p.avatarUrl && p.avatarUrl !== "null"
+                                    ? p.avatarUrl
+                                    : "https://picsum.photos/seed/sga/200/200"
+                                }
+                                className="h-7 w-7 rounded-full object-cover"
+                                alt=""
+                              />
+                              <span className="font-display">{p.name}</span>
+                            </div>
+                          </td>
+                          <td className="text-center">
+                            {(() => {
+                              const team = getPlayerTeam(Number(p.id));
+                              return team ? (
+                                <div className="flex items-center justify-center gap-2">
+                                  <TeamLogo team={team} size={24} />
+                                  <span className="text-xs">{team.name || team.tag || "Time"}</span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">Sem equipe</span>
+                              );
+                            })()}
+                          </td>
+                          <td className="text-center font-display text-primary">
+                            {Number(playerStatsById.get(Number(p.id))?.kda || 0).toFixed(2)}
+                          </td>
+                          <td className="text-center">
+                            {getUserLabel(
+                              usersData.find(
+                                (candidate: any) => Number(candidate.id) === Number(p.userId),
+                              ),
+                            )}
+                          </td>
+                          <td className="text-center">
+                            {p.isProfilePublic ? "Público" : "Privado"}
+                          </td>
+                          <td className="text-center">{formatDateBR(p.createdAt)}</td>
+                          <td className="px-4 py-3">
+                            <RowActions
+                              id={p.id}
+                              entity="Players"
+                              onEdit={() => openPlayerEdit(p)}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination pages={pages} />
+              </>
+            );
+          })()}
+
+        {tab === "partidas" &&
+          (() => {
+            const f = matchesData.filter((match: any) => {
+              const target =
+                `${getTournamentLabel(match.tournamentId)} ${getStageLabel(match.stageId)} ${getTournamentStatusLabel(match.statusId)} ${getGameLabel(match.gameId)}`.toLowerCase();
+              return target.includes(q.toLowerCase());
+            });
+            const { items, pages } = paginate(f);
+            return (
+              <>
+                {isCreatingMatch && (
+                  <div className="mb-8 p-6 border border-secondary/20 bg-secondary/5 rounded-xl space-y-4">
+                    <h3 className="font-display text-xl uppercase italic text-secondary">
+                      Agendar Novo Confronto
+                    </h3>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Campeonato
+                        </label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm"
+                          value={newMatch.tournamentId || ""}
+                          onChange={(e) =>
+                            setNewMatch({
+                              ...newMatch,
+                              tournamentId: Number(e.target.value) || 0,
+                              stageId: 0,
+                            })
+                          }
+                        >
+                          <option value="">Selecionar...</option>
+                          {tournamentsData.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}
                             </option>
-                          );
-                        })}
-                      </select>
-                      {selectedUser && (
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                          {selectedUser.login || selectedUser.email || `ID ${selectedUser.id}`} · {selectedUser.email || `ROLE ${selectedUser.role}`}
-                        </p>
-                      )}
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Stage
+                        </label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm"
+                          value={newMatch.stageId || ""}
+                          onChange={(e) =>
+                            setNewMatch({ ...newMatch, stageId: Number(e.target.value) || 0 })
+                          }
+                        >
+                          <option value="">Selecionar...</option>
+                          {availableStages.map((stage: any) => (
+                            <option key={stage.id} value={stage.id}>
+                              {stage.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Status
+                        </label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm"
+                          value={newMatch.statusId || ""}
+                          onChange={(e) =>
+                            setNewMatch({ ...newMatch, statusId: Number(e.target.value) || 0 })
+                          }
+                        >
+                          <option value="">Selecionar...</option>
+                          {statusesData.map((status: any) => (
+                            <option key={status.id} value={status.id}>
+                              {status.name || status.title}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Jogo
+                        </label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm"
+                          value={newMatch.gameId || ""}
+                          onChange={(e) =>
+                            setNewMatch({ ...newMatch, gameId: Number(e.target.value) || 0 })
+                          }
+                        >
+                          <option value="">Selecionar...</option>
+                          {gamesData.map((game: any) => (
+                            <option key={game.id} value={game.id}>
+                              {game.name || game.title}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Melhor de
+                        </label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={newMatch.bestOf}
+                          onChange={(e) =>
+                            setNewMatch({ ...newMatch, bestOf: Number(e.target.value) || 1 })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Vencedor
+                        </label>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm"
+                          value={newMatch.winnerTeamId || ""}
+                          onChange={(e) =>
+                            setNewMatch({ ...newMatch, winnerTeamId: Number(e.target.value) || 0 })
+                          }
+                        >
+                          <option value="">Definir depois</option>
+                          {teamsData.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Início
+                        </label>
+                        <Input
+                          type="datetime-local"
+                          value={newMatch.startedAt}
+                          onChange={(e) => setNewMatch({ ...newMatch, startedAt: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] uppercase font-black text-muted-foreground italic">
+                          Fim
+                        </label>
+                        <Input
+                          type="datetime-local"
+                          value={newMatch.finishedAt}
+                          onChange={(e) => setNewMatch({ ...newMatch, finishedAt: e.target.value })}
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Nome do Player</label>
-                      <Input placeholder="Ex: Igor Caetano" value={newPlayer.name} onChange={e => setNewPlayer({ ...newPlayer, name: e.target.value })} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Avatar URL</label>
-                      <Input placeholder="https://..." value={newPlayer.avatarUrl} onChange={e => setNewPlayer({ ...newPlayer, avatarUrl: e.target.value })} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Perfil Público</label>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                        value={String(newPlayer.isProfilePublic)}
-                        onChange={e => setNewPlayer({ ...newPlayer, isProfilePublic: e.target.value === "true" })}
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="ghost" onClick={() => setIsCreatingMatch(false)}>
+                        Cancelar
+                      </Button>
+                      <Button
+                        className="bg-secondary text-black font-black"
+                        onClick={async () => {
+                          try {
+                            if (
+                              !newMatch.tournamentId ||
+                              !newMatch.stageId ||
+                              !newMatch.statusId ||
+                              !newMatch.gameId
+                            )
+                              throw new Error("Preencha os campos obrigatórios");
+                            const payload = {
+                              ...newMatch,
+                              startedAt: formatApiUtcTimestamp(newMatch.startedAt),
+                              finishedAt: formatApiUtcTimestamp(newMatch.finishedAt),
+                            };
+                            await apiMatches.create(payload);
+                            toast.success("Partida agendada!");
+                            setIsCreatingMatch(false);
+                            setNewMatch(createEmptyMatch());
+
+                            // Gatilho de atualização automática
+                            queryClient.invalidateQueries({ queryKey: ["matches", token] });
+                            queryClient.invalidateQueries({ queryKey: ["matches"] });
+                          } catch (err: any) {
+                            toast.error(err.message || "Erro ao agendar partida");
+                          }
+                        }}
                       >
-                        <option value="true">Sim</option>
-                        <option value="false">Não</option>
-                      </select>
+                        Confirmar Agenda
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="ghost" onClick={() => setIsCreatingPlayer(false)}>Cancelar</Button>
-                    <Button className="bg-primary font-black" onClick={async () => {
-                      try {
-                        if (!newPlayer.userId) throw new Error("Selecione um usuário para vincular ao player.");
-                        if (!newPlayer.name.trim()) throw new Error("O nome do player é obrigatório.");
-
-                        const payload = {
-                          ...newPlayer,
-                          name: newPlayer.name.trim(),
-                          avatarUrl: newPlayer.avatarUrl?.trim() || "https://picsum.photos/seed/sga/200/200",
-                          updatedAt: formatApiTimestamp(new Date()),
-                        };
-
-                        const result = await apiPlayers.create(payload);
-
-                        if (result?.result || result === true || result === null) {
-                          toast.success("Jogador contratado!");
-                          setIsCreatingPlayer(false);
-                          setNewPlayer(createEmptyPlayer());
-
-                          queryClient.invalidateQueries({ queryKey: ["players"] });
-                          return;
-                        }
-
-                        toast.error("Erro ao criar jogador");
-                      } catch (err: any) {
-                        toast.error(err.message || "Erro ao criar jogador");
-                      }
-                    }}>Salvar Perfil</Button>
-                  </div>
-                </div>
-              )}
-              <HeaderBar create="Novo jogador" onCreate={() => setIsCreatingPlayer(true)} />
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-card-grad">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
-                    <tr><th className="px-4 py-3 text-left">Jogador</th><th>Usuário</th><th>Visibilidade</th><th>Criado em</th><th /></tr>
-                  </thead>
-                  <tbody>
-                    {items.map((p) => (
-                      <tr key={p.id} className="border-t border-border/40 hover:bg-muted/30 transition">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <img src={p.avatarUrl && p.avatarUrl !== "null" ? p.avatarUrl : "https://picsum.photos/seed/sga/200/200"} className="h-7 w-7 rounded-full object-cover" alt="" />
-                            <span className="font-display">{p.name}</span>
-                          </div>
-                        </td>
-                        <td className="text-center">{getUserLabel(usersData.find((candidate: any) => Number(candidate.id) === Number(p.userId)))}</td>
-                        <td className="text-center">{p.isProfilePublic ? "Público" : "Privado"}</td>
-                        <td className="text-center">{formatDateBR(p.createdAt)}</td>
-                        <td className="px-4 py-3"><RowActions id={p.id} entity="Players" /></td>
+                )}
+                <HeaderBar create="Nova partida" onCreate={() => setIsCreatingMatch(true)} />
+                <div className="overflow-hidden rounded-xl border border-border/60 bg-card-grad">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Campeonato</th>
+                        <th>Stage</th>
+                        <th>Bo</th>
+                        <th>Vencedor</th>
+                        <th>Status</th>
+                        <th>Início</th>
+                        <th />
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <Pagination pages={pages} />
-            </>
-          );
-        })()}
-
-        {tab === "partidas" && (() => {
-          const f = matchesData.filter((match: any) => {
-            const target = `${getTournamentLabel(match.tournamentId)} ${getStageLabel(match.stageId)} ${getTournamentStatusLabel(match.statusId)} ${getGameLabel(match.gameId)}`.toLowerCase();
-            return target.includes(q.toLowerCase());
-          });
-          const { items, pages } = paginate(f);
-          return (
-            <>
-              {isCreatingMatch && (
-                <div className="mb-8 p-6 border border-secondary/20 bg-secondary/5 rounded-xl space-y-4">
-                  <h3 className="font-display text-xl uppercase italic text-secondary">Agendar Novo Confronto</h3>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Campeonato</label>
-                      <select className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm" value={newMatch.tournamentId || ""} onChange={e => setNewMatch({ ...newMatch, tournamentId: Number(e.target.value) || 0, stageId: 0 })}>
-                        <option value="">Selecionar...</option>
-                        {tournamentsData.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Stage</label>
-                      <select className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm" value={newMatch.stageId || ""} onChange={e => setNewMatch({ ...newMatch, stageId: Number(e.target.value) || 0 })}>
-                        <option value="">Selecionar...</option>
-                        {availableStages.map((stage: any) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Status</label>
-                      <select className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm" value={newMatch.statusId || ""} onChange={e => setNewMatch({ ...newMatch, statusId: Number(e.target.value) || 0 })}>
-                        <option value="">Selecionar...</option>
-                        {statusesData.map((status: any) => <option key={status.id} value={status.id}>{status.name || status.title}</option>)}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Jogo</label>
-                      <select className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm" value={newMatch.gameId || ""} onChange={e => setNewMatch({ ...newMatch, gameId: Number(e.target.value) || 0 })}>
-                        <option value="">Selecionar...</option>
-                        {gamesData.map((game: any) => <option key={game.id} value={game.id}>{game.name || game.title}</option>)}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Melhor de</label>
-                      <Input type="number" min={1} value={newMatch.bestOf} onChange={e => setNewMatch({ ...newMatch, bestOf: Number(e.target.value) || 1 })} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Vencedor</label>
-                      <select className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm" value={newMatch.winnerTeamId || ""} onChange={e => setNewMatch({ ...newMatch, winnerTeamId: Number(e.target.value) || 0 })}>
-                        <option value="">Definir depois</option>
-                        {teamsData.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Início</label>
-                      <Input type="datetime-local" value={newMatch.startedAt} onChange={e => setNewMatch({ ...newMatch, startedAt: e.target.value })} />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-black text-muted-foreground italic">Fim</label>
-                      <Input type="datetime-local" value={newMatch.finishedAt} onChange={e => setNewMatch({ ...newMatch, finishedAt: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="ghost" onClick={() => setIsCreatingMatch(false)}>Cancelar</Button>
-                    <Button className="bg-secondary text-black font-black" onClick={async () => {
-                      try {
-                        if (!newMatch.tournamentId || !newMatch.stageId || !newMatch.statusId || !newMatch.gameId) throw new Error("Preencha os campos obrigatórios");
-                        const payload = {
-                          ...newMatch,
-                          startedAt: formatApiUtcTimestamp(newMatch.startedAt),
-                          finishedAt: formatApiUtcTimestamp(newMatch.finishedAt),
-                        };
-                        await apiMatches.create(payload);
-                        toast.success("Partida agendada!");
-                        setIsCreatingMatch(false);
-                        setNewMatch(createEmptyMatch());
-
-                        // Gatilho de atualização automática
-                        queryClient.invalidateQueries({ queryKey: ["matches"] });
-                      } catch (err: any) {
-                        toast.error(err.message || "Erro ao agendar partida");
-                      }
-                    }}>Confirmar Agenda</Button>
-                  </div>
+                    </thead>
+                    <tbody>
+                      {items.map((m: any) => (
+                        <tr key={m.id} className="border-t border-border/40 hover:bg-muted/30">
+                          <td className="px-4 py-3 font-display">
+                            {getTournamentLabel(m.tournamentId)}
+                          </td>
+                          <td className="text-center">{getStageLabel(m.stageId)}</td>
+                          <td className="text-center">MD{m.bestOf || 1}</td>
+                          <td className="text-center">
+                            {m.winnerTeamId ? getTeamLabel(m.winnerTeamId) : "-"}
+                          </td>
+                          <td className="text-center">
+                            <StatusBadge status={getTournamentStatusLabel(m.statusId)} />
+                          </td>
+                          <td className="text-center">
+                            {m.startedAt ? formatDateBR(m.startedAt) : "-"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <RowActions
+                              id={m.id}
+                              entity="Matches"
+                              onEdit={() => openMatchEdit(m)}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-              <HeaderBar create="Nova partida" onCreate={() => setIsCreatingMatch(true)} />
-              <div className="overflow-hidden rounded-xl border border-border/60 bg-card-grad">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
-                    <tr><th className="px-4 py-3 text-left">Campeonato</th><th>Stage</th><th>Bo</th><th>Vencedor</th><th>Status</th><th>Início</th><th /></tr>
-                  </thead>
-                  <tbody>
-                    {items.map((m: any) => (
-                      <tr key={m.id} className="border-t border-border/40 hover:bg-muted/30">
-                        <td className="px-4 py-3 font-display">{getTournamentLabel(m.tournamentId)}</td>
-                        <td className="text-center">{getStageLabel(m.stageId)}</td>
-                        <td className="text-center">MD{m.bestOf || 1}</td>
-                        <td className="text-center">{m.winnerTeamId ? getTeamLabel(m.winnerTeamId) : "-"}</td>
-                        <td className="text-center"><StatusBadge status={getTournamentStatusLabel(m.statusId)} /></td>
-                        <td className="text-center">{m.startedAt ? formatDateBR(m.startedAt) : "-"}</td>
-                        <td className="px-4 py-3"><RowActions id={m.id} entity="Matches" /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <Pagination pages={pages} />
-            </>
-          );
-        })()}
+                <Pagination pages={pages} />
+              </>
+            );
+          })()}
 
         {tab === "highlights" && (
           <>
             <HeaderBar create="Novo highlight" />
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {highlightsData.map((h: any) => (
-                <div key={h.id} className="rounded-xl overflow-hidden border border-border/60 bg-card-grad">
-                  <div className="relative aspect-video"><img src={h.thumbnail} className="h-full w-full object-cover" alt="" /><Film className="absolute top-2 right-2 h-5 w-5 text-primary" /></div>
+                <div
+                  key={h.id}
+                  className="rounded-xl overflow-hidden border border-border/60 bg-card-grad"
+                >
+                  <div className="relative aspect-video">
+                    <img src={h.thumbnail} className="h-full w-full object-cover" alt="" />
+                    <Film className="absolute top-2 right-2 h-5 w-5 text-primary" />
+                  </div>
                   <div className="p-3">
                     <div className="text-sm font-display truncate">{h.title}</div>
-                    <div className="mt-2 flex justify-end"><RowActions id={h.id} entity="Highlights" /></div>
+                    <div className="mt-2 flex justify-end">
+                      <RowActions id={h.id} entity="Highlights" />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1842,8 +4830,16 @@ function Admin() {
                 <div key={i} className="relative group rounded-lg overflow-hidden">
                   <img src={src} alt="" className="aspect-square w-full object-cover" />
                   <div className="absolute inset-0 bg-background/70 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
-                    <Button size="icon" variant="ghost" onClick={fakeAct("Editado")}><Img className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => handleDelete(String(i), "Gallery")}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    <Button size="icon" variant="ghost" onClick={fakeAct("Editado")}>
+                      <Img className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleDelete(String(i), "Gallery")}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 </div>
               ))}

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { RankingTable } from "@/components/sga/RankingTable";
+import { normalizeGame, type GameLabel } from "@/lib/game";
 
 export const Route = createFileRoute("/tournaments")({
   head: () => ({ meta: [{ title: "Ranking de Equipes — SGA" }, { name: "description", content: "Ranking oficial das melhores equipes da Santos Games Arena." }] }),
@@ -9,7 +10,7 @@ export const Route = createFileRoute("/tournaments")({
 });
 
 function RankingPage() {
-  const [game, setGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
+  const [game, setGame] = useState<GameLabel>("COUNTER-STRIKE 2");
 
   return (
     <div className="relative min-h-screen bg-[#06070a] overflow-hidden">
@@ -51,9 +52,9 @@ function RankingPage() {
             Filtrar por título_
           </span>
           {[
-            { id: "COUNTER-STRIKE 2" as const, label: "CS2", color: "text-cs2" },
-            { id: "VALORANT" as const, label: "VALORANT", color: "text-valorant" },
-            { id: "LEAGUE OF LEGENDS" as const, label: "LoL", color: "text-lol" },
+            { id: normalizeGame("CS2") as GameLabel, label: "CS2", color: "text-cs2" },
+            { id: normalizeGame("VALORANT") as GameLabel, label: "VALORANT", color: "text-valorant" },
+            { id: normalizeGame("LEAGUE OF LEGENDS") as GameLabel, label: "LoL", color: "text-lol" },
           ].map((g) => (
             <button
               key={g.id}

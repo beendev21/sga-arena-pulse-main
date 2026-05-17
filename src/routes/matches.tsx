@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import useApiController from "@/API/controler";
 import { MatchCard } from "@/components/sga/MatchCard";
+import { buildPublicMatches } from "@/lib/publicApi";
 
 interface Match {
   id: string;
@@ -26,14 +27,48 @@ const tabs: Match["status"][] = ["Ao vivo", "Agendada", "Encerrada"];
 
 function MatchesPage() {
   const apiMatches = useApiController("Matches");
-  const { result: matchesRaw, isLoading } = useQuery({
+  const apiMatchTeams = useApiController("Matchteams");
+  const apiTeams = useApiController("Teams");
+  const apiTournaments = useApiController("Tournaments");
+  const apiStatus = useApiController("Status");
+  const apiStages = useApiController("Stages");
+  const { data: matchesRaw, isLoading } = useQuery({
     queryKey: ["matches"],
-    queryFn: () => apiMatches.getAll()
+    queryFn: () => apiMatches.getAll({ includeAuth: false })
+  });
+  const { data: matchTeamsRaw } = useQuery({
+    queryKey: ["matchteams"],
+    queryFn: () => apiMatchTeams.getAll({ includeAuth: false }),
+  });
+  const { data: teamsRaw } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => apiTeams.getAll({ includeAuth: false }),
+  });
+  const { data: tournamentsRaw } = useQuery({
+    queryKey: ["tournaments"],
+    queryFn: () => apiTournaments.getAll({ includeAuth: false }),
+  });
+  const { data: statusRaw } = useQuery({
+    queryKey: ["status"],
+    queryFn: () => apiStatus.getAll({ includeAuth: false }),
+  });
+  const { data: stagesRaw } = useQuery({
+    queryKey: ["stages"],
+    queryFn: () => apiStages.getAll({ includeAuth: false }),
   });
 
-  const matches = useMemo(() => {
-    return Array.isArray(matchesRaw) ? matchesRaw : (matchesRaw?.result || []);
-  }, [matchesRaw]);
+  const matches = useMemo(
+    () =>
+      buildPublicMatches({
+        matchesRaw,
+        matchTeamsRaw,
+        teamsRaw,
+        tournamentsRaw,
+        statusRaw,
+        stagesRaw,
+      }),
+    [matchesRaw, matchTeamsRaw, teamsRaw, tournamentsRaw, statusRaw, stagesRaw],
+  );
 
   const [tab, setTab] = useState<Match["status"]>("Ao vivo");
   const list = matches.filter((m) => m.status === tab);
