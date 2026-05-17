@@ -14,6 +14,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV VITE_ALLOWED_HOSTS=false
 ENV __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=prime.santos-games.com
+ENV VITE_API_URL=https://app.santos-games.com
 
 COPY package.json package-lock.json ./
 COPY --from=build /app/node_modules ./node_modules
