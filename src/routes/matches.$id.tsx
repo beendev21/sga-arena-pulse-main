@@ -13,12 +13,12 @@ function MatchPage() {
   const { getById: getMatchById } = useApiController("Matches");
   const { getAll: getAllPlayers } = useApiController("Players");
 
-  const { data: m, isLoading: loadingMatch } = useQuery({
+  const { result: m, isLoading: loadingMatch } = useQuery({
     queryKey: ["match", id],
     queryFn: () => getMatchById(id),
   });
 
-  const { data: playersRaw, isLoading: loadingPlayers } = useQuery({
+  const { result: playersRaw, isLoading: loadingPlayers } = useQuery({
     queryKey: ["players"],
     queryFn: () => getAllPlayers(),
   });

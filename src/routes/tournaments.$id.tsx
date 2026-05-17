@@ -18,17 +18,17 @@ function TPage() {
   const { getAll: getAllMatches } = useApiController("Matches");
   const { getAll: getAllTeams } = useApiController("Teams");
 
-  const { data: t, isLoading: loadingT } = useQuery({
+  const { result: t, isLoading: loadingT } = useQuery({
     queryKey: ["tournament", id],
     queryFn: () => getTourneyById(id),
   });
 
-  const { data: matchesRaw, isLoading: loadingM } = useQuery({
+  const { result: matchesRaw, isLoading: loadingM } = useQuery({
     queryKey: ["matches"],
     queryFn: () => getAllMatches(),
   });
 
-  const { data: teamsRaw, isLoading: loadingTeams } = useQuery({
+  const { result: teamsRaw, isLoading: loadingTeams } = useQuery({
     queryKey: ["teams"],
     queryFn: () => getAllTeams(),
   });
@@ -36,12 +36,12 @@ function TPage() {
   const [activeTab, setActiveTab] = useState("geral");
 
   const tMatches = useMemo(() => {
-    const list = Array.isArray(matchesRaw) ? matchesRaw : matchesRaw?.$values || [];
+    const list = Array.isArray(matchesRaw) ? matchesRaw : matchesRaw?.result || [];
     return list.filter((m: any) => m.tournamentId === id);
   }, [matchesRaw, id]);
 
   const tournamentTeams = useMemo(() => {
-    return Array.isArray(teamsRaw) ? teamsRaw : teamsRaw?.$values || [];
+    return Array.isArray(teamsRaw) ? teamsRaw : teamsRaw?.result || [];
   }, [teamsRaw]);
 
   if (loadingT || loadingM || loadingTeams) return <div className="p-10 text-center">Carregando...</div>;

@@ -16,28 +16,28 @@ function TeamPage() {
   const apiPlayers = useApiController("Players");
   const apiMatches = useApiController("Matches");
   
-  const { data: team, isLoading: l1 } = useQuery({
+  const { result: team, isLoading: l1 } = useQuery({
     queryKey: ["team", teamId],
     queryFn: () => apiTeams.getById(teamId)
   });
 
-  const { data: playersRaw, isLoading: l2 } = useQuery({
+  const { result: playersRaw, isLoading: l2 } = useQuery({
     queryKey: ["players"],
     queryFn: () => apiPlayers.getAll()
   });
 
-  const { data: matchesRaw, isLoading: l3 } = useQuery({
+  const { result: matchesRaw, isLoading: l3 } = useQuery({
     queryKey: ["matches"],
     queryFn: () => apiMatches.getAll()
   });
 
   const lineup = useMemo(() => {
-    const list = Array.isArray(playersRaw) ? playersRaw : (playersRaw?.$values || []);
+    const list = Array.isArray(playersRaw) ? playersRaw : (playersRaw?.result || []);
     return list.filter((p: any) => p.teamId === teamId);
   }, [playersRaw, teamId]);
 
   const recent = useMemo(() => {
-    const list = Array.isArray(matchesRaw) ? matchesRaw : (matchesRaw?.$values || []);
+    const list = Array.isArray(matchesRaw) ? matchesRaw : (matchesRaw?.result || []);
     return list.filter((m: any) => m.teamAId === teamId || m.teamBId === teamId).slice(0, 5);
   }, [matchesRaw, teamId]);
 

@@ -46,7 +46,7 @@ function PlayerProfilePage() {
 
   const parse = useCallback((r: any) => {
     if (!r) return [];
-    return Array.isArray(r) ? r : (r?.data || r?.$values || []);
+    return Array.isArray(r) ? r : (r?.result || []);
   }, []);
 
   const teams = useMemo(() => parse(teamsRaw), [teamsRaw, parse]);

@@ -26,13 +26,13 @@ const tabs: Match["status"][] = ["Ao vivo", "Agendada", "Encerrada"];
 
 function MatchesPage() {
   const apiMatches = useApiController("Matches");
-  const { data: matchesRaw, isLoading } = useQuery({
+  const { result: matchesRaw, isLoading } = useQuery({
     queryKey: ["matches"],
     queryFn: () => apiMatches.getAll()
   });
 
   const matches = useMemo(() => {
-    return Array.isArray(matchesRaw) ? matchesRaw : (matchesRaw?.$values || []);
+    return Array.isArray(matchesRaw) ? matchesRaw : (matchesRaw?.result || []);
   }, [matchesRaw]);
 
   const [tab, setTab] = useState<Match["status"]>("Ao vivo");

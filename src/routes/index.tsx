@@ -95,7 +95,7 @@ function Home() {
 
   const parse = useCallback((r: any) => {
     if (!r) return [];
-    return Array.isArray(r) ? r : (r?.data || r?.$values || []);
+    return Array.isArray(r) ? r : (r?.result || []);
   }, []);
 
   const tournaments = useMemo(() => parse(tRaw), [tRaw, parse]);

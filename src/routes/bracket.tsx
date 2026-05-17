@@ -15,11 +15,11 @@ function BracketPage() {
   const { getAll: getTournaments } = useApiController("Tournaments");
   const { getAll: getMatches } = useApiController("Matches");
 
-  const { data: tRaw = [] } = useQuery({ queryKey: ["tournaments"], queryFn: () => getTournaments() });
-  const { data: mRaw = [] } = useQuery({ queryKey: ["matches"], queryFn: () => getMatches() });
+  const { result: tRaw = [] } = useQuery({ queryKey: ["tournaments"], queryFn: () => getTournaments() });
+  const { result: mRaw = [] } = useQuery({ queryKey: ["matches"], queryFn: () => getMatches() });
 
-  const tournamentsData = Array.isArray(tRaw) ? tRaw : tRaw?.$values || [];
-  const matchesData = Array.isArray(mRaw) ? mRaw : mRaw?.$values || [];
+  const tournamentsData = Array.isArray(tRaw) ? tRaw : tRaw?.result || [];
+  const matchesData = Array.isArray(mRaw) ? mRaw : mRaw?.result || [];
   
   const filteredTournaments = useMemo(() => {
     return tournamentsData.filter((t: any) => t.game?.toUpperCase() === game.toUpperCase());

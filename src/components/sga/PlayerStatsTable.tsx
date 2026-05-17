@@ -19,7 +19,7 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
 
   const parse = useCallback((r: any) => {
     if (!r) return [];
-    return Array.isArray(r) ? r : (r?.data || r?.$values || []);
+    return Array.isArray(r) ? r : (r?.result || []);
   }, []);
 
   const players = useMemo(() => parse(pRaw), [pRaw, parse]);
