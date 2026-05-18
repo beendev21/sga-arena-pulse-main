@@ -25,6 +25,11 @@ function MatchPage() {
   const { data: matchesRaw, isLoading: l1 } = useQuery({
     queryKey: ["matches"],
     queryFn: () => apiMatches.getAll({ includeAuth: false }),
+    // Refresca os dados a cada 5 segundos se houver uma partida ao vivo sendo visualizada
+    refetchInterval: (query) => {
+      const match = (query.state.data as any)?.find?.((m: any) => String(m.id) === String(id));
+      return match?.statusId === 2 || match?.status === "Ao vivo" ? 5000 : false;
+    }
   });
   const { data: matchTeamsRaw, isLoading: l2 } = useQuery({
     queryKey: ["matchteams"],
@@ -101,6 +106,102 @@ function MatchPage() {
   }
 
   const winA = Number(match.scoreA) > Number(match.scoreB);
+  const isLive = match.status === "Ao vivo" || match.status === "Ativo";
+
+  if (isLive) {
+    return (
+      <div className="relative min-h-screen bg-[#06070a] overflow-hidden">
+        {/* Live Cinematic Header */}
+        <div className="relative h-[60vh] flex items-center justify-center overflow-hidden border-b border-primary/20">
+          <div className="absolute inset-0 grid-bg opacity-10" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(248,109,131,0.15),transparent_70%)] animate-pulse" />
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-12 md:gap-32">
+            <motion.div initial={{ x: -50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="text-center group">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 group-hover:bg-primary/40 transition-all duration-700" />
+                <TeamLogo team={match.teamA} size={160} />
+              </div>
+              <h2 className="font-display text-4xl italic font-black uppercase text-white drop-shadow-neon">{match.teamA?.name}</h2>
+            </motion.div>
+
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2.5 px-3 py-1 bg-primary text-[10px] font-black uppercase tracking-[0.4em] italic mb-6 shadow-neon">
+                <div className="h-2 w-2 rounded-full bg-white animate-ping" /> Live_Transmitting
+              </div>
+              <div className="font-display text-8xl md:text-9xl italic font-black text-white leading-none tracking-tighter">
+                {match.scoreA}<span className="text-primary/40 mx-4">:</span>{match.scoreB}
+              </div>
+              <div className="mt-6 text-[11px] font-black uppercase tracking-[0.6em] text-white/30 italic">Round Control Active</div>
+            </div>
+
+            <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="text-center group">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-white/5 blur-3xl rounded-full scale-150 transition-all duration-700" />
+                <TeamLogo team={match.teamB} size={160} />
+              </div>
+              <h2 className="font-display text-4xl italic font-black uppercase text-white">{match.teamB?.name}</h2>
+            </motion.div>
+          </div>
+          
+          {/* HUD Tech Elements */}
+          <div className="absolute top-10 left-10 text-[9px] font-black text-white/10 uppercase tracking-[0.5em] hidden lg:block">SGA_STREAM_V2 // ENCRYPTED_LINK</div>
+          <div className="absolute bottom-10 right-10 text-[9px] font-black text-white/10 uppercase tracking-[0.5em] hidden lg:block">LATENCY: 14MS // BUFFER: 100%</div>
+        </div>
+
+        <div className="mx-auto max-w-[1500px] px-4 py-16 grid lg:grid-cols-3 gap-12">
+          <div className="lg:col-span-2 space-y-12">
+            <section className="p-8 border border-white/5 bg-[#0a0a0c]/60 backdrop-blur-md relative overflow-hidden">
+              <div className="absolute inset-0 grid-bg opacity-[0.03]" />
+              <h3 className="font-display text-2xl uppercase italic font-black text-white mb-8 flex items-center gap-3">
+                <span className="h-2 w-2 bg-primary rounded-full" /> Player_Lineups
+              </h3>
+              <div className="grid md:grid-cols-2 gap-10">
+                 <div className="space-y-3">
+                    <div className="text-[10px] font-black text-primary uppercase italic mb-4 border-b border-primary/20 pb-2">{match.teamA?.name}</div>
+                    {lineupA.map((p: any) => (
+                      <div key={p.id} className="flex items-center justify-between p-3 bg-white/5 border border-white/5 hover:border-primary/20 transition-all">
+                         <span className="text-sm font-bold text-white uppercase italic">{p.playerName}</span>
+                         <span className="text-[9px] font-black text-white/20">AGENT_ONLINE</span>
+                      </div>
+                    ))}
+                 </div>
+                 <div className="space-y-3">
+                    <div className="text-[10px] font-black text-white/40 uppercase italic mb-4 border-b border-white/10 pb-2">{match.teamB?.name}</div>
+                    {lineupB.map((p: any) => (
+                      <div key={p.id} className="flex items-center justify-between p-3 bg-white/5 border border-white/5 hover:border-white/20 transition-all">
+                         <span className="text-sm font-bold text-white uppercase italic">{p.playerName}</span>
+                         <span className="text-[9px] font-black text-white/20">AGENT_ONLINE</span>
+                      </div>
+                    ))}
+                 </div>
+              </div>
+            </section>
+          </div>
+          
+          <div className="space-y-8">
+             <div className="p-6 border border-white/5 bg-[#0a0a0c] space-y-6">
+                <h3 className="font-display text-xl uppercase italic font-black text-white">Match_Info</h3>
+                <div className="space-y-4">
+                   <div className="flex justify-between items-center py-2 border-b border-white/5">
+                      <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Campeonato</span>
+                      <span className="text-[10px] font-bold text-primary uppercase italic">{match.tournamentName}</span>
+                   </div>
+                   <div className="flex justify-between items-center py-2 border-b border-white/5">
+                      <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Fase</span>
+                      <span className="text-[10px] font-bold text-white uppercase italic">{match.bracketPosition}</span>
+                   </div>
+                   <div className="flex justify-between items-center py-2 border-b border-white/5">
+                      <span className="text-[9px] font-black text-white/30 uppercase tracking-widest">Formato</span>
+                      <span className="text-[10px] font-bold text-white uppercase italic">Best of 3</span>
+                   </div>
+                </div>
+             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

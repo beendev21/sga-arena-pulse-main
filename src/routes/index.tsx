@@ -130,7 +130,7 @@ function Home() {
   const loading = loadingT || loadingM || loadingTeams;
 
   // Filtros derivados dos estados sincronizados
-  const live = useMemo(() => matches.filter((m) => m.status === "Ao vivo").slice(0, 4), [matches]);
+  const live = useMemo(() => matches.filter((m) => m.status === "Ao vivo" || m.status === "Ativo").slice(0, 4), [matches]);
   const upcoming = useMemo(() => matches.filter((m) => m.status === "Agendada").slice(0, 6), [matches]);
 
   const heroImages = useMemo(() => [

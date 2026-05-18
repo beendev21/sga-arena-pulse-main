@@ -8,7 +8,7 @@ import { buildPublicMatches } from "@/lib/publicApi";
 
 interface Match {
   id: string;
-  status: "Ao vivo" | "Agendada" | "Encerrada";
+  status: "Ao vivo" | "Ativo" | "Agendada" | "Encerrada";
   teamA: { name: string; tag: string; logo?: string };
   teamB: { name: string; tag: string; logo?: string };
   scoreA: number;
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/matches")({
   component: MatchesPage,
 });
 
-const tabs: Match["status"][] = ["Ao vivo", "Agendada", "Encerrada"];
+const tabs: Match["status"][] = ["Ao vivo", "Ativo", "Agendada", "Encerrada"];
 
 function MatchesPage() {
   const apiMatches = useApiController("Matches");
@@ -70,7 +70,7 @@ function MatchesPage() {
     [matchesRaw, matchTeamsRaw, teamsRaw, tournamentsRaw, statusRaw, stagesRaw],
   );
 
-  const [tab, setTab] = useState<Match["status"]>("Ao vivo");
+  const [tab, setTab] = useState<Match["status"]>(matches.some(m => m.status === "Ativo") ? "Ativo" : "Ao vivo");
   const list = matches.filter((m) => m.status === tab);
 
   if (isLoading) return <div className="p-20 text-center font-display uppercase animate-pulse">Sincronizando satélites da Arena...</div>;

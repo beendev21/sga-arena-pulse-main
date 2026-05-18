@@ -58,6 +58,7 @@ const tabs = [
   { k: "jogadores", label: "Jogadores" },
   { k: "partidas", label: "Partidas" },
   { k: "chaveamentos", label: "Chaveamentos" },
+  { k: "monitoramento", label: "Monitoramento Ao Vivo" },
   { k: "highlights", label: "Highlights" },
   { k: "galeria", label: "Galeria" },
 ] as const;
@@ -893,7 +894,7 @@ function Admin() {
     queryFn: () => apiStages.getAll(),
     enabled: !!token,
   });
-  const { data: sr } = useQuery({
+  const { data: sr, isLoading: lStatus } = useQuery({
     queryKey: ["statuses", token],
     queryFn: () => apiStatus.getAll(),
     enabled: !!token,
@@ -1637,7 +1638,7 @@ function Admin() {
     return null;
   };
 
-  const loading = l1 || l2 || l3 || l4;
+  const loading = l1 || l2 || l3 || l4 || lStatus;
 
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
   const [newMatch, setNewMatch] = useState(createEmptyMatch());
@@ -1749,7 +1750,7 @@ function Admin() {
   );
 
   const activeStatusId = useMemo(
-    () => getStatusIdByLabel(["ativo", "andam", "progres", "curso", "abert"]) || scheduledStatusId,
+    () => getStatusIdByLabel(["vivo", "live", "ativo", "andam", "progres", "curso", "abert"]) || scheduledStatusId,
     [scheduledStatusId, statusesData],
   );
 
@@ -3856,6 +3857,117 @@ function Admin() {
               </>
             );
           })()}
+
+        {tab === "monitoramento" && (
+          <div className="animate-in fade-in duration-700 space-y-6">
+            <div className="flex items-center gap-4 border-b border-white/5 pb-6">
+              <div className="p-3 bg-primary/10 text-primary">
+                <Activity className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="font-display text-2xl uppercase italic font-black text-white">Live Match Control</h3>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest italic">Sincronização de placar em tempo real via API_</p>
+              </div>
+            </div>
+
+            <div className="grid gap-6">
+              {matchesData.filter(m => {
+                const statusLabel = getTournamentStatusLabel(m.statusId).toLowerCase();
+                return statusLabel.includes("vivo") || statusLabel.includes("live") || statusLabel.includes("andam") || statusLabel.includes("ativo");
+              }).length === 0 ? (
+                <div className="p-20 text-center border border-dashed border-white/10 bg-white/[0.02] text-white/20 uppercase tracking-[0.4em] italic">
+                  Nenhuma partida em andamento_
+                </div>
+              ) : (
+                matchesData.filter(m => {
+                  const statusLabel = getTournamentStatusLabel(m.statusId).toLowerCase();
+                  return statusLabel.includes("vivo") || statusLabel.includes("live") || statusLabel.includes("andam") || statusLabel.includes("ativo");
+                }).map((m: any) => {
+                  const teamA = getTeamById(m.teamAId);
+                  const teamB = getTeamById(m.teamBId);
+                  
+                  // Função interna para atualizar placar rápido
+                  const updateScore = async (side: 'A' | 'B', increment: number) => {
+                    try {
+                      const currentScore = side === 'A' ? (m.scoreA || 0) : (m.scoreB || 0);
+                      const newScore = Math.max(0, currentScore + increment);
+                      
+                      await saveBracketMatch(m.bracketPosition, {
+                        [`score${side}`]: newScore,
+                        statusId: m.statusId // Mantém ao vivo
+                      });
+                      toast.success(`Placar atualizado: ${newScore}`);
+                    } catch (err) {
+                      toast.error("Erro ao sincronizar placar");
+                    }
+                  };
+
+                  return (
+                    <div key={m.id} className="relative border border-primary/20 bg-[#0a0a0c] p-6 shadow-2xl overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-3 bg-primary/10 text-primary text-[8px] font-black uppercase italic">Match_ID: {m.id}</div>
+                      
+                      <div className="grid md:grid-cols-[1fr_auto_1fr] items-center gap-10">
+                        {/* Team A Control */}
+                        <div className="flex flex-col items-center gap-4">
+                          <TeamLogo team={teamA} size={64} />
+                          <div className="font-display text-lg uppercase text-white">{teamA?.name}</div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => updateScore('A', -1)} className="h-10 w-10 border-white/10">-</Button>
+                            <div className="font-display text-5xl text-primary px-4">{m.scoreA || 0}</div>
+                            <Button variant="outline" size="sm" onClick={() => updateScore('A', 1)} className="h-10 w-10 border-white/10">+</Button>
+                          </div>
+                        </div>
+
+                        {/* Match Info Center */}
+                        <div className="flex flex-col items-center gap-4 border-x border-white/5 px-10">
+                          <div className="text-[10px] font-black text-primary animate-pulse italic uppercase tracking-[0.3em]">Live Now</div>
+                          <div className="text-center">
+                            <div className="text-[11px] font-bold text-white uppercase">{getTournamentLabel(m.tournamentId)}</div>
+                            <div className="text-[9px] text-white/40 uppercase tracking-widest mt-1">{m.bracketPosition}</div>
+                          </div>
+                          <div className="flex gap-2">
+                             <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              className="h-8 text-[9px] font-black italic uppercase tracking-widest"
+                              onClick={() => {
+                                if(confirm("Deseja encerrar esta partida oficialmente?")) {
+                                  handleMatchWinner(m.bracketPosition, m.scoreA > m.scoreB ? 'teamAId' : 'teamBId');
+                                }
+                              }}
+                             >
+                               Finalizar Partida
+                             </Button>
+                             <Link to="/matches/$id" params={{ id: String(m.id) }}>
+                               <Button variant="outline" size="sm" className="h-8 text-[9px] font-black italic uppercase tracking-widest border-white/10">
+                                 Ver Página
+                               </Button>
+                             </Link>
+                          </div>
+                        </div>
+
+                        {/* Team B Control */}
+                        <div className="flex flex-col items-center gap-4">
+                          <TeamLogo team={teamB} size={64} />
+                          <div className="font-display text-lg uppercase text-white">{teamB?.name}</div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => updateScore('B', -1)} className="h-10 w-10 border-white/10">-</Button>
+                            <div className="font-display text-5xl text-white px-4">{m.scoreB || 0}</div>
+                            <Button variant="outline" size="sm" onClick={() => updateScore('B', 1)} className="h-10 w-10 border-white/10">+</Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* HUD Accents */}
+                      <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary" />
+                      <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary" />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
 
         {tab === "chaveamentos" && (
           <div className="animate-in fade-in duration-700 space-y-6">
