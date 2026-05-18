@@ -1,213 +1,88 @@
 # 🎮 SGA Arena Pulse
 
-> Plataforma oficial da **Santos Games Arena** — acompanhe campeonatos, partidas, rankings e estatísticas de jogadores de CS2, Valorant e CS em tempo real.
+Plataforma web para acompanhamento de campeonatos de e-sports. O sistema exibe torneios, partidas, rankings, estatísticas de jogadores e equipes em tempo real, com área pública e painel administrativo.
 
 ---
 
-## 📋 Sobre o Projeto
+## 📌 Sobre
 
-O **SGA Arena Pulse** é o frontend da Santos Games Arena, uma plataforma de e-sports desenvolvida para gerenciar e exibir torneios, partidas, equipes e jogadores. A interface consome uma API REST externa e oferece tanto uma área pública (acessível a qualquer visitante) quanto um painel administrativo restrito a usuários autenticados.
-
----
-
-## 🛠️ Stack Tecnológica
-
-### Frontend
-| Tecnologia | Versão | Função |
-|---|---|---|
-| React | 19 | Biblioteca de UI |
-| TypeScript | 5.8 | Tipagem estática |
-| TanStack Router | 1.x | Roteamento file-based |
-| TanStack Query | 5.x | Cache e gerenciamento de estado do servidor |
-| Tailwind CSS | 4.x | Estilização utilitária |
-| shadcn/ui + Radix UI | — | Componentes de interface |
-| Framer Motion | 12.x | Animações |
-| Zustand | 5.x | Gerenciamento de estado global (autenticação) |
-| Recharts | 2.x | Gráficos e visualizações |
-| React Hook Form + Zod | — | Formulários e validação |
-| Vite | 7.x | Bundler e dev server |
-
-### Deploy / Infraestrutura
-| Tecnologia | Função |
-|---|---|
-| Cloudflare Workers | Runtime de produção (via Wrangler) |
-| Docker | Containerização para deploy alternativo |
-| Node.js 22 | Runtime de build |
+Este projeto foi desenvolvido como freelance. O escopo de entrega foi o **frontend completo**, integrado a uma API REST e infraestrutura de backend fornecidas pelo cliente.
 
 ---
 
-## 🔌 API & Backend
+## 🖥️ Front-End
 
-O frontend se comunica exclusivamente com uma **API REST externa** — o backend **não está incluído** neste repositório.
+Interface web construída em **React 19** com **TypeScript**, focada em performance, responsividade e atualização em tempo real.
 
-### URL Base
+**Tecnologias utilizadas:**
 
-A URL da API é configurada via variável de ambiente:
+- **React 19** com **TypeScript** — base da aplicação
+- **TanStack Router** — roteamento file-based com suporte a SSR
+- **TanStack Query** — gerenciamento de dados, cache e sincronização com a API
+- **Tailwind CSS 4** — estilização utilitária
+- **shadcn/ui + Radix UI** — componentes de interface acessíveis
+- **Framer Motion** — animações e transições
+- **Zustand** — estado global de autenticação
+- **Recharts** — gráficos e visualizações de estatísticas
+- **React Hook Form + Zod** — formulários com validação tipada
+- **Vite** — bundler e dev server
 
-```env
-VITE_API_URL=https://sua-api.exemplo.com
-```
+**Páginas:**
 
-### Autenticação
+- **Home** — visão geral com torneios, partidas recentes e ranking
+- **Torneios** — listagem e detalhes de campeonatos
+- **Partidas** — resultados e partidas ao vivo
+- **Chaveamento (Bracket)** — visualização de eliminatórias
+- **Equipes** — times participantes
+- **Jogadores** — perfis e estatísticas individuais
+- **Galeria / Destaques** — conteúdo de mídia
+- **Login / Cadastro** — autenticação de usuários
+- **Perfil** — área do usuário logado
+- **Admin** — painel administrativo restrito
 
-A autenticação é feita via **JWT (Bearer Token)**. Após o login, o token é armazenado no `localStorage` (persistido via Zustand) e no `sessionStorage`, e enviado automaticamente no header `Authorization` de todas as requisições autenticadas.
+---
 
-```
-Authorization: Bearer <token>
-```
+## ⚙️ Back-End
 
-Ao receber um erro `401` com `Token has expired`, o usuário é redirecionado automaticamente para `/login`.
+O backend foi fornecido pelo cliente. A arquitetura é composta por:
 
-### Módulo de Serviço (`src/API/service.tsx`)
-
-Camada de abstração sobre o `fetch` nativo, com suporte a:
-
-- `GET`, `POST`, `PUT`, `DELETE`
-- Upload de imagens via `multipart/form-data`
-- Tratamento padronizado de erros (compatível com o padrão Problem Details do ASP.NET)
-- Injeção automática do token de autenticação
-
-### Controller Genérico (`src/API/controler.tsx`)
-
-Hook `useApiController(entityName)` que expõe operações CRUD padronizadas para qualquer entidade da API:
-
-```ts
-const { getAll, getById, create, update, remove } = useApiController("tournaments");
-```
-
-### Endpoints Utilizados (exemplos)
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| POST | `/api/auth/login` | Login de usuário |
-| GET | `/api/tournaments` | Listar torneios |
-| GET | `/api/matches` | Listar partidas |
-| GET | `/api/players` | Listar jogadores |
-| GET | `/api/teams` | Listar equipes |
-| GET | `/api/roles` | Listar funções/roles |
-| GET | `/api/participants` | Listar participantes |
-
-> O contrato completo da API é definido pelo backend (ASP.NET). Os erros de validação seguem o padrão `Problem Details` com o campo `errors`.
+- **.NET API** — responsável por autenticação (JWT), regras de negócio, integração com a Steam API e gerenciamento de campeonatos
+- **Background Worker** — serviço que roda em segundo plano para persistência de eventos de partida e processamento do motor de jogo (Match Engine)
+- **Event API** — recebe eventos em tempo real capturados no computador do jogador e os encaminha para processamento
+- **SignalR Gateway** — camada de comunicação em tempo real entre o backend e os frontends, responsável por empurrar atualizações de placar, rounds e eventos instantaneamente para os clientes conectados
+- **Redis** — utilizado para cache, Pub/Sub, filas de processamento e stream processing dos eventos de jogo
 
 ---
 
 ## 🗄️ Banco de Dados
 
-O banco de dados é gerenciado inteiramente pelo **backend** e não é acessado diretamente pelo frontend. As entidades principais inferidas pelo consumo da API são:
-
-- **Users** — usuários com roles (`Administrador`, `Jogador`)
-- **Tournaments** — torneios com status (Agendado, Ao vivo, Encerrado)
-- **Matches** — partidas vinculadas a torneios
-- **Teams** — equipes participantes
-- **Players** — jogadores com estatísticas
-- **Participants** — relação entre jogadores, equipes e roles
-- **Roles** — funções dos jogadores (ex: IGL, Sniper, etc.)
-- **Gallery / Highlights** — conteúdo de mídia
+- **PostgreSQL** — banco de dados relacional principal, armazena jogadores, times, torneios, partidas e histórico de rounds. A escrita é feita principalmente pelo Background Worker
+- **Cloudflare R2** — armazenamento de mídia (imagens, logos, highlights)
 
 ---
 
-## 📁 Estrutura do Projeto
+## 🔌 API
 
-```
-src/
-├── API/
-│   ├── service.tsx        # Cliente HTTP (fetch wrapper)
-│   └── controler.tsx      # Hook CRUD genérico
-├── components/
-│   ├── sga/               # Componentes de domínio (MatchCard, Bracket, etc.)
-│   └── ui/                # Componentes base (shadcn/ui)
-├── lib/
-│   ├── api.ts             # Utilitários de unwrap de listas
-│   ├── publicApi.ts       # Mappers para dados públicos
-│   └── dateUtils.ts       # Helpers de data
-├── routes/                # Páginas (file-based routing via TanStack Router)
-│   ├── index.tsx          # Home pública
-│   ├── matches.tsx        # Listagem de partidas
-│   ├── tournaments.tsx    # Torneios
-│   ├── players.tsx        # Jogadores
-│   ├── teams.tsx          # Equipes
-│   ├── bracket.tsx        # Chaveamento
-│   ├── gallery.tsx        # Galeria
-│   ├── highlights.tsx     # Destaques
-│   ├── login.tsx          # Autenticação
-│   ├── register.tsx       # Cadastro
-│   ├── profile.tsx        # Perfil do usuário
-│   └── admin.tsx          # Painel administrativo
-├── store/
-│   └── auth.ts            # Store Zustand de autenticação
-├── hooks/                 # Hooks customizados
-└── server.ts              # Entry point Cloudflare Workers
-```
+O frontend se comunica com a API via **REST**, autenticando todas as requisições protegidas com **JWT (Bearer Token)**. A URL base é configurada via variável de ambiente `VITE_API_URL`.
 
----
+Os perfis de acesso controlam o que cada usuário pode ver e fazer:
 
-## 🚀 Como Rodar Localmente
-
-### Pré-requisitos
-
-- Node.js `22.x`
-- npm ou bun
-
-### Instalação
-
-```bash
-git clone https://github.com/seu-usuario/sga-arena-pulse.git
-cd sga-arena-pulse
-npm install
-```
-
-### Variáveis de Ambiente
-
-Crie um arquivo `.env` na raiz:
-
-```env
-VITE_API_URL=https://app.santos-games.com
-```
-
-### Desenvolvimento
-
-```bash
-npm run dev
-```
-
-### Build
-
-```bash
-npm run build
-```
-
----
-
-## 🐳 Deploy com Docker
-
-```bash
-docker build -t sga-arena-pulse .
-docker run -p 3000:3000 -e VITE_API_URL=https://sua-api.exemplo.com sga-arena-pulse
-```
-
----
-
-## ☁️ Deploy no Cloudflare Workers
-
-```bash
-npm run build
-npx wrangler deploy
-```
-
-Configurações em `wrangler.jsonc`.
-
----
-
-## 👥 Perfis de Usuário
-
-| Role | Acesso |
+| Perfil | Acesso |
 |---|---|
-| Visitante | Área pública (home, partidas, torneios, jogadores, equipes, galeria) |
+| Visitante | Área pública |
 | Jogador | Área pública + perfil próprio |
-| Administrador | Tudo acima + painel de administração completo |
+| Administrador | Acesso total + painel admin |
+
+---
+
+## 🚀 Deploy
+
+Preparado para deploy em **Cloudflare Workers** (via Wrangler) ou **Docker**.
 
 ---
 
 ## 📄 Licença
 
-Projeto privado — Santos Games Arena. Todos os direitos reservados.
+© 2025 Santos Games Arena. Todos os direitos reservados.
+
+Este repositório é de uso privado. É proibida a reprodução, distribuição ou uso do código sem autorização expressa da Santos Games Arena.
