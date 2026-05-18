@@ -1,17 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useCallback } from "react";
 import useApiController from "@/API/controler";
+import { unwrapList } from "@/lib/api";
 
 export function GalleryGrid() {
   const api = useApiController("Gallery");
   const { data: raw, isLoading } = useQuery({
     queryKey: ["gallery"],
-    queryFn: () => api.getAll()
+    queryFn: () => api.getAll({ includeAuth: false })
   });
 
   const parse = useCallback((r: any) => {
-    if (!r) return [];
-    return Array.isArray(r) ? r : (r?.result || []);
+    return unwrapList(r);
   }, []);
 
   const gallery = useMemo(() => parse(raw), [raw, parse]);

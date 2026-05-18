@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import useApiController from "@/API/controler";
 import { TeamCard } from "@/components/sga/TeamCard";
+import { matchesGame, type GameLabel } from "@/lib/game";
+import { unwrapList } from "@/lib/api";
 
 export const Route = createFileRoute("/teams")({
   head: () => ({ meta: [{ title: "Times — SGA" }, { name: "description", content: "Conheça os times da SGA: estatísticas, ELO, vitórias e troféus." }] }),
@@ -16,18 +18,16 @@ function TeamsList() {
 
   const { data: tRaw, isLoading } = useQuery({
     queryKey: ["teams"],
-    queryFn: () => apiTeams.getAll()
+    queryFn: () => apiTeams.getAll({ includeAuth: false })
   });
 
-  const parse = useCallback((r: any) => {
-    if (!r) return [];
-    return Array.isArray(r) ? r : (r?.result || []);
-  }, []);
+  const parse = useCallback((r: any) => unwrapList(r), []);
 
   const teams = useMemo(() => parse(tRaw), [tRaw, parse]);
   
   const filteredTeams = useMemo(() => {
-    return teams.filter(t => (t as any).game?.toUpperCase() === game.toUpperCase());
+    const list = teams.filter(t => matchesGame((t as any).game, game as GameLabel));
+    return list.length > 0 ? list : teams;
   }, [teams, game]);
 
   if (isLoading) return <div className="p-20 text-center font-display uppercase animate-pulse italic">Escaneando frequenze da Arena...</div>;

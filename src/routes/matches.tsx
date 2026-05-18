@@ -4,10 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import useApiController from "@/API/controler";
 import { MatchCard } from "@/components/sga/MatchCard";
+import { buildPublicMatches } from "@/lib/publicApi";
 
 interface Match {
   id: string;
-  status: "Ao vivo" | "Agendada" | "Encerrada";
+  status: "Ao vivo" | "Ativo" | "Agendada" | "Encerrada";
   teamA: { name: string; tag: string; logo?: string };
   teamB: { name: string; tag: string; logo?: string };
   scoreA: number;
@@ -22,10 +23,58 @@ export const Route = createFileRoute("/matches")({
   component: MatchesPage,
 });
 
-const tabs: Match["status"][] = ["Ao vivo", "Agendada", "Encerrada"];
+const tabs: Match["status"][] = ["Ao vivo", "Ativo", "Agendada", "Encerrada"];
 
 function MatchesPage() {
-  
+  const apiMatches = useApiController("Matches");
+  const apiMatchTeams = useApiController("Matchteams");
+  const apiTeams = useApiController("Teams");
+  const apiTournaments = useApiController("Tournaments");
+  const apiStatus = useApiController("Status");
+  const apiStages = useApiController("Stages");
+  const { data: matchesRaw, isLoading } = useQuery({
+    queryKey: ["matches"],
+    queryFn: () => apiMatches.getAll({ includeAuth: false })
+  });
+  const { data: matchTeamsRaw } = useQuery({
+    queryKey: ["matchteams"],
+    queryFn: () => apiMatchTeams.getAll({ includeAuth: false }),
+  });
+  const { data: teamsRaw } = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => apiTeams.getAll({ includeAuth: false }),
+  });
+  const { data: tournamentsRaw } = useQuery({
+    queryKey: ["tournaments"],
+    queryFn: () => apiTournaments.getAll({ includeAuth: false }),
+  });
+  const { data: statusRaw } = useQuery({
+    queryKey: ["status"],
+    queryFn: () => apiStatus.getAll({ includeAuth: false }),
+  });
+  const { data: stagesRaw } = useQuery({
+    queryKey: ["stages"],
+    queryFn: () => apiStages.getAll({ includeAuth: false }),
+  });
+
+  const matches = useMemo(
+    () =>
+      buildPublicMatches({
+        matchesRaw,
+        matchTeamsRaw,
+        teamsRaw,
+        tournamentsRaw,
+        statusRaw,
+        stagesRaw,
+      }),
+    [matchesRaw, matchTeamsRaw, teamsRaw, tournamentsRaw, statusRaw, stagesRaw],
+  );
+
+  const [tab, setTab] = useState<Match["status"]>(matches.some(m => m.status === "Ativo") ? "Ativo" : "Ao vivo");
+  const list = matches.filter((m) => m.status === tab);
+
+  if (isLoading) return <div className="p-20 text-center font-display uppercase animate-pulse">Sincronizando satélites da Arena...</div>;
+
   return (
     <div className="relative min-h-screen bg-[#06070a] overflow-hidden">
       {/* Background Layers */}

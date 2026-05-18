@@ -8,6 +8,19 @@ import { MatchCard } from "@/components/sga/MatchCard";
 import { Bracket } from "@/components/sga/Bracket";
 import { Trophy, Calendar, Users, CheckCircle2, XCircle, ShieldAlert } from "lucide-react";
 import { formatDateBR } from "@/lib/dateUtils";
+import { buildPublicMatches } from "@/lib/publicApi";
+import { unwrapList } from "@/lib/api";
+
+type MatchListItem = {
+  tournamentId: string | number;
+};
+
+type TeamListItem = {
+  id: string | number;
+  tag?: string;
+  bannerColor?: string;
+  name?: string;
+};
 
 export const Route = createFileRoute("/tournaments/$id")({ component: TPage });
 
@@ -16,35 +29,59 @@ function TPage() {
   const { id } = Route.useParams();
   const { getById: getTourneyById } = useApiController("Tournaments");
   const { getAll: getAllMatches } = useApiController("Matches");
+  const { getAll: getAllMatchTeams } = useApiController("Matchteams");
   const { getAll: getAllTeams } = useApiController("Teams");
+  const { getAll: getAllStatus } = useApiController("Status");
+  const { getAll: getAllStages } = useApiController("Stages");
 
   const { result: t, isLoading: loadingT } = useQuery({
     queryKey: ["tournament", id],
-    queryFn: () => getTourneyById(id),
+    queryFn: () => getTourneyById(id, { includeAuth: false }),
   });
 
   const { result: matchesRaw, isLoading: loadingM } = useQuery({
     queryKey: ["matches"],
-    queryFn: () => getAllMatches(),
+    queryFn: () => getAllMatches({ includeAuth: false }),
+  });
+
+  const { data: matchTeamsRaw } = useQuery({
+    queryKey: ["matchteams"],
+    queryFn: () => getAllMatchTeams({ includeAuth: false }),
   });
 
   const { result: teamsRaw, isLoading: loadingTeams } = useQuery({
     queryKey: ["teams"],
-    queryFn: () => getAllTeams(),
+    queryFn: () => getAllTeams({ includeAuth: false }),
+  });
+  const { data: statusRaw } = useQuery({
+    queryKey: ["status"],
+    queryFn: () => getAllStatus({ includeAuth: false }),
+  });
+  const { data: stagesRaw } = useQuery({
+    queryKey: ["stages"],
+    queryFn: () => getAllStages({ includeAuth: false }),
   });
 
   const [activeTab, setActiveTab] = useState("geral");
 
   const tMatches = useMemo(() => {
-    const list = Array.isArray(matchesRaw) ? matchesRaw : matchesRaw?.result || [];
-    return list.filter((m: any) => m.tournamentId === id);
-  }, [matchesRaw, id]);
+    const list = buildPublicMatches({
+      matchesRaw,
+      matchTeamsRaw,
+      teamsRaw,
+      tournamentsRaw: [t],
+      statusRaw,
+      stagesRaw,
+    });
+    return list.filter((m) => String(m.tournamentId) === String(id));
+  }, [matchesRaw, matchTeamsRaw, teamsRaw, statusRaw, stagesRaw, t, id]);
 
   const tournamentTeams = useMemo(() => {
-    return Array.isArray(teamsRaw) ? teamsRaw : teamsRaw?.result || [];
+    return unwrapList<TeamListItem>(teamsRaw);
   }, [teamsRaw]);
 
-  if (loadingT || loadingM || loadingTeams) return <div className="p-10 text-center">Carregando...</div>;
+  if (loadingT || loadingM || loadingTeams)
+    return <div className="p-10 text-center">Carregando...</div>;
   if (!t) return <div className="p-10 text-center">Campeonato não encontrado.</div>;
 
   return (
@@ -57,9 +94,16 @@ function TPage() {
           <StatusBadge status={t.status} />
           <h1 className="font-display text-4xl md:text-5xl uppercase mt-2">{t.name}</h1>
           <div className="flex flex-wrap gap-4 mt-3 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1.5"><Trophy className="h-4 w-4 text-primary" /> {t.prize}</span>
-            <span className="flex items-center gap-1.5"><Users className="h-4 w-4" /> {t.teamsCount} times</span>
-            <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" /> {formatDateBR(t.startDate)} → {formatDateBR(t.endDate)}</span>
+            <span className="flex items-center gap-1.5">
+              <Trophy className="h-4 w-4 text-primary" /> {t.prize}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Users className="h-4 w-4" /> {t.teamsCount} times
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4" /> {formatDateBR(t.startDate)} →{" "}
+              {formatDateBR(t.endDate)}
+            </span>
           </div>
         </div>
       </div>
@@ -87,12 +131,19 @@ function TPage() {
           {activeTab === "geral" && (
             <>
               <section>
-                <h2 className="font-display text-2xl uppercase mb-4"><span className="text-primary">/</span> Times inscritos</h2>
+                <h2 className="font-display text-2xl uppercase mb-4">
+                  <span className="text-primary">/</span> Times inscritos
+                </h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-                  {tournamentTeams.map((tm: any) => (
-                    <div key={tm.id} className="flex flex-col items-center gap-2 p-3 rounded-lg bg-card-grad border border-border/60">
+                  {tournamentTeams.map((tm) => (
+                    <div
+                      key={tm.id}
+                      className="flex flex-col items-center gap-2 p-3 rounded-lg bg-card-grad border border-border/60"
+                    >
                       <TeamLogo team={tm} size={48} />
-                      <div className="text-xs text-center font-display truncate w-full">{tm.tag}</div>
+                      <div className="text-xs text-center font-display truncate w-full">
+                        {tm.tag}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -101,12 +152,16 @@ function TPage() {
               {t.status === "Encerrado" && tMatches.length > 0 && (
                 // Lógica dinâmica para exibir o campeão com base na última partida
                 <section>
-                  <h2 className="font-display text-2xl uppercase mb-4"><span className="text-primary">/</span> Campeão</h2>
+                  <h2 className="font-display text-2xl uppercase mb-4">
+                    <span className="text-primary">/</span> Campeão
+                  </h2>
                   <div className="inline-flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary/20">
                     <Trophy className="w-8 h-8 text-primary" />
                     <div>
                       <div className="font-display text-xl">Campeonato Finalizado</div>
-                      <div className="text-xs text-muted-foreground uppercase tracking-widest">Confira o chaveamento para o resultado final</div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-widest">
+                        Confira o chaveamento para o resultado final
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -116,19 +171,25 @@ function TPage() {
 
           {activeTab === "chaveamento" && (
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="font-display text-2xl uppercase mb-4"><span className="text-primary">/</span> Chaveamento</h2>
-              <Bracket matches={tMatches} />
+              <h2 className="font-display text-2xl uppercase mb-4">
+                <span className="text-primary">/</span> Chaveamento
+              </h2>
+              <Bracket matches={tMatches} bracketType={t.bracketType || t.format} />
             </section>
           )}
 
           {activeTab === "partidas" && (
             <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <h2 className="font-display text-2xl uppercase mb-4"><span className="text-primary">/</span> Partidas</h2>
+              <h2 className="font-display text-2xl uppercase mb-4">
+                <span className="text-primary">/</span> Partidas
+              </h2>
               {tMatches.length === 0 ? (
                 <div className="text-muted-foreground">Sem partidas registradas ainda.</div>
               ) : (
                 <div className="grid md:grid-cols-2 gap-4">
-                  {tMatches.map((m) => <MatchCard key={m.id} m={m} />)}
+                  {tMatches.map((m) => (
+                    <MatchCard key={m.id} m={m} />
+                  ))}
                 </div>
               )}
             </section>
@@ -141,13 +202,17 @@ function TPage() {
                   <div className="flex items-center gap-2 text-primary font-display uppercase tracking-widest">
                     <CheckCircle2 className="h-5 w-5" /> Quem pode jogar
                   </div>
-                  <p className="text-sm text-muted-foreground">Diamante 3, Ascendente 1-3, Imortal 1-3 e Radiante.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Diamante 3, Ascendente 1-3, Imortal 1-3 e Radiante.
+                  </p>
                 </div>
                 <div className="p-6 rounded-2xl bg-card border border-destructive/20 space-y-4">
                   <div className="flex items-center gap-2 text-destructive font-display uppercase tracking-widest">
                     <XCircle className="h-5 w-5" /> Quem não pode
                   </div>
-                  <p className="text-sm text-muted-foreground">Diamante 1, Diamante 2 ou qualquer elo abaixo.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Diamante 1, Diamante 2 ou qualquer elo abaixo.
+                  </p>
                 </div>
               </div>
 
@@ -156,12 +221,24 @@ function TPage() {
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
                     { t: "Tier 01", n: "Diamond", d: "Apenas Diamante 3.", c: "border-cs2/30" },
-                    { t: "Tier 02", n: "Ascendant", d: "Ascendente 1, 2 e 3.", c: "border-valorant/30" },
+                    {
+                      t: "Tier 02",
+                      n: "Ascendant",
+                      d: "Ascendente 1, 2 e 3.",
+                      c: "border-valorant/30",
+                    },
                     { t: "Tier 03", n: "Immortal", d: "Imortal 1, 2 e 3.", c: "border-lol/30" },
-                    { t: "Tier 04", n: "Radiant", d: "Nível Radiante permitido.", c: "border-primary/30 shadow-neon" },
+                    {
+                      t: "Tier 04",
+                      n: "Radiant",
+                      d: "Nível Radiante permitido.",
+                      c: "border-primary/30 shadow-neon",
+                    },
                   ].map((item) => (
                     <div key={item.t} className={`p-4 rounded-xl border bg-card-grad ${item.c}`}>
-                      <div className="text-[10px] text-muted-foreground uppercase mb-1">{item.t}</div>
+                      <div className="text-[10px] text-muted-foreground uppercase mb-1">
+                        {item.t}
+                      </div>
                       <div className="font-display text-lg mb-2">{item.n}</div>
                       <p className="text-xs text-muted-foreground leading-relaxed">{item.d}</p>
                     </div>
@@ -172,8 +249,12 @@ function TPage() {
               <div className="flex items-start gap-4 p-4 rounded-xl bg-primary/5 border border-primary/20">
                 <ShieldAlert className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                 <div className="text-xs text-muted-foreground leading-relaxed">
-                  <span className="font-bold text-primary uppercase block mb-1">Aviso Importante</span>
-                  A Série A é exclusiva para jogadores de nível avançado. O descumprimento dos requisitos de elo resultará em desclassificação imediata do time, sem direito a reembolso.
+                  <span className="font-bold text-primary uppercase block mb-1">
+                    Aviso Importante
+                  </span>
+                  A Série A é exclusiva para jogadores de nível avançado. O descumprimento dos
+                  requisitos de elo resultará em desclassificação imediata do time, sem direito a
+                  reembolso.
                 </div>
               </div>
             </section>

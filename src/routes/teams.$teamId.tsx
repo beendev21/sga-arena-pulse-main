@@ -6,6 +6,7 @@ import { MatchCard } from "@/components/sga/MatchCard";
 import { Trophy, TrendingUp, Target, Crosshair } from "lucide-react";
 import { StatsCard } from "@/components/sga/StatsCard";
 import { useMemo } from "react";
+import { buildPublicMatches, buildPublicRoster } from "@/lib/publicApi";
 
 export const Route = createFileRoute("/teams/$teamId")({ component: TeamPage });
 
@@ -13,35 +14,78 @@ function TeamPage() {
   // Captura o parâmetro de ID da URL (ex: /teams/team-uuid).
   const { teamId } = Route.useParams();
   const apiTeams = useApiController("Teams");
-  const apiPlayers = useApiController("Players");
   const apiMatches = useApiController("Matches");
+  const apiMatchTeams = useApiController("Matchteams");
+  const apiParticipants = useApiController("TeamParticipants");
+  const apiPlayers = useApiController("Players");
+  const apiRoles = useApiController("Roles");
+  const apiTournaments = useApiController("Tournaments");
+  const apiStatus = useApiController("Status");
+  const apiStages = useApiController("Stages");
   
   const { result: team, isLoading: l1 } = useQuery({
     queryKey: ["team", teamId],
-    queryFn: () => apiTeams.getById(teamId)
+    queryFn: () => apiTeams.getById(teamId, { includeAuth: false })
   });
 
   const { result: playersRaw, isLoading: l2 } = useQuery({
     queryKey: ["players"],
-    queryFn: () => apiPlayers.getAll()
+    queryFn: () => apiPlayers.getAll({ includeAuth: false })
   });
 
   const { result: matchesRaw, isLoading: l3 } = useQuery({
     queryKey: ["matches"],
-    queryFn: () => apiMatches.getAll()
+    queryFn: () => apiMatches.getAll({ includeAuth: false })
+  });
+
+  const { data: matchTeamsRaw } = useQuery({
+    queryKey: ["matchteams"],
+    queryFn: () => apiMatchTeams.getAll({ includeAuth: false })
+  });
+  const { data: participantsRaw } = useQuery({
+    queryKey: ["team-participants"],
+    queryFn: () => apiParticipants.getAll({ includeAuth: false })
+  });
+  const { data: rolesRaw } = useQuery({
+    queryKey: ["roles"],
+    queryFn: () => apiRoles.getAll({ includeAuth: false })
+  });
+  const { data: tournamentsRaw } = useQuery({
+    queryKey: ["tournaments"],
+    queryFn: () => apiTournaments.getAll({ includeAuth: false })
+  });
+  const { data: statusRaw } = useQuery({
+    queryKey: ["status"],
+    queryFn: () => apiStatus.getAll({ includeAuth: false })
+  });
+  const { data: stagesRaw } = useQuery({
+    queryKey: ["stages"],
+    queryFn: () => apiStages.getAll({ includeAuth: false })
   });
 
   const lineup = useMemo(() => {
-    const list = Array.isArray(playersRaw) ? playersRaw : (playersRaw?.result || []);
-    return list.filter((p: any) => p.teamId === teamId);
-  }, [playersRaw, teamId]);
+    return buildPublicRoster({
+      playersRaw,
+      teamsRaw: [team],
+      participantsRaw,
+      rolesRaw,
+    }).filter((entry: any) => String(entry.teamId) === String(teamId));
+  }, [playersRaw, participantsRaw, rolesRaw, team, teamId]);
 
   const recent = useMemo(() => {
-    const list = Array.isArray(matchesRaw) ? matchesRaw : (matchesRaw?.result || []);
-    return list.filter((m: any) => m.teamAId === teamId || m.teamBId === teamId).slice(0, 5);
-  }, [matchesRaw, teamId]);
+    return buildPublicMatches({
+      matchesRaw,
+      matchTeamsRaw,
+      teamsRaw: [team],
+      tournamentsRaw,
+      statusRaw,
+      stagesRaw,
+    })
+      .filter((m: any) => String(m.teamA?.id) === String(teamId) || String(m.teamB?.id) === String(teamId))
+      .slice(0, 5);
+  }, [matchesRaw, matchTeamsRaw, tournamentsRaw, statusRaw, stagesRaw, team, teamId]);
 
-  if (l1 || l2 || l3) return <div className="p-10 text-center font-display uppercase italic">Recuperando registros de equipe...</div>;
+  if (l1 || l2 || l3 || !participantsRaw || !rolesRaw) return <div className="p-10 text-center font-display uppercase italic">Recuperando registros de equipe...</div>;
   if (!team) return <div className="p-10 text-center">Time não encontrado.</div>;
 
   const wr = Math.round((team.wins / Math.max(team.wins + team.losses, 1)) * 100);
@@ -69,16 +113,21 @@ function TeamPage() {
 
         <section>
           <h2 className="font-display text-2xl uppercase mb-4"><span className="text-primary">/</span> Lineup</h2>
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {lineup.map((p) => (
-              <div key={p.id} className="rounded-xl border border-border/60 bg-card-grad p-4 text-center hover:shadow-neon transition">
-                <img src={p.avatar} alt={p.nick} className="mx-auto h-20 w-20 rounded-full ring-2 ring-primary/40" />
-                <div className="font-display mt-3">{p.nick}</div>
-                <div className="text-xs text-muted-foreground">{p.role}</div>
-                <div className="mt-2 text-xs">Rating <span className="text-primary font-display">{p.rating}</span></div>
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {lineup.map((p) => (
+                  <div key={p.id} className="rounded-xl border border-border/60 bg-card-grad p-4 text-center hover:shadow-neon transition">
+                <div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-primary/20 bg-primary/10 font-display text-xl text-primary">
+                  {String(p.playerName || "?")
+                    .split(" ")
+                    .filter(Boolean)
+                    .slice(0, 2)
+                    .map((part: string) => part[0]?.toUpperCase() || "")
+                    .join("")}
+                </div>
+                <div className="font-display mt-3">{p.playerName}</div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
         </section>
 
         <section>

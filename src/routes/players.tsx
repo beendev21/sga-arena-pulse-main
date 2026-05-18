@@ -9,13 +9,6 @@ export const Route = createFileRoute("/players")({
 });
 
 function P() {
-  /**
-   * Estado de Filtragem por Jogo.
-   * Integração: O valor de 'game' deve ser passado para o componente 'PlayerStatsTable'
-   * para que ele execute um fetch específico de dados (ex: /api/players?game=CS2).
-   */
-  const [game, setGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
-
   return (
     <div className="relative min-h-screen bg-[#06070a] overflow-hidden">
       {/* Background Layers */}
@@ -57,54 +50,18 @@ function P() {
           </Link>
         </motion.div>
 
-        {/* Game Tabs Navigation */}
-        <div className="flex gap-4 sm:gap-10 mb-10 border-b border-white/5 pb-4 overflow-x-auto scrollbar-none items-center">
-          <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em] hidden sm:block italic mr-2">
-            Title_Filter_
-          </span>
-          {[
-            { id: "COUNTER-STRIKE 2" as const, label: "CS2", color: "text-cs2" },
-            { id: "VALORANT" as const, label: "VALORANT", color: "text-valorant" },
-            { id: "LEAGUE OF LEGENDS" as const, label: "LoL", color: "text-lol" },
-          ].map((g) => (
-            <button
-              key={g.id}
-              onClick={() => setGame(g.id)}
-              className={`font-display text-lg sm:text-2xl italic font-bold uppercase transition-all relative py-2 whitespace-nowrap px-1 tracking-tight ${
-                game === g.id ? `${g.color} opacity-100` : "text-muted-foreground opacity-30 hover:opacity-60"
-              }`}
-            >
-              {g.label}
-              {game === g.id && (
-                <motion.div 
-                  layoutId="playerGameTab" 
-                  className="absolute bottom-0 left-0 right-0 h-[3px] bg-current shadow-[0_0_10px_currentColor]" 
-                />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Table Container with HUD Accents */}
         <div className="relative group">
           <div className="absolute -top-4 -left-4 w-8 h-8 border-t border-l border-white/10 group-hover:border-primary/40 transition-colors" />
           <div className="absolute -bottom-4 -right-4 w-8 h-8 border-b border-r border-white/10 group-hover:border-primary/40 transition-colors" />
 
-          <AnimatePresence mode="wait">
-            <motion.div 
-              key={game}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              className="rounded-none border border-white/5 bg-[#0a0a0c]/80 backdrop-blur-md shadow-2xl p-1 overflow-hidden mt-8"
-            >
-              <div className="absolute top-0 right-0 p-4 text-[8px] font-black text-white/5 uppercase tracking-[0.4em] pointer-events-none">
-                System Check // Live Performance Data
-              </div>
-              <PlayerStatsTable limit={40} game={game} />
-            </motion.div>
-          </AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="rounded-none border border-white/5 bg-[#0a0a0c]/80 backdrop-blur-md shadow-2xl p-1 overflow-hidden mt-8"
+          >
+            <PlayerStatsTable limit={40} />
+          </motion.div>
         </div>
       </div>
     </div>

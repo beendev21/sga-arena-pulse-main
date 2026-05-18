@@ -1,101 +1,126 @@
-import { useMemo, useCallback } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import useApiController from "../../API/controler";
 import { TeamLogo } from "./TeamLogo";
+import { buildPublicRoster } from "@/lib/publicApi";
+import { unwrapList } from "@/lib/api";
 
 export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: string }) {
-  const getPlayers = useApiController("Players");
-  const getTeams = useApiController("Teams");
+  const apiPlayers = useApiController("Players");
+  const apiTeams = useApiController("Teams");
+  const apiParticipants = useApiController("TeamParticipants");
+  const apiRoles = useApiController("Roles");
+  const apiPlayerMatchStats = useApiController("PlayerMatchStats");
 
   const { data: pRaw, isLoading: l1 } = useQuery({
     queryKey: ["players"],
-    queryFn: () => getPlayers.getAll({ includeAuth: false })
+    queryFn: () => apiPlayers.getAll({ includeAuth: false })
   });
 
   const { data: tRaw, isLoading: l2 } = useQuery({
     queryKey: ["teams"],
-    queryFn: () => getTeams.getAll()
+    queryFn: () => apiTeams.getAll({ includeAuth: false })
   });
 
-  const parse = useCallback((r: any) => {
-    if (!r) return [];
-    return Array.isArray(r) ? r : (r?.result || []);
-  }, []);
+  const { data: tpRaw, isLoading: l3 } = useQuery({
+    queryKey: ["team-participants"],
+    queryFn: () => apiParticipants.getAll({ includeAuth: false })
+  });
 
-  const players = useMemo(() => parse(pRaw), [pRaw, parse]);
-  const teams = useMemo(() => parse(tRaw), [tRaw, parse]);
+  const { data: rolesRaw, isLoading: l4 } = useQuery({
+    queryKey: ["roles"],
+    queryFn: () => apiRoles.getAll({ includeAuth: false })
+  });
+  const { data: statsRaw, isLoading: l5 } = useQuery({
+    queryKey: ["player-match-stats"],
+    queryFn: () => apiPlayerMatchStats.getAll({ includeAuth: false })
+  });
 
-  const filteredData = useMemo(() => {
-    return players.filter((p: any) => {
-      if (!game) return true;
-      const targetGame = game.toUpperCase();
-      if (p.game?.toUpperCase() === targetGame) return true;
-      
-      const team = teams.find((t: any) => String(t.id) === String(p.teamId));
-      if (team && team.game?.toUpperCase() === targetGame) return true;
-      
-      return !p.game;
-    }).slice(0, limit);
-  }, [players, teams, game, limit]);
+  const aggregateStats = useMemo(() => {
+    const map = new Map<number, { kills: number; deaths: number; assists: number; matches: number }>();
+    for (const stat of unwrapList(statsRaw) as any[]) {
+      const playerId = Number(stat?.playerId);
+      if (!playerId) continue;
+      const current = map.get(playerId) || { kills: 0, deaths: 0, assists: 0, matches: 0 };
+      current.kills += Number(stat?.kills) || 0;
+      current.deaths += Number(stat?.deaths) || 0;
+      current.assists += Number(stat?.assists) || 0;
+      current.matches += 1;
+      map.set(playerId, current);
+    }
+    return map;
+  }, [statsRaw]);
 
-  if (l1 || l2) return <div className="p-8 text-center text-muted-foreground animate-pulse font-display uppercase tracking-widest italic">Acessando Dossiê de Atletas...</div>;
+  const roster = useMemo(
+    () =>
+      buildPublicRoster({
+        playersRaw: pRaw,
+        teamsRaw: tRaw,
+        participantsRaw: tpRaw,
+        rolesRaw,
+      })
+        .map((entry: any) => {
+          const stats = aggregateStats.get(Number(entry.playerId)) || { kills: 0, deaths: 0, assists: 0, matches: 0 };
+          const kda = (stats.kills + stats.assists) / Math.max(stats.deaths, 1);
+          return {
+            ...entry,
+            stats,
+            kda,
+          };
+        })
+        .sort((a: any, b: any) => b.kda - a.kda)
+        .slice(0, limit),
+    [pRaw, tRaw, tpRaw, rolesRaw, aggregateStats, limit],
+  );
+
+  if (l1 || l2 || l3 || l4 || l5) return <div className="p-8 text-center text-muted-foreground animate-pulse font-display uppercase tracking-widest italic">Acessando Dossiê de Atletas...</div>;
 
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60 bg-card-grad">
-      <table className="w-full text-sm min-w-[820px]">
+      <table className="w-full text-sm min-w-[760px]">
         <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
           <tr>
             <th className="px-3 py-3 text-left">#</th>
             <th className="px-3 py-3 text-left">Jogador</th>
             <th className="px-3 py-3 text-left">Time</th>
-            <th className="px-3 py-3 text-right">K</th>
-            <th className="px-3 py-3 text-right">D</th>
-            <th className="px-3 py-3 text-right">A</th>
-            <th className="px-3 py-3 text-right">KDA</th>
-            <th className="px-3 py-3 text-right">Defuse</th>
-            <th className="px-3 py-3 text-right">Plant</th>
-            <th className="px-3 py-3 text-right">HS%</th>
-            <th className="px-3 py-3 text-right">Rating</th>
+            <th className="px-3 py-3 text-left">KDA</th>
           </tr>
         </thead>
         <tbody>
-          {filteredData.map((p, i) => {
-            const team = teams.find(t => String(t.id) === String(p.teamId));
-            
-            const kills = p.kills || 0;
-            const assists = p.assists || 0;
-            const deaths = p.deaths || 0;
-            const kda = ((kills + assists) / Math.max(deaths, 1)).toFixed(2);
+          {roster.map((entry, i) => {
+            const initials = String(entry.playerName || "?")
+              .split(" ")
+              .filter(Boolean)
+              .slice(0, 2)
+              .map((part: string) => part[0]?.toUpperCase() || "")
+              .join("");
             return (
-              <tr key={p.id} className="border-t border-border/40 hover:bg-muted/30 transition">
+              <tr key={entry.id} className="border-t border-border/40 hover:bg-muted/30 transition">
                 <td className="px-3 py-2 font-display text-muted-foreground">{i + 1}</td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
-                    <img src={p.avatar} alt={p.nick} className="h-8 w-8 rounded-full ring-1 ring-primary/40" />
+                    <div className="grid h-8 w-8 place-items-center rounded-full border border-primary/20 bg-primary/10 font-display text-[10px] text-primary">
+                      {initials || "P"}
+                    </div>
                     <div>
-                      <div className="font-display">{p.nick}</div>
-                      <div className="text-[10px] text-muted-foreground">{p.role}</div>
+                      <div className="font-display">{entry.playerName}</div>
+                      <div className="text-[10px] text-muted-foreground">ID {entry.playerId}</div>
                     </div>
                   </div>
                 </td>
                 <td className="px-3 py-2">
-                  {team ? (
+                  {entry.team ? (
                     <div className="flex items-center gap-2">
-                      <TeamLogo team={team} size={24} />
-                      <span className="text-xs">{team.tag}</span>
+                      <TeamLogo team={entry.team} size={24} />
+                      <span className="text-xs">{entry.teamName || entry.teamTag}</span>
                     </div>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground italic">Sem Equipe</span>
+                    <span className="text-[10px] text-muted-foreground italic">Sem equipe</span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-right">{kills}</td>
-                <td className="px-3 py-2 text-right">{deaths}</td>
-                <td className="px-3 py-2 text-right">{assists}</td>
-                <td className="px-3 py-2 text-right">{kda}</td>
-                <td className="px-3 py-2 text-right">{p.defuses || 0}</td>
-                <td className="px-3 py-2 text-right">{p.plants || 0}</td>
-                <td className="px-3 py-2 text-right">{p.hs || 0}%</td>
-                <td className="px-3 py-2 text-right font-display text-primary">{(p.rating || 0).toFixed(2)}</td>
+                <td className="px-3 py-2 font-display text-primary">
+                  {Number(entry.kda || 0).toFixed(2)}
+                </td>
               </tr>
             );
           })}
