@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +39,7 @@ import useApiController from "../API/controler";
 import ApiService from "../API/service";
 import { motion } from "framer-motion";
 import { formatDateBR } from "@/lib/dateUtils";
+import { AiMatchTab } from "@/components/admin/AiMatchTab";
 
 /**
  * Definição da rota '/admin' utilizando TanStack Router.
@@ -61,6 +63,7 @@ const tabs = [
   { k: "monitoramento", label: "Monitoramento Ao Vivo" },
   { k: "highlights", label: "Highlights" },
   { k: "galeria", label: "Galeria" },
+  { k: "ia", label: "IA" },
 ] as const;
 
   const createEmptyPlayer = () => ({
@@ -86,9 +89,16 @@ const createEmptyTeam = () => ({
   bannerColor: "#f86d83",
   gameId: 0,
   elo: 0,
-  wins: 0,
-  losses: 0,
-  trophies: 0,
+});
+
+const createEmptyTeamMatchStats = () => ({
+  id: 0,
+  teamId: 0,
+  matchId: 0,
+  roundsWon: 0,
+  roundsLost: 0,
+  plants: 0,
+  defuses: 0,
 });
 
 const createEmptyTeamParticipant = () => ({
@@ -310,6 +320,44 @@ const toDateTimeLocalValue = (value?: string | Date | null) => {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
+
+type HeaderBarProps = {
+  create: string;
+  q: string;
+  setQ: Dispatch<SetStateAction<string>>;
+  onCreate?: () => void;
+  onUpload?: () => void;
+};
+
+function HeaderBar({ create, q, setQ, onCreate, onUpload }: HeaderBarProps) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="relative flex-1 min-w-[200px]">
+        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Filtrar..."
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="pl-8"
+        />
+      </div>
+      <Button variant="outline" onClick={onUpload || (() => {})}>
+        <Upload className="h-4 w-4 mr-1" /> Upload
+      </Button>
+      <Button
+        className="bg-neon shadow-neon"
+        onClick={
+          onCreate ||
+          (create.includes("partida")
+            ? () => undefined
+            : () => undefined)
+        }
+      >
+        <Plus className="h-4 w-4 mr-1" /> {create}
+      </Button>
+    </div>
+  );
+}
 
 function buildAdminBracketLayout(rounds: AdminBracketRound[]) {
   const boardTopOffset = 66;
@@ -817,12 +865,16 @@ function Admin() {
   const [editTournamentDraft, setEditTournamentDraft] = useState(createEmptyTournament());
   const [editTeamDraft, setEditTeamDraft] = useState(createEmptyTeam());
   const [editTeamGameId, setEditTeamGameId] = useState(0);
+  const [editTeamMatchStatsDraft, setEditTeamMatchStatsDraft] = useState(
+    createEmptyTeamMatchStats(),
+  );
   const [editTeamParticipants, setEditTeamParticipants] = useState<
     Array<ReturnType<typeof createEmptyTeamParticipantDraft>>
   >([createEmptyTeamParticipantDraft()]);
   const [editPlayerDraft, setEditPlayerDraft] = useState(createEmptyPlayer());
   const [editPlayerStatsMatchId, setEditPlayerStatsMatchId] = useState(0);
   const [editMatchDraft, setEditMatchDraft] = useState(createEmptyMatch());
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; entity: string } | null>(null);
 
   const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
   const [newPlayer, setNewPlayer] = useState(createEmptyPlayer());
@@ -839,12 +891,16 @@ function Admin() {
   const apiRoles = useApiController("Roles");
   const apiTeamParticipants = useApiController("TeamParticipants");
   const apiPlayerMatchStats = useApiController("PlayerMatchStats");
+  const apiTeamMatchStats = useApiController("TeamMatchStats");
   const apiUsers = useApiController("User");
+  const apiGameAccounts = useApiController("GameAccounts");
   const apiGames = useApiController("Games");
   const apiStages = useApiController("Stages");
   const apiStatus = useApiController("Status");
   const apiMatches = useApiController("Matches");
   const apiMatchTeams = useApiController("Matchteams");
+  const apiMatchLineups = useApiController("MatchLineups");
+  const apiMatchLineupPlayers = useApiController("MatchLineupPlayers");
   const apiHighlights = useApiController("Highlights");
   const apiGallery = useApiController("Gallery");
 
@@ -879,9 +935,19 @@ function Admin() {
     queryFn: () => apiPlayerMatchStats.getAll(),
     enabled: !!token,
   });
+  const { data: tmsr } = useQuery({
+    queryKey: ["team-match-stats", token],
+    queryFn: () => apiTeamMatchStats.getAll(),
+    enabled: !!token,
+  });
   const { data: ur } = useQuery({
     queryKey: ["users", token],
     queryFn: () => apiUsers.getAll(),
+    enabled: !!token,
+  });
+  const { data: garc } = useQuery({
+    queryKey: ["game-accounts", token],
+    queryFn: () => apiGameAccounts.getAll(),
     enabled: !!token,
   });
   const { data: gar } = useQuery({
@@ -902,6 +968,21 @@ function Admin() {
   const { data: mr, isLoading: l4 } = useQuery({
     queryKey: ["matches", token],
     queryFn: () => apiMatches.getAll(),
+  });
+  const { data: mtr } = useQuery({
+    queryKey: ["match-teams", token],
+    queryFn: () => apiMatchTeams.getAll(),
+    enabled: !!token,
+  });
+  const { data: mlar } = useQuery({
+    queryKey: ["match-lineups", token],
+    queryFn: () => apiMatchLineups.getAll(),
+    enabled: !!token,
+  });
+  const { data: mlpar } = useQuery({
+    queryKey: ["match-lineup-players", token],
+    queryFn: () => apiMatchLineupPlayers.getAll(),
+    enabled: !!token,
   });
   const { data: hr } = useQuery({
     queryKey: ["highlights", token],
@@ -928,11 +1009,16 @@ function Admin() {
   const rolesData = useMemo(() => parse(rr), [rr]);
   const teamParticipantsData = useMemo(() => parse(tpr), [tpr]);
   const playerMatchStatsData = useMemo(() => parse(pmsr), [pmsr]);
+  const teamMatchStatsData = useMemo(() => parse(tmsr), [tmsr]);
   const usersData = useMemo(() => parse(ur), [ur]);
+  const gameAccountsData = useMemo(() => parse(garc), [garc]);
   const gamesData = useMemo(() => parse(gar), [gar]);
   const stagesData = useMemo(() => parse(str), [str]);
   const statusesData = useMemo(() => parse(sr), [sr]);
   const matchesData = useMemo(() => parse(mr), [mr]);
+  const matchTeamsData = useMemo(() => parse(mtr), [mtr]);
+  const matchLineupsData = useMemo(() => parse(mlar), [mlar]);
+  const matchLineupPlayersData = useMemo(() => parse(mlpar), [mlpar]);
   const highlightsData = useMemo(() => parse(hr), [hr]);
   const galleryData = useMemo(() => parse(gr), [gr]);
 
@@ -1094,6 +1180,23 @@ function Admin() {
       })[0];
   };
 
+  const getTeamMatchStatsRecord = (teamId: number, matchId: number) => {
+    return [...teamMatchStatsData].find(
+      (entry: any) =>
+        Number(entry.teamId) === Number(teamId) && Number(entry.matchId) === Number(matchId),
+    );
+  };
+
+  const getLatestTeamMatchStatsRecord = (teamId: number) => {
+    return [...teamMatchStatsData]
+      .filter((entry: any) => Number(entry.teamId) === Number(teamId))
+      .sort((a: any, b: any) => {
+        const ta = new Date(a.updatedAt || a.createdAt || 0).getTime();
+        const tb = new Date(b.updatedAt || b.createdAt || 0).getTime();
+        return tb - ta;
+      })[0];
+  };
+
   const editingPlayerTeamId = useMemo(() => {
     if (editingEntity?.type !== "player") return 0;
     return getPlayerTeamId(Number(editingEntity.data?.id) || 0);
@@ -1114,6 +1217,28 @@ function Admin() {
         return tb - ta;
       });
   }, [editingPlayerTeamId, matchesData]);
+
+  const teamStatsMatchOptions = useMemo(() => {
+    if (!editingTeamId) return [];
+
+    return [...matchesData]
+      .filter((match: any) => {
+        const matchTeams = Array.isArray(match?.teams) ? match.teams : match?.teams?.$values || [];
+
+        return (
+          Number(match.teamAId) === Number(editingTeamId) ||
+          Number(match.teamBId) === Number(editingTeamId) ||
+          Number(match.matchTeamAId) === Number(editingTeamId) ||
+          Number(match.matchTeamBId) === Number(editingTeamId) ||
+          matchTeams.some((candidate: any) => Number(candidate?.teamId) === Number(editingTeamId))
+        );
+      })
+      .sort((a: any, b: any) => {
+        const ta = new Date(a.startedAt || a.createdAt || a.updatedAt || 0).getTime();
+        const tb = new Date(b.startedAt || b.createdAt || b.updatedAt || 0).getTime();
+        return tb - ta;
+      });
+  }, [editingTeamId, matchesData]);
 
   const resolveMatchTeamId = (...candidates: any[]) => {
     for (const candidate of candidates) {
@@ -1150,6 +1275,14 @@ function Admin() {
   };
 
   const openTeamEdit = (team: any) => {
+    const teamId = Number(team?.id) || 0;
+    const latestTeamStats = getLatestTeamMatchStatsRecord(teamId);
+    const inferredMatchId =
+      Number(latestTeamStats?.matchId) || Number(getLatestMatchForTeam(teamId)?.id) || 0;
+    const resolvedTeamStats = inferredMatchId
+      ? getTeamMatchStatsRecord(teamId, inferredMatchId) || latestTeamStats
+      : latestTeamStats;
+
     setEditingTeamId(Number(team?.id) || null);
     setEditTeamRosterHydrated(false);
     setEditingEntity({ type: "team", data: team });
@@ -1162,11 +1295,17 @@ function Admin() {
       bannerColor: String(team?.bannerColor || "#f86d83"),
       gameId: Number(team?.gameId) || 0,
       elo: Number(team?.elo) || 0,
-      wins: Number(team?.wins) || 0,
-      losses: Number(team?.losses) || 0,
-      trophies: Number(team?.trophies) || 0,
     });
     setEditTeamGameId(Number(team?.gameId) || 0);
+    setEditTeamMatchStatsDraft({
+      id: Number(resolvedTeamStats?.id) || 0,
+      teamId,
+      matchId: inferredMatchId,
+      roundsWon: Number(resolvedTeamStats?.roundsWon) || 0,
+      roundsLost: Number(resolvedTeamStats?.roundsLost) || 0,
+      plants: Number(resolvedTeamStats?.plants) || 0,
+      defuses: Number(resolvedTeamStats?.defuses) || 0,
+    });
     setEditTeamParticipants([createEmptyTeamParticipantDraft()]);
   };
 
@@ -1236,6 +1375,22 @@ function Admin() {
     setEditTeamRosterHydrated(false);
     setEditPlayerDraft(createEmptyPlayer());
     setEditPlayerStatsMatchId(0);
+    setEditTeamMatchStatsDraft(createEmptyTeamMatchStats());
+  };
+
+  const updateEditTeamMatchStatsMatch = (matchId: number) => {
+    const teamId = Number(editingTeamId) || Number(editingEntity?.data?.id) || 0;
+    const existing = teamId && matchId ? getTeamMatchStatsRecord(teamId, matchId) : null;
+
+    setEditTeamMatchStatsDraft({
+      id: Number(existing?.id) || 0,
+      teamId,
+      matchId,
+      roundsWon: Number(existing?.roundsWon) || 0,
+      roundsLost: Number(existing?.roundsLost) || 0,
+      plants: Number(existing?.plants) || 0,
+      defuses: Number(existing?.defuses) || 0,
+    });
   };
 
   const updateEditTeamParticipant = (
@@ -1365,6 +1520,9 @@ function Admin() {
         if (!editTeamDraft.name.trim() || !editTeamDraft.tag.trim()) {
           throw new Error("Nome e TAG são obrigatórios.");
         }
+        if (!Number(editTeamMatchStatsDraft.matchId)) {
+          throw new Error("Selecione uma partida para confirmar os stats do time.");
+        }
 
         const payload = {
           id: Number(editingEntity.data?.id) || 0,
@@ -1383,7 +1541,30 @@ function Admin() {
           throw new Error("Erro ao atualizar time");
         }
 
-        const teamId = Number(editingEntity.data?.id);
+        const teamId = Number(editingEntity.data?.id) || 0;
+        const selectedMatchId = Number(editTeamMatchStatsDraft.matchId) || 0;
+        const existingStatsRecord = getTeamMatchStatsRecord(teamId, selectedMatchId);
+        const statsPayload = {
+          id: Number(existingStatsRecord?.id) || Number(editTeamMatchStatsDraft.id) || 0,
+          createdAt:
+            formatApiUtcTimestamp(existingStatsRecord?.createdAt) ||
+            formatApiUtcTimestamp(new Date()),
+          updatedAt: formatApiUtcTimestamp(new Date()),
+          teamId,
+          matchId: selectedMatchId,
+          roundsWon: Number(editTeamMatchStatsDraft.roundsWon) || 0,
+          roundsLost: Number(editTeamMatchStatsDraft.roundsLost) || 0,
+          plants: Number(editTeamMatchStatsDraft.plants) || 0,
+          defuses: Number(editTeamMatchStatsDraft.defuses) || 0,
+        };
+
+        const statsResult = existingStatsRecord
+          ? await apiTeamMatchStats.update(Number(existingStatsRecord.id), statsPayload)
+          : await apiTeamMatchStats.create(statsPayload);
+        if (statsResult === false) {
+          throw new Error("Erro ao atualizar stats do time");
+        }
+
         const existingTeamParticipants = teamParticipantsData.filter(
           (participant: any) => Number(participant.teamId) === teamId,
         );
@@ -1454,9 +1635,11 @@ function Admin() {
             .map((participant: any) => apiTeamParticipants.deleteRecord(Number(participant.id))),
         );
 
-        toast.success("Time atualizado!");
+        toast.success("Time e stats atualizados!");
         queryClient.invalidateQueries({ queryKey: ["teams", token] });
         queryClient.invalidateQueries({ queryKey: ["teams"] });
+        queryClient.invalidateQueries({ queryKey: ["team-match-stats", token] });
+        queryClient.invalidateQueries({ queryKey: ["team-match-stats"] });
         queryClient.invalidateQueries({ queryKey: ["team-participants", token] });
         queryClient.invalidateQueries({ queryKey: ["players", token] });
         queryClient.invalidateQueries({ queryKey: ["players"] });
@@ -1575,7 +1758,7 @@ function Admin() {
         closeEditModal();
       }
     } catch (err: any) {
-      toast.error(err.message || "Erro ao salvar edição");
+      toast.error(err.message || "Erro ao confirmar edição");
     }
   };
 
@@ -1931,7 +2114,7 @@ function Admin() {
       Number(currentMatch?.id) || Number(extractEntity(matchResponse)?.id) || 0;
 
     if (!persistedMatchId) {
-      throw new Error("Não foi possível identificar a partida para salvar os times.");
+      throw new Error("Não foi possível identificar a partida para atualizar os times.");
     }
 
     const matchTeamsToDelete = [
@@ -2318,8 +2501,14 @@ function Admin() {
    */
   const fakeAct = (label: string) => () => toast.success(`${label} (mock)`);
 
+  const requestDelete = (id: string, entity: string) => {
+    setDeleteTarget({ id, entity });
+  };
+
   // Função real de exclusão que limpa o cache global
-  const handleDelete = async (id: string, entity: string) => {
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+
     // Mapeamento de controladores baseado na entidade
     const controllers: Record<string, any> = {
       Tournaments: apiTournaments,
@@ -2330,24 +2519,25 @@ function Admin() {
       Gallery: apiGallery,
     };
 
+    const { id, entity } = deleteTarget;
     const ctrl = controllers[entity] || apiMatches;
 
-    if (confirm("Confirmar exclusão definitiva?")) {
-      const res = await ctrl.deleteRecord(id);
-      if (res !== false) {
-        // Invalida a query específica para forçar o refetch
-        const queryKey = entity.toLowerCase();
-        queryClient.invalidateQueries({ queryKey: [queryKey, token] });
-        queryClient.invalidateQueries({ queryKey: [queryKey] });
+    const res = await ctrl.deleteRecord(id);
+    setDeleteTarget(null);
 
-        // Se deletar um time ou uma partida, o ranking (teams) deve ser recalculado
-        if (entity === "Teams" || entity === "Matches") {
-          queryClient.invalidateQueries({ queryKey: ["teams", token] });
-          queryClient.invalidateQueries({ queryKey: ["teams"] });
-        }
+    if (res !== false) {
+      // Invalida a query específica para forçar o refetch
+      const queryKey = entity.toLowerCase();
+      queryClient.invalidateQueries({ queryKey: [queryKey, token] });
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
 
-        toast.success("Removido com sucesso!");
+      // Se deletar um time ou uma partida, o ranking (teams) deve ser recalculado
+      if (entity === "Teams" || entity === "Matches") {
+        queryClient.invalidateQueries({ queryKey: ["teams", token] });
+        queryClient.invalidateQueries({ queryKey: ["teams"] });
       }
+
+      toast.success("Removido com sucesso!");
     }
   };
 
@@ -2358,40 +2548,6 @@ function Admin() {
   function paginate<T>(arr: T[]) {
     const start = (page - 1) * PAGE;
     return { items: arr.slice(start, start + PAGE), pages: Math.ceil(arr.length / PAGE) };
-  }
-
-  /**
-   * Componente de Cabeçalho Funcional.
-   * Encapsula a lógica de busca e botões de ação globais da aba.
-   */
-  function HeaderBar({ create, onCreate }: { create: string; onCreate?: () => void }) {
-    return (
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Filtrar..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-        <Button variant="outline" onClick={fakeAct("Upload realizado")}>
-          <Upload className="h-4 w-4 mr-1" /> Upload
-        </Button>
-        <Button
-          className="bg-neon shadow-neon"
-          onClick={
-            onCreate ||
-            (create.includes("partida")
-              ? () => setIsCreatingMatch(true)
-              : () => setIsCreatingTourney(true))
-          }
-        >
-          <Plus className="h-4 w-4 mr-1" /> {create}
-        </Button>
-      </div>
-    );
   }
 
   function Pagination({ pages }: { pages: number }) {
@@ -2426,7 +2582,7 @@ function Admin() {
         <Button size="icon" variant="ghost" onClick={onEdit || fakeAct("Editado")}>
           <Pencil className="h-4 w-4" />
         </Button>
-        <Button size="icon" variant="ghost" onClick={() => handleDelete(id, entity)}>
+        <Button size="icon" variant="ghost" onClick={() => requestDelete(id, entity)}>
           <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
       </div>
@@ -2442,6 +2598,28 @@ function Admin() {
 
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-10">
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent className="max-w-md border-white/10 bg-[#0a0a0c] text-white">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl uppercase italic">
+              Confirmar exclusão?
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Essa ação remove permanentemente{" "}
+              {deleteTarget?.entity ? deleteTarget.entity.toLowerCase() : "o registro"} do sistema.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Excluir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog
         open={viewingTeamId !== null}
         onOpenChange={(open) => !open && setViewingTeamId(null)}
@@ -2596,7 +2774,7 @@ function Admin() {
                       }))
                     }
                   >
-                    <option value={0}>Selecionar jogo</option>
+                    <option value={0} disabled>Selecionar jogo</option>
                     {gamesData.map((game: any) => (
                       <option key={game.id} value={game.id}>
                         {game.name || game.title}
@@ -2618,7 +2796,7 @@ function Admin() {
                       }))
                     }
                   >
-                    <option value={0}>Selecionar status</option>
+                    <option value={0} disabled>Selecionar status</option>
                     {statusesData.map((status: any) => (
                       <option key={status.id} value={status.id}>
                         {status.name || status.title}
@@ -2891,50 +3069,101 @@ function Admin() {
                     }
                   />
                 </div>
-                <div className="grid gap-1">
-                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
-                    Wins
-                  </label>
-                  <Input
-                    type="number"
-                    value={editTeamDraft.wins}
-                    onChange={(e) =>
-                      setEditTeamDraft((current) => ({
-                        ...current,
-                        wins: Number(e.target.value) || 0,
-                      }))
-                    }
-                  />
+              </div>
+              <div className="border border-white/10 bg-black/20 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <h4 className="text-[10px] uppercase tracking-[0.3em] font-black text-white/70 italic">
+                    Stats da partida
+                  </h4>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest italic">
+                    Selecione a partida antes de editar os números.
+                  </p>
                 </div>
-                <div className="grid gap-1">
-                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
-                    Losses
-                  </label>
-                  <Input
-                    type="number"
-                    value={editTeamDraft.losses}
-                    onChange={(e) =>
-                      setEditTeamDraft((current) => ({
-                        ...current,
-                        losses: Number(e.target.value) || 0,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
-                    Troféus
-                  </label>
-                  <Input
-                    type="number"
-                    value={editTeamDraft.trophies}
-                    onChange={(e) =>
-                      setEditTeamDraft((current) => ({
-                        ...current,
-                        trophies: Number(e.target.value) || 0,
-                      }))
-                    }
-                  />
+                <div className="grid md:grid-cols-2 gap-4 min-w-0">
+                  <div className="grid gap-1 md:col-span-2">
+                    <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                      Partida
+                    </label>
+                    <select
+                      className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                      value={editTeamMatchStatsDraft.matchId}
+                      onChange={(e) => updateEditTeamMatchStatsMatch(Number(e.target.value) || 0)}
+                    >
+                      <option value={0} disabled>
+                        Selecione uma partida
+                      </option>
+                      {teamStatsMatchOptions.map((match: any) => (
+                        <option key={match.id} value={match.id}>
+                          #{match.id} - {getTournamentLabel(Number(match.tournamentId) || 0)} -{" "}
+                          {formatDateBR(match.startedAt || match.createdAt || match.updatedAt)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid gap-1">
+                    <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                      Wins
+                    </label>
+                    <Input
+                      type="number"
+                      disabled={!editTeamMatchStatsDraft.matchId}
+                      value={editTeamMatchStatsDraft.roundsWon}
+                      onChange={(e) =>
+                        setEditTeamMatchStatsDraft((current) => ({
+                          ...current,
+                          roundsWon: Number(e.target.value) || 0,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                      Losses
+                    </label>
+                    <Input
+                      type="number"
+                      disabled={!editTeamMatchStatsDraft.matchId}
+                      value={editTeamMatchStatsDraft.roundsLost}
+                      onChange={(e) =>
+                        setEditTeamMatchStatsDraft((current) => ({
+                          ...current,
+                          roundsLost: Number(e.target.value) || 0,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                      Plants
+                    </label>
+                    <Input
+                      type="number"
+                      disabled={!editTeamMatchStatsDraft.matchId}
+                      value={editTeamMatchStatsDraft.plants}
+                      onChange={(e) =>
+                        setEditTeamMatchStatsDraft((current) => ({
+                          ...current,
+                          plants: Number(e.target.value) || 0,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-1">
+                    <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
+                      Defuses
+                    </label>
+                    <Input
+                      type="number"
+                      disabled={!editTeamMatchStatsDraft.matchId}
+                      value={editTeamMatchStatsDraft.defuses}
+                      onChange={(e) =>
+                        setEditTeamMatchStatsDraft((current) => ({
+                          ...current,
+                          defuses: Number(e.target.value) || 0,
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
               </div>
               <div className="border border-white/10 bg-black/20 p-4 space-y-4">
@@ -2948,7 +3177,7 @@ function Admin() {
                       value={editTeamGameId}
                       onChange={(e) => setEditTeamGameId(Number(e.target.value))}
                     >
-                      <option value={0}>Selecionar jogo dos roles...</option>
+                      <option value={0} disabled>Selecionar jogo dos roles...</option>
                       {gamesData.map((game: any) => (
                         <option key={game.id} value={game.id}>
                           {game.name || game.title}
@@ -2979,7 +3208,7 @@ function Admin() {
                             updateEditTeamParticipant(index, { playerId, playerName });
                           }}
                         >
-                          <option value="">Selecionar player...</option>
+                          <option value="" disabled>Selecionar player...</option>
                           {playersData.map((player: any) => {
                             const playerId = Number(player.id);
                             const selectedElsewhere =
@@ -2997,14 +3226,6 @@ function Admin() {
                             );
                           })}
                         </select>
-                        <div className="text-[10px] uppercase tracking-widest text-white/40 truncate">
-                          {participant.playerName ||
-                            playersData.find(
-                              (candidate: any) =>
-                                Number(candidate.id) === Number(participant.playerId),
-                            )?.name ||
-                            "Player não resolvido"}
-                        </div>
                       </div>
                       <select
                         className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
@@ -3019,7 +3240,7 @@ function Admin() {
                         }}
                         disabled={!editTeamGameId}
                       >
-                        <option value="">Selecionar role...</option>
+                        <option value="" disabled>Selecionar role...</option>
                         {editAvailableRoles.map((role: any) => (
                           <option key={role.id} value={role.id}>
                             {role.name}
@@ -3033,50 +3254,46 @@ function Admin() {
                           )?.name ||
                           "Role não resolvida"}
                       </div>
-                      <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                        <input
-                          type="checkbox"
+                      <label className="flex items-center gap-2 text-[10px] uppercase text-white/70">
+                        <Checkbox
                           checked={participant.isStarter}
-                          onChange={(e) =>
+                          onCheckedChange={(checked) =>
                             updateEditTeamParticipant(index, {
-                              isStarter: e.target.checked,
-                              isSubstitute: e.target.checked ? false : participant.isSubstitute,
+                              isStarter: Boolean(checked),
+                              isSubstitute: Boolean(checked) ? false : participant.isSubstitute,
                             })
                           }
-                        />{" "}
+                        />
                         Titular
                       </label>
-                      <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                        <input
-                          type="checkbox"
+                      <label className="flex items-center gap-2 text-[10px] uppercase text-white/70">
+                        <Checkbox
                           checked={participant.isCaptain}
-                          onChange={(e) =>
-                            updateEditTeamParticipant(index, { isCaptain: e.target.checked })
+                          onCheckedChange={(checked) =>
+                            updateEditTeamParticipant(index, { isCaptain: Boolean(checked) })
                           }
-                        />{" "}
+                        />
                         Capitão
                       </label>
-                      <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                        <input
-                          type="checkbox"
+                      <label className="flex items-center gap-2 text-[10px] uppercase text-white/70">
+                        <Checkbox
                           checked={participant.isSubstitute}
-                          onChange={(e) =>
+                          onCheckedChange={(checked) =>
                             updateEditTeamParticipant(index, {
-                              isSubstitute: e.target.checked,
-                              isStarter: e.target.checked ? false : participant.isStarter,
+                              isSubstitute: Boolean(checked),
+                              isStarter: Boolean(checked) ? false : participant.isStarter,
                             })
                           }
-                        />{" "}
+                        />
                         Reserva
                       </label>
-                      <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                        <input
-                          type="checkbox"
+                      <label className="flex items-center gap-2 text-[10px] uppercase text-white/70">
+                        <Checkbox
                           checked={participant.isActive}
-                          onChange={(e) =>
-                            updateEditTeamParticipant(index, { isActive: e.target.checked })
+                          onCheckedChange={(checked) =>
+                            updateEditTeamParticipant(index, { isActive: Boolean(checked) })
                           }
-                        />{" "}
+                        />
                         Ativo
                       </label>
                       <Button
@@ -3151,7 +3368,7 @@ function Admin() {
                     value={editPlayerStatsMatchId}
                     onChange={(e) => setEditPlayerStatsMatchId(Number(e.target.value) || 0)}
                   >
-                    <option value={0}>Selecionar partida</option>
+                    <option value={0} disabled>Selecionar partida</option>
                     {playerStatsMatchOptions.map((match: any) => (
                       <option key={match.id} value={match.id}>
                         {getTournamentLabel(Number(match.tournamentId))} - {match.bracketPosition || `Partida #${match.id}`}
@@ -3334,7 +3551,7 @@ function Admin() {
                       }))
                     }
                   >
-                    <option value={0}>Selecionar campeonato</option>
+                    <option value={0} disabled>Selecionar campeonato</option>
                     {tournamentsData.map((t: any) => (
                       <option key={t.id} value={t.id}>
                         {t.name}
@@ -3356,7 +3573,7 @@ function Admin() {
                       }))
                     }
                   >
-                    <option value={0}>Selecionar stage</option>
+                    <option value={0} disabled>Selecionar stage</option>
                     {stagesData
                       .filter(
                         (stage: any) =>
@@ -3384,7 +3601,7 @@ function Admin() {
                       }))
                     }
                   >
-                    <option value={0}>Selecionar status</option>
+                    <option value={0} disabled>Selecionar status</option>
                     {statusesData.map((status: any) => (
                       <option key={status.id} value={status.id}>
                         {status.name || status.title}
@@ -3406,7 +3623,7 @@ function Admin() {
                       }))
                     }
                   >
-                    <option value={0}>Selecionar jogo</option>
+                    <option value={0} disabled>Selecionar jogo</option>
                     {gamesData.map((game: any) => (
                       <option key={game.id} value={game.id}>
                         {game.name || game.title}
@@ -3444,7 +3661,7 @@ function Admin() {
                       }))
                     }
                   >
-                    <option value={0}>Selecionar time A</option>
+                    <option value={0} disabled>Selecionar time A</option>
                     {teamsData.map((team: any) => (
                       <option key={team.id} value={team.id}>
                         {team.name}
@@ -3466,7 +3683,7 @@ function Admin() {
                       }))
                     }
                   >
-                    <option value={0}>Selecionar time B</option>
+                    <option value={0} disabled>Selecionar time B</option>
                     {teamsData.map((team: any) => (
                       <option key={team.id} value={team.id}>
                         {team.name}
@@ -3676,7 +3893,7 @@ function Admin() {
                             setNewTourney({ ...newTourney, gameId: Number(e.target.value) })
                           }
                         >
-                          <option value={0}>Selecionar Jogo...</option>
+                          <option value={0} disabled>Selecionar Jogo...</option>
                           {gamesData.map((game: any) => (
                             <option key={game.id} value={game.id}>
                               {game.name || game.title}
@@ -3710,7 +3927,7 @@ function Admin() {
                             setNewTourney({ ...newTourney, statusId: Number(e.target.value) })
                           }
                         >
-                          <option value={0}>Selecionar Status...</option>
+                          <option value={0} disabled>Selecionar Status...</option>
                           {statusesData.map((status: any) => (
                             <option key={status.id} value={status.id}>
                               {status.name || status.title}
@@ -3813,12 +4030,12 @@ function Admin() {
                           }
                         }}
                       >
-                        Salvar
+                        Criar campeonato
                       </Button>
                     </div>
                   </div>
                 )}
-                <HeaderBar create="Novo campeonato" />
+                <HeaderBar create="Novo campeonato" q={q} setQ={setQ} onCreate={() => setIsCreatingTourney(true)} />
                 <div className="overflow-x-auto rounded-xl border border-border/60 bg-card-grad">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -3980,9 +4197,6 @@ function Admin() {
                   <h3 className="font-display text-2xl uppercase italic font-black text-white leading-none">
                     Gestão de <span className="text-primary">Chaveamentos</span>
                   </h3>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest italic mt-1">
-                    Playoff_Matrix_Control // Protocol_9.9
-                  </p>
                 </div>
               </div>
             </div>
@@ -4205,7 +4419,7 @@ function Admin() {
                             value={teamGameId}
                             onChange={(e) => setTeamGameId(Number(e.target.value))}
                           >
-                            <option value={0}>Selecionar jogo dos roles...</option>
+                            <option value={0} disabled>Selecionar jogo dos roles...</option>
                             {gamesData.map((game: any) => (
                               <option key={game.id} value={game.id}>
                                 {game.name || game.title}
@@ -4232,7 +4446,7 @@ function Admin() {
                                 })
                               }
                             >
-                              <option value="">Selecionar player...</option>
+                              <option value="" disabled>Selecionar player...</option>
                               {playersData.map((player: any) => {
                                 const playerId = Number(player.id);
                                 const selectedElsewhere =
@@ -4260,59 +4474,55 @@ function Admin() {
                               }
                               disabled={!teamGameId}
                             >
-                              <option value="">Selecionar role...</option>
+                              <option value="" disabled>Selecionar role...</option>
                               {availableRoles.map((role: any) => (
                                 <option key={role.id} value={role.id}>
                                   {role.name}
                                 </option>
                               ))}
                             </select>
-                            <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                              <input
-                                type="checkbox"
+                            <label className="flex items-center gap-2 text-[10px] uppercase text-white/70">
+                              <Checkbox
                                 checked={participant.isStarter}
-                                onChange={(e) =>
+                                onCheckedChange={(checked) =>
                                   updateTeamParticipant(index, {
-                                    isStarter: e.target.checked,
-                                    isSubstitute: e.target.checked
+                                    isStarter: Boolean(checked),
+                                    isSubstitute: Boolean(checked)
                                       ? false
                                       : participant.isSubstitute,
                                   })
                                 }
-                              />{" "}
+                              />
                               Titular
                             </label>
-                            <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                              <input
-                                type="checkbox"
+                            <label className="flex items-center gap-2 text-[10px] uppercase text-white/70">
+                              <Checkbox
                                 checked={participant.isCaptain}
-                                onChange={(e) =>
-                                  updateTeamParticipant(index, { isCaptain: e.target.checked })
+                                onCheckedChange={(checked) =>
+                                  updateTeamParticipant(index, { isCaptain: Boolean(checked) })
                                 }
-                              />{" "}
+                              />
                               Capitão
                             </label>
-                            <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                              <input
-                                type="checkbox"
+                            <label className="flex items-center gap-2 text-[10px] uppercase text-white/70">
+                              <Checkbox
                                 checked={participant.isSubstitute}
-                                onChange={(e) =>
+                                onCheckedChange={(checked) =>
                                   updateTeamParticipant(index, {
-                                    isSubstitute: e.target.checked,
-                                    isStarter: e.target.checked ? false : participant.isStarter,
+                                    isSubstitute: Boolean(checked),
+                                    isStarter: Boolean(checked) ? false : participant.isStarter,
                                   })
                                 }
-                              />{" "}
+                              />
                               Reserva
                             </label>
-                            <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                              <input
-                                type="checkbox"
+                            <label className="flex items-center gap-2 text-[10px] uppercase text-white/70">
+                              <Checkbox
                                 checked={participant.isActive}
-                                onChange={(e) =>
-                                  updateTeamParticipant(index, { isActive: e.target.checked })
+                                onCheckedChange={(checked) =>
+                                  updateTeamParticipant(index, { isActive: Boolean(checked) })
                                 }
-                              />{" "}
+                              />
                               Ativo
                             </label>
                             <Button
@@ -4399,7 +4609,7 @@ function Admin() {
                     </div>
                   </div>
                 )}
-                <HeaderBar create="Novo time" onCreate={() => setIsCreatingTeam(true)} />
+                <HeaderBar create="Novo time" q={q} setQ={setQ} onCreate={() => setIsCreatingTeam(true)} />
                 <div className="overflow-hidden rounded-xl border border-border/60 bg-card-grad">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -4483,7 +4693,7 @@ function Admin() {
                           value={newPlayer.userId || ""}
                           onChange={(e) => handlePlayerUserChange(e.target.value)}
                         >
-                          <option value="">Selecionar usuário para relacionar</option>
+                          <option value="" disabled>Selecionar usuário para relacionar</option>
                           {usersData.map((candidate: any) => {
                             const candidateId = Number(candidate.id);
                             const alreadyLinked =
@@ -4591,12 +4801,12 @@ function Admin() {
                           }
                         }}
                       >
-                        Salvar Perfil
+                        Criar perfil
                       </Button>
                     </div>
                   </div>
                 )}
-                <HeaderBar create="Novo jogador" onCreate={() => setIsCreatingPlayer(true)} />
+                <HeaderBar create="Novo jogador" q={q} setQ={setQ} onCreate={() => setIsCreatingPlayer(true)} />
                 <div className="overflow-hidden rounded-xl border border-border/60 bg-card-grad">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -4705,7 +4915,7 @@ function Admin() {
                             })
                           }
                         >
-                          <option value="">Selecionar...</option>
+                          <option value="" disabled>Selecionar...</option>
                           {tournamentsData.map((t) => (
                             <option key={t.id} value={t.id}>
                               {t.name}
@@ -4724,7 +4934,7 @@ function Admin() {
                             setNewMatch({ ...newMatch, stageId: Number(e.target.value) || 0 })
                           }
                         >
-                          <option value="">Selecionar...</option>
+                          <option value="" disabled>Selecionar...</option>
                           {availableStages.map((stage: any) => (
                             <option key={stage.id} value={stage.id}>
                               {stage.name}
@@ -4743,7 +4953,7 @@ function Admin() {
                             setNewMatch({ ...newMatch, statusId: Number(e.target.value) || 0 })
                           }
                         >
-                          <option value="">Selecionar...</option>
+                          <option value="" disabled>Selecionar...</option>
                           {statusesData.map((status: any) => (
                             <option key={status.id} value={status.id}>
                               {status.name || status.title}
@@ -4762,7 +4972,7 @@ function Admin() {
                             setNewMatch({ ...newMatch, gameId: Number(e.target.value) || 0 })
                           }
                         >
-                          <option value="">Selecionar...</option>
+                          <option value="" disabled>Selecionar...</option>
                           {gamesData.map((game: any) => (
                             <option key={game.id} value={game.id}>
                               {game.name || game.title}
@@ -4861,7 +5071,7 @@ function Admin() {
                     </div>
                   </div>
                 )}
-                <HeaderBar create="Nova partida" onCreate={() => setIsCreatingMatch(true)} />
+                <HeaderBar create="Nova partida" q={q} setQ={setQ} onCreate={() => setIsCreatingMatch(true)} />
                 <div className="overflow-hidden rounded-xl border border-border/60 bg-card-grad">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
@@ -4911,7 +5121,7 @@ function Admin() {
 
         {tab === "highlights" && (
           <>
-            <HeaderBar create="Novo highlight" />
+            <HeaderBar create="Novo highlight" q={q} setQ={setQ} onCreate={fakeAct("Novo highlight")} />
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {highlightsData.map((h: any) => (
                 <div
@@ -4936,7 +5146,7 @@ function Admin() {
 
         {tab === "galeria" && (
           <>
-            <HeaderBar create="Adicionar imagem" />
+            <HeaderBar create="Adicionar imagem" q={q} setQ={setQ} onCreate={fakeAct("Adicionar imagem")} />
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {galleryData.map((src: string, i: number) => (
                 <div key={i} className="relative group rounded-lg overflow-hidden">
@@ -4958,6 +5168,26 @@ function Admin() {
             </div>
           </>
         )}
+
+        <div className={tab === "ia" ? "block" : "hidden"} aria-hidden={tab !== "ia"}>
+          <AiMatchTab
+            token={token}
+            teamsData={teamsData}
+            playersData={playersData}
+            gameAccountsData={gameAccountsData}
+            matchTeamsData={matchTeamsData}
+            tournamentsData={tournamentsData}
+            stagesData={stagesData}
+            statusesData={statusesData}
+            gamesData={gamesData}
+            matchesData={matchesData}
+            teamMatchStatsData={teamMatchStatsData}
+            playerMatchStatsData={playerMatchStatsData}
+            matchLineupsData={matchLineupsData}
+            matchLineupPlayersData={matchLineupPlayersData}
+            teamParticipantsData={teamParticipantsData}
+          />
+        </div>
       </div>
     </div>
   );

@@ -88,7 +88,10 @@ function TeamPage() {
   if (l1 || l2 || l3 || !participantsRaw || !rolesRaw) return <div className="p-10 text-center font-display uppercase italic">Recuperando registros de equipe...</div>;
   if (!team) return <div className="p-10 text-center">Time não encontrado.</div>;
 
-  const wr = Math.round((team.wins / Math.max(team.wins + team.losses, 1)) * 100);
+  const wins = Number((team as any)?.wins) || 0;
+  const losses = Number((team as any)?.losses) || 0;
+  const trophies = Number((team as any)?.trophies) || 0;
+  const wr = Math.round((wins / Math.max(wins + losses, 1)) * 100);
 
   return (
     <div>
@@ -105,10 +108,10 @@ function TeamPage() {
       </div>
       <div className="mx-auto max-w-[1500px] px-4 py-8 space-y-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatsCard label="ELO" value={team.elo} icon={TrendingUp} accent />
-          <StatsCard label="Vitórias" value={team.wins} icon={Target} />
+          <StatsCard label="ELO" value={Number(team.elo) || 0} icon={TrendingUp} accent />
+          <StatsCard label="Vitórias" value={wins} icon={Target} />
           <StatsCard label="Winrate" value={`${wr}%`} icon={Crosshair} />
-          <StatsCard label="Troféus" value={team.trophies} icon={Trophy} />
+          <StatsCard label="Troféus" value={trophies} icon={Trophy} />
         </div>
 
         <section>
@@ -140,13 +143,13 @@ function TeamPage() {
         <section>
           <h2 className="font-display text-2xl uppercase mb-4"><span className="text-primary">/</span> Troféus</h2>
           <div className="flex flex-wrap gap-3">
-            {Array.from({ length: team.trophies }).map((_, i) => (
+            {Array.from({ length: trophies }).map((_, i) => (
               <div key={i} className="px-4 py-3 rounded-lg bg-card-grad border border-border/60 flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-primary" />
                 <div><div className="text-xs text-muted-foreground">Temporada {i + 1}</div><div className="font-display">SGA Cup</div></div>
               </div>
             ))}
-            {team.trophies === 0 && <div className="text-muted-foreground text-sm">Ainda em busca da glória.</div>}
+            {trophies === 0 && <div className="text-muted-foreground text-sm">Ainda em busca da glória.</div>}
           </div>
           <div className="mt-6 text-sm">
             <Link to="/teams" className="text-primary hover:underline">← Voltar para todos os times</Link>

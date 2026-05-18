@@ -37,14 +37,15 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
   });
 
   const aggregateStats = useMemo(() => {
-    const map = new Map<number, { kills: number; deaths: number; assists: number; matches: number }>();
+    const map = new Map<number, { kills: number; deaths: number; assists: number; hs: number; matches: number }>();
     for (const stat of unwrapList(statsRaw) as any[]) {
       const playerId = Number(stat?.playerId);
       if (!playerId) continue;
-      const current = map.get(playerId) || { kills: 0, deaths: 0, assists: 0, matches: 0 };
+      const current = map.get(playerId) || { kills: 0, deaths: 0, assists: 0, hs: 0, matches: 0 };
       current.kills += Number(stat?.kills) || 0;
       current.deaths += Number(stat?.deaths) || 0;
       current.assists += Number(stat?.assists) || 0;
+      current.hs += Number(stat?.hsPercentage ?? stat?.hs) || 0;
       current.matches += 1;
       map.set(playerId, current);
     }
@@ -60,12 +61,13 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
         rolesRaw,
       })
         .map((entry: any) => {
-          const stats = aggregateStats.get(Number(entry.playerId)) || { kills: 0, deaths: 0, assists: 0, matches: 0 };
+          const stats = aggregateStats.get(Number(entry.playerId)) || { kills: 0, deaths: 0, assists: 0, hs: 0, matches: 0 };
           const kda = (stats.kills + stats.assists) / Math.max(stats.deaths, 1);
           return {
             ...entry,
             stats,
             kda,
+            hs: stats.matches ? stats.hs / stats.matches : 0,
           };
         })
         .sort((a: any, b: any) => b.kda - a.kda)
@@ -84,6 +86,10 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
             <th className="px-3 py-3 text-left">Jogador</th>
             <th className="px-3 py-3 text-left">Time</th>
             <th className="px-3 py-3 text-left">KDA</th>
+            <th className="px-3 py-3 text-left">HS%</th>
+            <th className="px-3 py-3 text-left">Kills</th>
+            <th className="px-3 py-3 text-left">Deaths</th>
+            <th className="px-3 py-3 text-left">Assists</th>
           </tr>
         </thead>
         <tbody>
@@ -120,6 +126,18 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
                 </td>
                 <td className="px-3 py-2 font-display text-primary">
                   {Number(entry.kda || 0).toFixed(2)}
+                </td>
+                <td className="px-3 py-2 font-display text-primary">
+                  {Number(entry.hs || 0).toFixed(1)}%
+                </td>
+                <td className="px-3 py-2 font-display text-white">
+                  {Number(entry.stats?.kills || 0)}
+                </td>
+                <td className="px-3 py-2 font-display text-white">
+                  {Number(entry.stats?.deaths || 0)}
+                </td>
+                <td className="px-3 py-2 font-display text-white">
+                  {Number(entry.stats?.assists || 0)}
                 </td>
               </tr>
             );

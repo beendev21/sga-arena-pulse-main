@@ -44,7 +44,9 @@ export function RankingTable({ game }: { game: string }) {
         </thead>
         <tbody>
           {teams.map((t, i) => {
-            const wr = Math.round((t.wins / Math.max(t.wins + t.losses, 1)) * 100);
+            const wins = Number(t.wins) || 0;
+            const losses = Number(t.losses) || 0;
+            const wr = Math.round((wins / Math.max(wins + losses, 1)) * 100);
             return (
               <tr key={t.id} className="border-t border-border/40 hover:bg-muted/30 transition">
                 <td className="px-4 py-3 font-display">
@@ -56,8 +58,8 @@ export function RankingTable({ game }: { game: string }) {
                     <span className="font-display">{t.name}</span>
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-right text-success">{t.wins}</td>
-                <td className="px-4 py-3 text-right text-destructive">{t.losses}</td>
+                <td className="px-4 py-3 text-right text-success">{wins}</td>
+                <td className="px-4 py-3 text-right text-destructive">{losses}</td>
                 <td className="px-4 py-3 text-right">{t.rounds_diff > 0 ? "+" : ""}{t.rounds_diff}</td>
                 <td className="px-4 py-3 text-right">{wr}%</td>
                 <td className="px-4 py-3 text-right font-display text-primary">{t.elo}</td>

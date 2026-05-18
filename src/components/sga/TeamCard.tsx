@@ -13,7 +13,10 @@ import { TeamLogo } from "./TeamLogo";
 import { Trophy } from "lucide-react";
 
 export function TeamCard({ team, rank }: { team: Team; rank?: number }) {
-  const wr = Math.round((team.wins / Math.max(team.wins + team.losses, 1)) * 100);
+  const wins = Number(team.wins) || 0;
+  const losses = Number(team.losses) || 0;
+  const trophies = Number(team.trophies) || 0;
+  const wr = Math.round((wins / Math.max(wins + losses, 1)) * 100);
   return (
     <Link to="/teams/$teamId" params={{ teamId: String(team.id) } as any} className="group block">
       <div className="relative overflow-hidden rounded-xl border border-border/60 bg-card-grad p-4 hover:-translate-y-1 hover:shadow-neon transition-all">
@@ -30,12 +33,12 @@ export function TeamCard({ team, rank }: { team: Team; rank?: number }) {
           </div>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-          <div><div className="text-success font-display text-base">{team.wins}</div><div className="text-muted-foreground">Wins</div></div>
-          <div><div className="text-destructive font-display text-base">{team.losses}</div><div className="text-muted-foreground">Losses</div></div>
+          <div><div className="text-success font-display text-base">{wins}</div><div className="text-muted-foreground">Wins</div></div>
+          <div><div className="text-destructive font-display text-base">{losses}</div><div className="text-muted-foreground">Losses</div></div>
           <div><div className="text-primary font-display text-base">{wr}%</div><div className="text-muted-foreground">Winrate</div></div>
         </div>
         <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-          <Trophy className="h-3.5 w-3.5 text-primary" /> {team.trophies} troféus
+          <Trophy className="h-3.5 w-3.5 text-primary" /> {trophies} troféus
         </div>
       </div>
     </Link>
