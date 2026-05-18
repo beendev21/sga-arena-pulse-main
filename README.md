@@ -83,6 +83,6 @@ Preparado para deploy em **Cloudflare Workers** (via Wrangler) ou **Docker**.
 
 ## 📄 Licença
 
-© 2025 Santos Games Arena. Todos os direitos reservados.
+© 2026 Santos Games Arena. Todos os direitos reservados.
 
 Este repositório é de uso privado. É proibida a reprodução, distribuição ou uso do código sem autorização expressa da Santos Games Arena.
