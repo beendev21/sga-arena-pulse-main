@@ -38,6 +38,7 @@ import useApiController from "../API/controler";
 import ApiService from "../API/service";
 import { motion } from "framer-motion";
 import { formatDateBR } from "@/lib/dateUtils";
+import { buildTeamMatchStatsSummaryMap, getTeamMatchStatsSummary } from "@/lib/teamStats";
 
 /**
  * Definição da rota '/admin' utilizando TanStack Router.
@@ -111,6 +112,18 @@ const createEmptyTeamParticipantDraft = () => ({
   isSubstitute: false,
   joinedAt: "",
   leftAt: null as string | null,
+});
+
+const createEmptyTeamMatchStatDraft = () => ({
+  id: 0,
+  teamId: 0,
+  matchId: 0,
+  roundsWon: 0,
+  roundsLost: 0,
+  plants: 0,
+  defuses: 0,
+  createdAt: "",
+  updatedAt: "",
 });
 
 const createEmptyTournament = () => ({
@@ -819,6 +832,10 @@ function Admin() {
   const [editTeamParticipants, setEditTeamParticipants] = useState<
     Array<ReturnType<typeof createEmptyTeamParticipantDraft>>
   >([createEmptyTeamParticipantDraft()]);
+  const [editTeamMatchStats, setEditTeamMatchStats] = useState<
+    Array<ReturnType<typeof createEmptyTeamMatchStatDraft>>
+  >([createEmptyTeamMatchStatDraft()]);
+  const [editTeamMatchStatsHydrated, setEditTeamMatchStatsHydrated] = useState(false);
   const [editPlayerDraft, setEditPlayerDraft] = useState(createEmptyPlayer());
   const [editPlayerStatsMatchId, setEditPlayerStatsMatchId] = useState(0);
   const [editMatchDraft, setEditMatchDraft] = useState(createEmptyMatch());
@@ -843,7 +860,8 @@ function Admin() {
   const apiStages = useApiController("Stages");
   const apiStatus = useApiController("Status");
   const apiMatches = useApiController("Matches");
-  const apiMatchTeams = useApiController("Matchteams");
+  const apiMatchTeams = useApiController("MatchTeams");
+  const apiTeamMatchStats = useApiController("TeamMatchStats");
   const apiHighlights = useApiController("Highlights");
   const apiGallery = useApiController("Gallery");
 
@@ -910,6 +928,11 @@ function Admin() {
     queryKey: ["gallery", token],
     queryFn: () => apiGallery.getAll(),
   });
+  const { data: tmsr, isLoading: l5 } = useQuery({
+    queryKey: ["team-match-stats", token],
+    queryFn: () => apiTeamMatchStats.getAll(),
+    enabled: !!token,
+  });
 
   const parse = (r: any) => {
     if (!r) return [];
@@ -934,6 +957,11 @@ function Admin() {
   const matchesData = useMemo(() => parse(mr), [mr]);
   const highlightsData = useMemo(() => parse(hr), [hr]);
   const galleryData = useMemo(() => parse(gr), [gr]);
+  const teamMatchStatsData = useMemo(() => parse(tmsr), [tmsr]);
+  const teamMatchStatsById = useMemo(
+    () => buildTeamMatchStatsSummaryMap(tmsr),
+    [tmsr],
+  );
 
   const linkedUserIds = useMemo(
     () => new Set(playersData.map((player: any) => Number(player.userId)).filter(Boolean)),
@@ -1029,6 +1057,15 @@ function Admin() {
   const getTeamLabel = (teamId: number) => {
     const team = teamsData.find((candidate: any) => Number(candidate.id) === Number(teamId));
     return team?.name || `Time #${teamId}`;
+  };
+
+  const getMatchLabel = (matchId: number) => {
+    const match = matchesData.find((candidate: any) => Number(candidate.id) === Number(matchId));
+    if (!match) return `Partida #${matchId}`;
+    const teamA = getTeamLabel(Number(match.teamAId) || Number(match.matchTeamAId) || 0);
+    const teamB = getTeamLabel(Number(match.teamBId) || Number(match.matchTeamBId) || 0);
+    const tournament = getTournamentLabel(Number(match.tournamentId) || 0);
+    return `${tournament} · ${teamA} vs ${teamB} · #${match.id}`;
   };
 
   const playerStatsById = useMemo(() => {
@@ -1149,8 +1186,11 @@ function Admin() {
   };
 
   const openTeamEdit = (team: any) => {
+    setViewingTeamId(null);
     setEditingTeamId(Number(team?.id) || null);
     setEditTeamRosterHydrated(false);
+    setEditTeamMatchStatsHydrated(false);
+    const teamStatsSummary = getTeamMatchStatsSummary(Number(team?.id) || 0, teamMatchStatsById);
     setEditingEntity({ type: "team", data: team });
     setEditTeamDraft({
       ...createEmptyTeam(),
@@ -1161,15 +1201,16 @@ function Admin() {
       bannerColor: String(team?.bannerColor || "#f86d83"),
       gameId: Number(team?.gameId) || 0,
       elo: Number(team?.elo) || 0,
-      wins: Number(team?.wins) || 0,
-      losses: Number(team?.losses) || 0,
-      trophies: Number(team?.trophies) || 0,
+      wins: Number(team?.wins) || teamStatsSummary.wins || 0,
+      losses: Number(team?.losses) || teamStatsSummary.losses || 0,
+      trophies: Number(team?.trophies) || teamStatsSummary.trophies || 0,
     });
     setEditTeamGameId(Number(team?.gameId) || 0);
     setEditTeamParticipants([createEmptyTeamParticipantDraft()]);
   };
 
   const openPlayerEdit = (player: any) => {
+    setViewingTeamId(null);
     const latestStats = getLatestStatsRecordForPlayer(Number(player?.id) || 0);
     const playerTeamId = getPlayerTeamId(Number(player?.id) || 0);
     const inferredMatch = latestStats?.matchId
@@ -1196,6 +1237,7 @@ function Admin() {
   };
 
   const openMatchEdit = (match: any) => {
+    setViewingTeamId(null);
     setEditingEntity({ type: "match", data: match });
     setEditMatchDraft({
       ...createEmptyMatch(),
@@ -1233,6 +1275,8 @@ function Admin() {
     setEditTournamentDraft(createEmptyTournament());
     setEditingTeamId(null);
     setEditTeamRosterHydrated(false);
+    setEditTeamMatchStats([createEmptyTeamMatchStatDraft()]);
+    setEditTeamMatchStatsHydrated(false);
     setEditPlayerDraft(createEmptyPlayer());
     setEditPlayerStatsMatchId(0);
   };
@@ -1256,6 +1300,26 @@ function Admin() {
     setEditTeamParticipants((current) => {
       if (current.length === 1) return [createEmptyTeamParticipantDraft()];
       return current.filter((_, participantIndex) => participantIndex !== index);
+    });
+  };
+
+  const updateEditTeamMatchStat = (
+    index: number,
+    patch: Partial<ReturnType<typeof createEmptyTeamMatchStatDraft>>,
+  ) => {
+    setEditTeamMatchStats((current) =>
+      current.map((stat, statIndex) => (statIndex === index ? { ...stat, ...patch } : stat)),
+    );
+  };
+
+  const addEditTeamMatchStat = () => {
+    setEditTeamMatchStats((current) => [...current, createEmptyTeamMatchStatDraft()]);
+  };
+
+  const removeEditTeamMatchStat = (index: number) => {
+    setEditTeamMatchStats((current) => {
+      if (current.length === 1) return [createEmptyTeamMatchStatDraft()];
+      return current.filter((_, statIndex) => statIndex !== index);
     });
   };
 
@@ -1299,6 +1363,27 @@ function Admin() {
     playersData,
     rolesData,
   ]);
+
+  useEffect(() => {
+    if (editingEntity?.type !== "team" || !editingTeamId || editTeamMatchStatsHydrated) return;
+
+    const currentStats = teamMatchStatsData
+      .filter((stat: any) => Number(stat.teamId) === Number(editingTeamId))
+      .map((stat: any) => ({
+        id: Number(stat.id) || 0,
+        teamId: Number(stat.teamId) || Number(editingTeamId) || 0,
+        matchId: Number(stat.matchId) || 0,
+        roundsWon: Number(stat.roundsWon) || 0,
+        roundsLost: Number(stat.roundsLost) || 0,
+        plants: Number(stat.plants) || 0,
+        defuses: Number(stat.defuses) || 0,
+        createdAt: stat.createdAt || "",
+        updatedAt: stat.updatedAt || "",
+      }));
+
+    setEditTeamMatchStats(currentStats.length > 0 ? currentStats : [createEmptyTeamMatchStatDraft()]);
+    setEditTeamMatchStatsHydrated(true);
+  }, [editingEntity?.type, editingTeamId, editTeamMatchStatsHydrated, teamMatchStatsData]);
 
   const saveEdit = async () => {
     if (!editingEntity) return;
@@ -1375,6 +1460,9 @@ function Admin() {
           description: editTeamDraft.description.trim() || null,
           tag: editTeamDraft.tag.trim() || null,
           logoUrl: editTeamDraft.logoUrl.trim() || null,
+          wins: Number(editTeamDraft.wins) || 0,
+          losses: Number(editTeamDraft.losses) || 0,
+          trophies: Number(editTeamDraft.trophies) || 0,
         };
 
         const result = await apiTeams.update(Number(editingEntity.data?.id), payload);
@@ -1426,7 +1514,14 @@ function Admin() {
                 isCaptain: Boolean(participant.isCaptain),
                 isSubstitute: Boolean(participant.isSubstitute),
               };
-              return apiTeamParticipants.update(Number(participant.id), participantPayload);
+              const participantResult = await apiTeamParticipants.update(
+                Number(participant.id),
+                participantPayload,
+              );
+              if (participantResult === false) {
+                throw new Error("Erro ao atualizar participante do time");
+              }
+              return participantResult;
             }
 
             const participantPayload = {
@@ -1443,20 +1538,96 @@ function Admin() {
               isSubstitute: Boolean(participant.isSubstitute),
             };
 
-            return apiTeamParticipants.create(participantPayload);
+            const participantResult = await apiTeamParticipants.create(participantPayload);
+            if (participantResult === false) {
+              throw new Error("Erro ao criar participante do time");
+            }
+            return participantResult;
           }),
         );
 
         await Promise.all(
           existingTeamParticipants
             .filter((participant: any) => !draftById.has(Number(participant.id)))
-            .map((participant: any) => apiTeamParticipants.deleteRecord(Number(participant.id))),
+            .map(async (participant: any) => {
+              const participantResult = await apiTeamParticipants.deleteRecord(
+                Number(participant.id),
+              );
+              if (participantResult === false) {
+                throw new Error("Erro ao remover participante do time");
+              }
+              return participantResult;
+            }),
+        );
+
+        const existingTeamMatchStats = teamMatchStatsData.filter(
+          (stat: any) => Number(stat.teamId) === teamId,
+        );
+        const draftStatsById = new Map(
+          editTeamMatchStats
+            .filter((stat) => stat.matchId)
+            .map((stat) => [Number(stat.id) || 0, stat] as const),
+        );
+
+        await Promise.all(
+          editTeamMatchStats.map(async (stat) => {
+            if (!stat.matchId) return null;
+
+            const currentStat = stat.id
+              ? existingTeamMatchStats.find(
+                  (candidate: any) => Number(candidate.id) === Number(stat.id),
+                )
+              : null;
+
+            const statPayload = {
+              id: Number(stat.id) || 0,
+              createdAt:
+                currentStat?.createdAt ||
+                stat.createdAt ||
+                formatApiUtcTimestamp(new Date()),
+              updatedAt: formatApiUtcTimestamp(new Date()),
+              teamId,
+              matchId: Number(stat.matchId) || 0,
+              roundsWon: Number(stat.roundsWon) || 0,
+              roundsLost: Number(stat.roundsLost) || 0,
+              plants: Number(stat.plants) || 0,
+              defuses: Number(stat.defuses) || 0,
+            };
+
+            if (Number(stat.id) > 0) {
+              const statResult = await apiTeamMatchStats.update(Number(stat.id), statPayload);
+              if (statResult === false) {
+                throw new Error("Erro ao atualizar estatística do time");
+              }
+              return statResult;
+            }
+
+            const statResult = await apiTeamMatchStats.create(statPayload);
+            if (statResult === false) {
+              throw new Error("Erro ao criar estatística do time");
+            }
+            return statResult;
+          }),
+        );
+
+        await Promise.all(
+          existingTeamMatchStats
+            .filter((stat: any) => !draftStatsById.has(Number(stat.id)))
+            .map(async (stat: any) => {
+              const statResult = await apiTeamMatchStats.deleteRecord(Number(stat.id));
+              if (statResult === false) {
+                throw new Error("Erro ao remover estatística do time");
+              }
+              return statResult;
+            }),
         );
 
         toast.success("Time atualizado!");
         queryClient.invalidateQueries({ queryKey: ["teams", token] });
         queryClient.invalidateQueries({ queryKey: ["teams"] });
         queryClient.invalidateQueries({ queryKey: ["team-participants", token] });
+        queryClient.invalidateQueries({ queryKey: ["team-match-stats", token] });
+        queryClient.invalidateQueries({ queryKey: ["team-match-stats"] });
         queryClient.invalidateQueries({ queryKey: ["players", token] });
         queryClient.invalidateQueries({ queryKey: ["players"] });
         closeEditModal();
@@ -1637,7 +1808,7 @@ function Admin() {
     return null;
   };
 
-  const loading = l1 || l2 || l3 || l4;
+  const loading = l1 || l2 || l3 || l4 || l5;
 
   const [isCreatingMatch, setIsCreatingMatch] = useState(false);
   const [newMatch, setNewMatch] = useState(createEmptyMatch());
@@ -2515,7 +2686,7 @@ function Admin() {
           if (!open) closeEditModal();
         }}
       >
-        <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-[calc(100vw-2.5rem)] md:w-[min(92vw,56rem)] max-h-[90vh] overflow-hidden box-border border-white/10 bg-[#0a0a0c] text-white flex flex-col p-4 sm:p-5">
+        <DialogContent className="z-[60] w-[calc(100vw-0.5rem)] sm:w-[calc(100vw-1rem)] md:w-[min(98vw,82rem)] lg:w-[min(96vw,88rem)] max-w-none max-h-[84vh] overflow-hidden box-border border-white/10 bg-[#0a0a0c] text-white flex flex-col p-4 sm:p-5">
           <DialogHeader>
             <DialogTitle className="font-display text-2xl uppercase italic">
               {editingEntity?.type === "tournament"
@@ -2538,7 +2709,7 @@ function Admin() {
           </DialogHeader>
 
           {editingEntity?.type === "tournament" && (
-            <div className="grid gap-4 overflow-y-auto pr-1 max-h-[calc(90vh-10rem)] min-w-0">
+            <div className="grid gap-4 overflow-y-auto overflow-x-hidden pr-4 [scrollbar-gutter:stable] max-h-[calc(84vh-10rem)] min-w-0">
               <div className="grid md:grid-cols-2 gap-4 min-w-0">
                 <div className="grid gap-1 md:col-span-2">
                   <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
@@ -2595,7 +2766,7 @@ function Admin() {
                       }))
                     }
                   >
-                    <option value={0}>Selecionar jogo</option>
+                    <option value={0} disabled>Selecionar jogo</option>
                     {gamesData.map((game: any) => (
                       <option key={game.id} value={game.id}>
                         {game.name || game.title}
@@ -2793,7 +2964,7 @@ function Admin() {
           )}
 
           {editingEntity?.type === "team" && (
-            <div className="grid gap-4 overflow-y-auto pr-1 max-h-[calc(90vh-10rem)] min-w-0">
+            <div className="grid gap-4 overflow-y-auto overflow-x-hidden pr-4 [scrollbar-gutter:stable] max-h-[calc(90vh-10rem)] min-w-0">
               <div className="grid md:grid-cols-2 gap-4 min-w-0">
                 <div className="grid gap-1 md:col-span-2">
                   <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
@@ -2831,7 +3002,7 @@ function Admin() {
                       }))
                     }
                   >
-                    <option value={0}>Selecione um jogo</option>
+                    <option value={0} disabled>Selecione um jogo</option>
                     {gamesData.map((game: any) => (
                       <option key={game.id} value={game.id}>
                         {game.name || game.title}
@@ -2947,7 +3118,7 @@ function Admin() {
                       value={editTeamGameId}
                       onChange={(e) => setEditTeamGameId(Number(e.target.value))}
                     >
-                      <option value={0}>Selecionar jogo dos roles...</option>
+                      <option value={0} disabled>Selecionar jogo dos roles...</option>
                       {gamesData.map((game: any) => (
                         <option key={game.id} value={game.id}>
                           {game.name || game.title}
@@ -2963,11 +3134,11 @@ function Admin() {
                   {editTeamParticipants.map((participant, index) => (
                     <div
                       key={participant.id || index}
-                      className="grid md:grid-cols-[1.8fr_1fr_auto_auto_auto_auto_auto] gap-3 items-center border border-white/5 p-3 min-w-0"
+                      className="border border-white/5 p-3 min-w-0 space-y-3"
                     >
-                      <div className="space-y-1 min-w-0">
+                      <div className="grid gap-3 md:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
                         <select
-                          className="flex h-12 w-full rounded-md border border-input bg-black/40 px-3 py-3 text-base focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          className="flex h-12 w-full min-w-0 rounded-md border border-input bg-black/40 px-3 py-3 text-base focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
                           value={participant.playerId || ""}
                           onChange={(e) => {
                             const playerId = Number(e.target.value) || 0;
@@ -2996,95 +3167,172 @@ function Admin() {
                             );
                           })}
                         </select>
-                        <div className="text-[10px] uppercase tracking-widest text-white/40 truncate">
-                          {participant.playerName ||
-                            playersData.find(
-                              (candidate: any) =>
-                                Number(candidate.id) === Number(participant.playerId),
-                            )?.name ||
-                            "Player não resolvido"}
-                        </div>
+                        <select
+                          className="flex h-12 w-full min-w-0 rounded-md border border-input bg-black/40 px-3 py-3 text-base focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          value={participant.roleId || ""}
+                          onChange={(e) => {
+                            const roleId = Number(e.target.value) || 0;
+                            const roleName =
+                              editAvailableRoles.find(
+                                (candidate: any) => Number(candidate.id) === roleId,
+                              )?.name || "";
+                            updateEditTeamParticipant(index, { roleId, roleName });
+                          }}
+                          disabled={!editTeamGameId}
+                        >
+                          <option value="">Selecionar role...</option>
+                          {editAvailableRoles.map((role: any) => (
+                            <option key={role.id} value={role.id}>
+                              {role.name}
+                            </option>
+                          ))}
+                        </select>
                       </div>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                        value={participant.roleId || ""}
-                        onChange={(e) => {
-                          const roleId = Number(e.target.value) || 0;
-                          const roleName =
-                            editAvailableRoles.find(
-                              (candidate: any) => Number(candidate.id) === roleId,
-                            )?.name || "";
-                          updateEditTeamParticipant(index, { roleId, roleName });
-                        }}
-                        disabled={!editTeamGameId}
-                      >
-                        <option value="">Selecionar role...</option>
-                        {editAvailableRoles.map((role: any) => (
-                          <option key={role.id} value={role.id}>
-                            {role.name}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="text-[10px] uppercase tracking-widest text-white/40 md:col-span-2">
-                        {participant.roleName ||
-                          editAvailableRoles.find(
-                            (candidate: any) => Number(candidate.id) === Number(participant.roleId),
-                          )?.name ||
-                          "Role não resolvida"}
+                      <div className="flex flex-wrap items-center gap-4">
+                        <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={participant.isStarter}
+                            onChange={(e) =>
+                              updateEditTeamParticipant(index, {
+                                isStarter: e.target.checked,
+                                isSubstitute: e.target.checked ? false : participant.isSubstitute,
+                              })
+                            }
+                          />{" "}
+                          Titular
+                        </label>
+                        <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={participant.isCaptain}
+                            onChange={(e) =>
+                              updateEditTeamParticipant(index, { isCaptain: e.target.checked })
+                            }
+                          />{" "}
+                          Capitão
+                        </label>
+                        <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={participant.isSubstitute}
+                            onChange={(e) =>
+                              updateEditTeamParticipant(index, {
+                                isSubstitute: e.target.checked,
+                                isStarter: e.target.checked ? false : participant.isStarter,
+                              })
+                            }
+                          />{" "}
+                          Reserva
+                        </label>
+                        <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={participant.isActive}
+                            onChange={(e) =>
+                              updateEditTeamParticipant(index, { isActive: e.target.checked })
+                            }
+                          />{" "}
+                          Ativo
+                        </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => removeEditTeamParticipant(index)}
+                        >
+                          Remover
+                        </Button>
                       </div>
-                      <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={participant.isStarter}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="border border-white/10 bg-black/20 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <h4 className="text-[10px] uppercase tracking-[0.3em] font-black text-white/70 italic">
+                    Estatísticas por partida
+                  </h4>
+                  <Button type="button" variant="outline" onClick={addEditTeamMatchStat}>
+                    Adicionar estatística
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  {editTeamMatchStats.map((stat, index) => (
+                    <div
+                      key={stat.id || index}
+                      className="border border-white/5 p-3 min-w-0 space-y-3"
+                    >
+                      <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_repeat(4,minmax(0,1fr))] min-w-0">
+                        <select
+                          className="flex h-12 w-full min-w-0 rounded-md border border-input bg-black/40 px-3 py-3 text-base focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary md:col-span-1"
+                          value={stat.matchId || ""}
                           onChange={(e) =>
-                            updateEditTeamParticipant(index, {
-                              isStarter: e.target.checked,
-                              isSubstitute: e.target.checked ? false : participant.isSubstitute,
+                            updateEditTeamMatchStat(index, {
+                              matchId: Number(e.target.value) || 0,
                             })
                           }
-                        />{" "}
-                        Titular
-                      </label>
-                      <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={participant.isCaptain}
+                        >
+                          <option value="">Selecionar partida...</option>
+                          {matchesData.map((match: any) => (
+                            <option key={match.id} value={match.id}>
+                              {getMatchLabel(Number(match.id))}
+                            </option>
+                          ))}
+                        </select>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={stat.roundsWon}
                           onChange={(e) =>
-                            updateEditTeamParticipant(index, { isCaptain: e.target.checked })
-                          }
-                        />{" "}
-                        Capitão
-                      </label>
-                      <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={participant.isSubstitute}
-                          onChange={(e) =>
-                            updateEditTeamParticipant(index, {
-                              isSubstitute: e.target.checked,
-                              isStarter: e.target.checked ? false : participant.isStarter,
+                            updateEditTeamMatchStat(index, {
+                              roundsWon: Number(e.target.value) || 0,
                             })
                           }
-                        />{" "}
-                        Reserva
-                      </label>
-                      <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={participant.isActive}
+                          placeholder="Rounds won"
+                        />
+                        <Input
+                          type="number"
+                          min={0}
+                          value={stat.roundsLost}
                           onChange={(e) =>
-                            updateEditTeamParticipant(index, { isActive: e.target.checked })
+                            updateEditTeamMatchStat(index, {
+                              roundsLost: Number(e.target.value) || 0,
+                            })
                           }
-                        />{" "}
-                        Ativo
-                      </label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => removeEditTeamParticipant(index)}
-                      >
-                        Remover
-                      </Button>
+                          placeholder="Rounds lost"
+                        />
+                        <Input
+                          type="number"
+                          min={0}
+                          value={stat.plants}
+                          onChange={(e) =>
+                            updateEditTeamMatchStat(index, {
+                              plants: Number(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="Plants"
+                        />
+                        <Input
+                          type="number"
+                          min={0}
+                          value={stat.defuses}
+                          onChange={(e) =>
+                            updateEditTeamMatchStat(index, {
+                              defuses: Number(e.target.value) || 0,
+                            })
+                          }
+                          placeholder="Defuses"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => removeEditTeamMatchStat(index)}
+                        >
+                          Remover
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -3102,7 +3350,7 @@ function Admin() {
           )}
 
           {editingEntity?.type === "player" && (
-            <div className="grid gap-4 overflow-y-auto pr-1 max-h-[calc(90vh-10rem)] min-w-0">
+            <div className="grid gap-4 overflow-y-auto overflow-x-hidden pr-4 [scrollbar-gutter:stable] max-h-[calc(90vh-10rem)] min-w-0">
               <div className="grid md:grid-cols-2 gap-4 min-w-0">
                 <div className="grid gap-1 md:col-span-2">
                   <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
@@ -3317,7 +3565,7 @@ function Admin() {
           )}
 
           {editingEntity?.type === "match" && (
-            <div className="grid gap-4 overflow-y-auto pr-1 max-h-[calc(90vh-10rem)] min-w-0">
+            <div className="grid gap-4 overflow-y-auto overflow-x-hidden pr-4 [scrollbar-gutter:stable] max-h-[calc(90vh-10rem)] min-w-0">
               <div className="grid md:grid-cols-2 gap-4 min-w-0">
                 <div className="grid gap-1 md:col-span-2">
                   <label className="text-[9px] uppercase font-black text-white/60 tracking-widest">
@@ -3405,7 +3653,7 @@ function Admin() {
                       }))
                     }
                   >
-                    <option value={0}>Selecionar jogo</option>
+                    <option value={0} disabled>Selecionar jogo</option>
                     {gamesData.map((game: any) => (
                       <option key={game.id} value={game.id}>
                         {game.name || game.title}
@@ -3675,7 +3923,7 @@ function Admin() {
                             setNewTourney({ ...newTourney, gameId: Number(e.target.value) })
                           }
                         >
-                          <option value={0}>Selecionar Jogo...</option>
+                          <option value={0} disabled>Selecionar Jogo...</option>
                           {gamesData.map((game: any) => (
                             <option key={game.id} value={game.id}>
                               {game.name || game.title}
@@ -4093,11 +4341,11 @@ function Admin() {
                             value={teamGameId}
                             onChange={(e) => setTeamGameId(Number(e.target.value))}
                           >
-                            <option value={0}>Selecionar jogo dos roles...</option>
+                            <option value={0} disabled>Selecionar jogo dos roles...</option>
                             {gamesData.map((game: any) => (
                               <option key={game.id} value={game.id}>
                                 {game.name || game.title}
-                              </option>
+                          </option>
                             ))}
                           </select>
                           <Button type="button" variant="outline" onClick={addTeamParticipant}>
@@ -4109,107 +4357,111 @@ function Admin() {
                         {teamParticipants.map((participant, index) => (
                           <div
                             key={index}
-                            className="grid md:grid-cols-[1.8fr_1fr_auto_auto_auto_auto_auto] gap-3 items-center border border-white/5 p-3"
+                            className="border border-white/5 p-3 min-w-0 space-y-3"
                           >
-                            <select
-                              className="flex h-12 w-full rounded-md border border-input bg-black/40 px-3 py-3 text-base focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                              value={participant.playerId || ""}
-                              onChange={(e) =>
-                                updateTeamParticipant(index, {
-                                  playerId: Number(e.target.value) || 0,
-                                })
-                              }
-                            >
-                              <option value="">Selecionar player...</option>
-                              {playersData.map((player: any) => {
-                                const playerId = Number(player.id);
-                                const selectedElsewhere =
-                                  linkedPlayerIdsInDraft.has(playerId) &&
-                                  playerId !== Number(participant.playerId);
-                                return (
-                                  <option
-                                    key={player.id}
-                                    value={player.id}
-                                    disabled={selectedElsewhere}
-                                  >
-                                    {player.name}
-                                    {selectedElsewhere ? " (já escalado)" : ""}
+                            <div className="grid gap-3 md:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
+                              <select
+                                className="flex h-12 w-full min-w-0 rounded-md border border-input bg-black/40 px-3 py-3 text-base focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                                value={participant.playerId || ""}
+                                onChange={(e) =>
+                                  updateTeamParticipant(index, {
+                                    playerId: Number(e.target.value) || 0,
+                                  })
+                                }
+                              >
+                                <option value="">Selecionar player...</option>
+                                {playersData.map((player: any) => {
+                                  const playerId = Number(player.id);
+                                  const selectedElsewhere =
+                                    linkedPlayerIdsInDraft.has(playerId) &&
+                                    playerId !== Number(participant.playerId);
+                                  return (
+                                    <option
+                                      key={player.id}
+                                      value={player.id}
+                                      disabled={selectedElsewhere}
+                                    >
+                                      {player.name}
+                                      {selectedElsewhere ? " (já escalado)" : ""}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                              <select
+                                className="flex h-12 w-full min-w-0 rounded-md border border-input bg-black/40 px-3 py-3 text-base focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                                value={participant.roleId || ""}
+                                onChange={(e) =>
+                                  updateTeamParticipant(index, {
+                                    roleId: Number(e.target.value) || 0,
+                                  })
+                                }
+                                disabled={!teamGameId}
+                              >
+                                <option value="">Selecionar role...</option>
+                                {availableRoles.map((role: any) => (
+                                  <option key={role.id} value={role.id}>
+                                    {role.name}
                                   </option>
-                                );
-                              })}
-                            </select>
-                            <select
-                              className="flex h-10 w-full rounded-md border border-input bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-                              value={participant.roleId || ""}
-                              onChange={(e) =>
-                                updateTeamParticipant(index, {
-                                  roleId: Number(e.target.value) || 0,
-                                })
-                              }
-                              disabled={!teamGameId}
-                            >
-                              <option value="">Selecionar role...</option>
-                              {availableRoles.map((role: any) => (
-                                <option key={role.id} value={role.id}>
-                                  {role.name}
-                                </option>
-                              ))}
-                            </select>
-                            <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={participant.isStarter}
-                                onChange={(e) =>
-                                  updateTeamParticipant(index, {
-                                    isStarter: e.target.checked,
-                                    isSubstitute: e.target.checked
-                                      ? false
-                                      : participant.isSubstitute,
-                                  })
-                                }
-                              />{" "}
-                              Titular
-                            </label>
-                            <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={participant.isCaptain}
-                                onChange={(e) =>
-                                  updateTeamParticipant(index, { isCaptain: e.target.checked })
-                                }
-                              />{" "}
-                              Capitão
-                            </label>
-                            <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={participant.isSubstitute}
-                                onChange={(e) =>
-                                  updateTeamParticipant(index, {
-                                    isSubstitute: e.target.checked,
-                                    isStarter: e.target.checked ? false : participant.isStarter,
-                                  })
-                                }
-                              />{" "}
-                              Reserva
-                            </label>
-                            <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={participant.isActive}
-                                onChange={(e) =>
-                                  updateTeamParticipant(index, { isActive: e.target.checked })
-                                }
-                              />{" "}
-                              Ativo
-                            </label>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              onClick={() => removeTeamParticipant(index)}
-                            >
-                              Remover
-                            </Button>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-4">
+                              <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={participant.isStarter}
+                                  onChange={(e) =>
+                                    updateTeamParticipant(index, {
+                                      isStarter: e.target.checked,
+                                      isSubstitute: e.target.checked
+                                        ? false
+                                        : participant.isSubstitute,
+                                    })
+                                  }
+                                />{" "}
+                                Titular
+                              </label>
+                              <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={participant.isCaptain}
+                                  onChange={(e) =>
+                                    updateTeamParticipant(index, { isCaptain: e.target.checked })
+                                  }
+                                />{" "}
+                                Capitão
+                              </label>
+                              <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={participant.isSubstitute}
+                                  onChange={(e) =>
+                                    updateTeamParticipant(index, {
+                                      isSubstitute: e.target.checked,
+                                      isStarter: e.target.checked ? false : participant.isStarter,
+                                    })
+                                  }
+                                />{" "}
+                                Reserva
+                              </label>
+                              <label className="text-[10px] uppercase text-white/70 flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={participant.isActive}
+                                  onChange={(e) =>
+                                    updateTeamParticipant(index, { isActive: e.target.checked })
+                                  }
+                                />{" "}
+                                Ativo
+                              </label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => removeTeamParticipant(index)}
+                              >
+                                Remover
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -4230,6 +4482,9 @@ function Admin() {
                               description: newTeam.description.trim() || null,
                               tag: newTeam.tag.trim() || null,
                               logoUrl: newTeam.logoUrl.trim() || null,
+                              wins: Number(newTeam.wins) || 0,
+                              losses: Number(newTeam.losses) || 0,
+                              trophies: Number(newTeam.trophies) || 0,
                             };
                             const result = await apiTeams.create(payload);
                             const createdTeam = extractEntity(result);
@@ -4256,11 +4511,7 @@ function Admin() {
 
                               const participantResult =
                                 await apiTeamParticipants.create(participantPayload);
-                              if (
-                                !participantResult?.result &&
-                                participantResult !== true &&
-                                participantResult !== null
-                              ) {
+                              if (participantResult === false) {
                                 throw new Error(
                                   "Time criado, mas houve erro ao vincular jogadores.",
                                 );
@@ -4391,12 +4642,6 @@ function Admin() {
                             );
                           })}
                         </select>
-                        {selectedUser && (
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                            {selectedUser.login || selectedUser.email || `ID ${selectedUser.id}`} ·{" "}
-                            {selectedUser.email || `ROLE ${selectedUser.role}`}
-                          </p>
-                        )}
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] uppercase font-black text-muted-foreground italic">

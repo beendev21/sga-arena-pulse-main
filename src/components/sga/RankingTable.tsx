@@ -5,16 +5,27 @@ import { TeamLogo } from "./TeamLogo";
 import { Link } from "@tanstack/react-router";
 import { matchesGame, type GameLabel } from "@/lib/game";
 import { unwrapList } from "@/lib/api";
+import { buildTeamMatchStatsSummaryMap, getTeamMatchStatsSummary } from "@/lib/teamStats";
 
 export function RankingTable({ game }: { game: string }) {
   const api = useApiController("Teams");
+  const apiTeamMatchStats = useApiController("TeamMatchStats");
 
   const { data: raw, isLoading: loading } = useQuery({
     queryKey: ["teams"],
     queryFn: () => api.getAll({ includeAuth: false })
   });
 
+  const { data: teamMatchStatsRaw } = useQuery({
+    queryKey: ["team-match-stats"],
+    queryFn: () => apiTeamMatchStats.getAll({ includeAuth: false }),
+  });
+
   const parse = useCallback((r: any) => unwrapList(r), []);
+  const teamStatsById = useMemo(
+    () => buildTeamMatchStatsSummaryMap(teamMatchStatsRaw),
+    [teamMatchStatsRaw],
+  );
 
   const teams = useMemo(() => {
     const list = parse(raw);
@@ -44,7 +55,8 @@ export function RankingTable({ game }: { game: string }) {
         </thead>
         <tbody>
           {teams.map((t, i) => {
-            const wr = Math.round((t.wins / Math.max(t.wins + t.losses, 1)) * 100);
+            const stats = getTeamMatchStatsSummary(t.id, teamStatsById);
+            const wr = Math.round((stats.wins / Math.max(stats.wins + stats.losses, 1)) * 100);
             return (
               <tr key={t.id} className="border-t border-border/40 hover:bg-muted/30 transition">
                 <td className="px-4 py-3 font-display">
@@ -56,9 +68,9 @@ export function RankingTable({ game }: { game: string }) {
                     <span className="font-display">{t.name}</span>
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-right text-success">{t.wins}</td>
-                <td className="px-4 py-3 text-right text-destructive">{t.losses}</td>
-                <td className="px-4 py-3 text-right">{t.rounds_diff > 0 ? "+" : ""}{t.rounds_diff}</td>
+                <td className="px-4 py-3 text-right text-success">{stats.wins}</td>
+                <td className="px-4 py-3 text-right text-destructive">{stats.losses}</td>
+                <td className="px-4 py-3 text-right">{stats.roundsDiff > 0 ? "+" : ""}{stats.roundsDiff}</td>
                 <td className="px-4 py-3 text-right">{wr}%</td>
                 <td className="px-4 py-3 text-right font-display text-primary">{t.elo}</td>
               </tr>

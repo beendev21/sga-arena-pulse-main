@@ -6,6 +6,7 @@ import useApiController from "@/API/controler";
 import { TeamCard } from "@/components/sga/TeamCard";
 import { matchesGame, type GameLabel } from "@/lib/game";
 import { unwrapList } from "@/lib/api";
+import { buildTeamMatchStatsSummaryMap, getTeamMatchStatsSummary } from "@/lib/teamStats";
 
 export const Route = createFileRoute("/teams")({
   head: () => ({ meta: [{ title: "Times — SGA" }, { name: "description", content: "Conheça os times da SGA: estatísticas, ELO, vitórias e troféus." }] }),
@@ -15,13 +16,22 @@ export const Route = createFileRoute("/teams")({
 function TeamsList() {
   const [game, setGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
   const apiTeams = useApiController("Teams");
+  const apiTeamMatchStats = useApiController("TeamMatchStats");
 
   const { data: tRaw, isLoading } = useQuery({
     queryKey: ["teams"],
     queryFn: () => apiTeams.getAll({ includeAuth: false })
   });
+  const { data: teamMatchStatsRaw } = useQuery({
+    queryKey: ["team-match-stats"],
+    queryFn: () => apiTeamMatchStats.getAll({ includeAuth: false }),
+  });
 
   const parse = useCallback((r: any) => unwrapList(r), []);
+  const teamStatsById = useMemo(
+    () => buildTeamMatchStatsSummaryMap(teamMatchStatsRaw),
+    [teamMatchStatsRaw],
+  );
 
   const teams = useMemo(() => parse(tRaw), [tRaw, parse]);
   
@@ -110,7 +120,7 @@ function TeamsList() {
               className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
             >
               {filteredTeams.map((t, i) => (
-                <TeamCard key={t.id} team={t} rank={i + 1} />
+                <TeamCard key={t.id} team={t} rank={i + 1} stats={getTeamMatchStatsSummary(t.id, teamStatsById)} />
               ))}
             </motion.div>
           </AnimatePresence>
