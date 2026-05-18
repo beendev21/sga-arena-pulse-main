@@ -25,21 +25,7 @@ export const Route = createFileRoute("/matches")({
 const tabs: Match["status"][] = ["Ao vivo", "Agendada", "Encerrada"];
 
 function MatchesPage() {
-  const apiMatches = useApiController("Matches");
-  const { result: matchesRaw, isLoading } = useQuery({
-    queryKey: ["matches"],
-    queryFn: () => apiMatches.getAll()
-  });
-
-  const matches = useMemo(() => {
-    return Array.isArray(matchesRaw) ? matchesRaw : (matchesRaw?.result || []);
-  }, [matchesRaw]);
-
-  const [tab, setTab] = useState<Match["status"]>("Ao vivo");
-  const list = matches.filter((m) => m.status === tab);
-
-  if (isLoading) return <div className="p-20 text-center font-display uppercase animate-pulse">Sincronizando satélites da Arena...</div>;
-
+  
   return (
     <div className="relative min-h-screen bg-[#06070a] overflow-hidden">
       {/* Background Layers */}
