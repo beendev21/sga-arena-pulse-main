@@ -1,7 +1,7 @@
 # 🎮 SGA Arena Pulse
 
 Plataforma web para acompanhamento de campeonatos de e-sports. O sistema exibe torneios, partidas, rankings, estatísticas de jogadores e equipes em tempo real, com área pública e painel administrativo.
-
+PLATAFORMA: https://prime.santos-games.com/
 ---
 
 ## 📌 Sobre
