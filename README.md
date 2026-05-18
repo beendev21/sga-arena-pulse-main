@@ -1,10 +1,11 @@
 # 🎮 SGA Arena Pulse
 
 Plataforma web para acompanhamento de campeonatos de e-sports. O sistema exibe torneios, partidas, rankings, estatísticas de jogadores e equipes em tempo real, com área pública e painel administrativo.
-PLATAFORMA: https://prime.santos-games.com/
 ---
 
 ## 📌 Sobre
+
+Plataforma: https://prime.santos-games.com/
 
 Este projeto foi desenvolvido como freelance. O escopo de entrega foi o **frontend completo**, integrado a uma API REST e infraestrutura de backend fornecidas pelo cliente.
 
