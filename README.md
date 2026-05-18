@@ -2,7 +2,7 @@
 
 ![SGA Logo](https://santos-games.com/encontre-um-time/assets/sga-logo-B5SOul8E.png)
 
-A **SGA Arena ** é a plataforma oficial da Santos Games Arena, projetada para gerenciar o ecossistema competitivo de e-sports, com foco em títulos como **CS2, Valorant e CS**. O sistema oferece uma experiência imersiva com estética *cyberpunk/tactical HUD*, integrando dados em tempo real de campeonatos, rankings de elite e dossiês detalhados de jogadores.
+A **SGA Arena** é a plataforma oficial da Santos Games Arena, projetada para gerenciar o ecossistema competitivo de e-sports, com foco em títulos como **CS2, Valorant e CS**. O sistema oferece uma experiência imersiva com estética *cyberpunk/tactical HUD*, integrando dados em tempo real de campeonatos, rankings de elite e dossiês detalhados de jogadores.
 
 ## 🚀 Tecnologias Utilizadas
 
