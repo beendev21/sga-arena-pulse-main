@@ -33,29 +33,9 @@ Este projeto utiliza uma stack moderna de alto desempenho:
 - **Roster Lock:** Controle de inscrições e transferências de jogadores entre equipes.
 - **Sincronização de Dados:** Interface direta para atualização de estatísticas de partidas e mapas.
 
-## 🛠️ Instalação e Execução
+## 🛠️ Execução
 
-1.  **Clone o repositório:**
-    ```bash
-    git clone <https://github.com/seu-usuario/sga-arena-pulse.git>
-    cd sga-arena-pulse
-    ```
-
-2.  **Instale as dependências:**
-    ```bash
-    npm install
-    ```
-
-3.  **Configure as variáveis de ambiente:**
-    Crie um arquivo `.env` na raiz do projeto com a URL da sua API:
-    ```env
-    VITE_API_URL=<https://sua-api-sga.com>
-    ```
-
-4.  **Inicie o servidor de desenvolvimento:**
-    ```bash
-    npm run dev
-    ```
+https://prime.santos-games.com/
 
 ## 📁 Estrutura de Pastas
 
