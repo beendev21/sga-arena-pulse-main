@@ -42,11 +42,7 @@ O frontend se comunica exclusivamente com uma **API REST externa** — o backend
 
 ### URL Base
 
-```
-https://app.santos-games.com
-```
-
-Pode ser sobrescrita via variável de ambiente:
+A URL da API é configurada via variável de ambiente:
 
 ```env
 VITE_API_URL=https://sua-api.exemplo.com
@@ -186,7 +182,7 @@ npm run build
 
 ```bash
 docker build -t sga-arena-pulse .
-docker run -p 3000:3000 -e VITE_API_URL=https://app.santos-games.com sga-arena-pulse
+docker run -p 3000:3000 -e VITE_API_URL=https://sua-api.exemplo.com sga-arena-pulse
 ```
 
 ---
