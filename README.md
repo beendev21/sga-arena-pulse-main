@@ -1,4 +1,4 @@
-# 🎮 SGA Arena Pulse
+# 🎮 SGA Arena 
 
 Plataforma web para acompanhamento de campeonatos de e-sports. O sistema exibe torneios, partidas, rankings, estatísticas de jogadores e equipes em tempo real, com área pública e painel administrativo.
 ---
