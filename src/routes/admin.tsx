@@ -514,13 +514,13 @@ function AdminBracketMatchCard({
         setDraggingTeamId(null);
         void handleBracketDrop(position, teamField, teamId);
       }}
-      className={`min-h-[44px] border px-3 py-2 transition ${
+      className={`min-h-[44px] border px-3 py-2 transition-all duration-300 relative ${
         team
-          ? "border-white/10 bg-black/60"
-          : "border-dashed border-white/15 bg-black/20 hover:border-primary/40"
+          ? "border-white/10 bg-black/40"
+          : "border-dashed border-white/10 bg-white/[0.02] hover:border-primary/40 hover:bg-white/[0.04]"
       } ${
         previewSlotKey === `${position}:${teamField}` && draggingTeam
-          ? "border-primary bg-primary/10"
+          ? "border-primary bg-primary/10 ring-1 ring-primary/20"
           : ""
       } ${matchIsLocked ? "cursor-not-allowed opacity-70" : ""}`}
     >
@@ -540,7 +540,7 @@ function AdminBracketMatchCard({
             <div className="truncate font-display text-sm uppercase italic text-white">
               {draggingTeam.name}
             </div>
-            <div className="text-[10px] uppercase tracking-widest text-primary">Preview</div>
+            <div className="text-[10px] uppercase tracking-widest text-primary animate-pulse">Sync_Preview</div>
           </div>
         </div>
       ) : team ? (
@@ -581,12 +581,17 @@ function AdminBracketMatchCard({
 
   return (
     <div
-      className={`relative border transition-all ${isFinalRound ? "p-5" : "p-4"} ${cardClass}`}
+      className={`relative border transition-all duration-500 group/match ${isFinalRound ? "p-6" : "p-5"} ${cardClass} shadow-xl hover:shadow-2xl`}
       style={{
         minWidth: isFinalRound ? ADMIN_BRACKET_FINAL_CARD_WIDTH : ADMIN_BRACKET_CARD_WIDTH,
         minHeight: isFinalRound ? ADMIN_BRACKET_FINAL_CARD_HEIGHT : ADMIN_BRACKET_CARD_HEIGHT,
+        background: 'linear-gradient(145deg, rgba(10,10,12,0.95), rgba(6,7,10,0.95))',
       }}
     >
+      {/* Tech Corners */}
+      <div className="absolute top-0 left-0 w-4 h-4 border-t border-l border-white/10 group-hover/match:border-primary/40 transition-colors" />
+      <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-white/10 group-hover/match:border-primary/40 transition-colors" />
+
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <div className="text-[8px] font-black uppercase tracking-widest text-white/30">
@@ -736,9 +741,9 @@ function AdminBracketSection({
           `${middleX},${parentY}`,
           `${parentX},${parentY}`,
         ].join(" "),
-        stroke: isLower ? "#ffffff" : "#ff6a00",
-        strokeWidth: isLower ? 2.6 : 3.2,
-        opacity: isLower ? 0.82 : 0.95,
+        stroke: isLower ? "rgba(255,255,255,0.15)" : "rgba(248,109,131,0.25)",
+        strokeWidth: 2,
+        opacity: 1,
       });
     }
 
@@ -746,18 +751,25 @@ function AdminBracketSection({
   }, [isLower, layout.positioned]);
 
   return (
-    <section className="rounded-[32px] border border-white/5 bg-black/70 p-6 md:p-10">
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="text-[12px] font-black uppercase tracking-[0.42em] text-white">
-            {title}
-          </div>
-          <div className="text-sm uppercase tracking-[0.28em] text-white/35">{subtitle}</div>
+    <section className="rounded-none border border-white/5 bg-[#0a0a0c]/80 p-8 md:p-12 relative overflow-hidden backdrop-blur-md">
+      {/* Background Decor */}
+      <div className="absolute inset-0 grid-bg opacity-[0.03] pointer-events-none" />
+      
+      <div className="mb-12 flex items-end gap-6 relative z-10">
+        <div className="bg-primary text-primary-foreground text-[10px] font-black px-2 py-0.5 italic shadow-[2px_2px_0px_rgba(0,0,0,0.5)]">
+          {isLower ? "LB" : "UB"}
         </div>
-        <div className="h-px flex-1 bg-white/5" />
+        <div className="space-y-1">
+          <h3 className="font-display text-2xl font-black italic uppercase tracking-tighter text-white leading-none">
+            {title} <span className="text-primary/60">{subtitle}</span>
+          </h3>
+          <div className="h-0.5 w-12 bg-primary/40" />
+        </div>
+        <div className="h-px flex-1 bg-white/5 mb-2" />
+        <div className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em] mb-1.5 hidden lg:block">SGA_BRACKET_ENGINE_v2.0</div>
       </div>
 
-      <div className="relative max-h-[72vh] w-full overflow-x-auto overflow-y-auto pb-6 pr-4">
+      <div className="relative max-h-[75vh] w-full overflow-x-auto overflow-y-auto pb-6 pr-4 custom-scrollbar">
         <div className="relative" style={{ width: boardWidth, height: layout.height + 30 }}>
           <svg
             className="absolute inset-0 h-full w-full pointer-events-none"
