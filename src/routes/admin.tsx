@@ -274,15 +274,14 @@ type AdminBracketPositionedMatch = {
   height: number;
 };
 
-const ADMIN_BRACKET_CARD_WIDTH = 285;
+const ADMIN_BRACKET_CARD_WIDTH = 290;
 const ADMIN_BRACKET_FINAL_CARD_WIDTH = 360;
-const ADMIN_BRACKET_CARD_HEIGHT = 220;
-const ADMIN_BRACKET_FINAL_CARD_HEIGHT = 248;
+const ADMIN_BRACKET_CARD_HEIGHT = 420; 
+const ADMIN_BRACKET_FINAL_CARD_HEIGHT = 320; 
 const ADMIN_BRACKET_COLUMN_GAP = 155;
-const ADMIN_BRACKET_ROW_GAP = 108;
+const ADMIN_BRACKET_ROW_GAP = 600; 
 const ADMIN_BRACKET_SECTION_PADDING_X = 130;
 const ADMIN_BRACKET_SECTION_PADDING_Y = 92;
-
 const BRACKET_STORAGE_KEY = "sga-admin-bracket-layouts";
 
 const formatApiTimestamp = (value?: string | Date | null) => {
@@ -707,7 +706,7 @@ function AdminBracketSection({
   getTeamLabel: (teamId: number) => string;
 }) {
   const layout = useMemo(() => buildAdminBracketLayout(rounds), [rounds]);
-  const boardWidth = Math.max(layout.width, 1700);
+  const boardWidth = layout.width;
 
   const lines = useMemo(() => {
     const result: Array<{
@@ -4213,7 +4212,7 @@ function Admin() {
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-[400px_1fr] gap-8 items-start">
+            <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-8 items-start">
               {/* Lista de Seleção */}
               <div className="space-y-4">
                 <span className="text-[9px] font-black text-white/20 uppercase tracking-[0.4em] italic">
@@ -4249,7 +4248,7 @@ function Admin() {
                       e bloqueia duplicidades no mesmo chaveamento.
                     </div>
                   </div>
-                  <div className="grid gap-2 max-h-[420px] overflow-y-auto pr-1">
+                  <div className="grid gap-2 max-h-[300px] xl:max-h-[420px] overflow-y-auto pr-1">
                     {bracketTeams.map((team: any) => {
                       const isAssigned = assignedBracketTeamIds.has(Number(team.id));
 
@@ -4296,7 +4295,7 @@ function Admin() {
               </div>
 
               {/* Workspace do Editor */}
-              <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 p-8 relative">
+              <div className="bg-[#0a0a0c]/60 backdrop-blur-md border border-white/5 p-8 relative min-w-0">
                 <div className="flex flex-col gap-12">
                   {!selectedTournament && (
                     <div className="border border-dashed border-white/10 bg-white/5 p-6 text-sm text-white/50">
