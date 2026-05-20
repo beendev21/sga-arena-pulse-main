@@ -36,7 +36,6 @@ type PositionedMatch = {
   y: number;
   width: number;
   height: number;
-  label: string;
 };
 
 const CARD_WIDTH = 285;
@@ -212,15 +211,11 @@ function MatchCard({
   match,
   index,
   isLower,
-  label,
-  showLabel,
   variant = "regular",
 }: {
   match: Match;
   index: number;
   isLower: boolean;
-  label: string;
-  showLabel: boolean;
   variant?: "regular" | "final";
 }) {
   const tones = cardTone(index, isLower);
@@ -228,34 +223,21 @@ function MatchCard({
 
   return (
     <div
-      className="relative"
+      className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[#07080c] shadow-[0_20px_48px_rgba(0,0,0,0.45)]"
       style={{ width: isFinal ? 360 : CARD_WIDTH, minHeight: isFinal ? 190 : CARD_HEIGHT }}
     >
-      {showLabel ? (
-        <div className="absolute -left-[120px] top-1/2 w-[110px] -translate-y-1/2 text-right">
-          <div className="text-[28px] font-black uppercase leading-none tracking-tight text-white">
-            {label}
-          </div>
-        </div>
-      ) : null}
-
       <div
-        className="overflow-hidden border border-black/40 bg-black shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
-        style={{ width: isFinal ? 360 : CARD_WIDTH }}
+        className={`flex items-center justify-center px-4 text-center font-black uppercase ${tones.top}`}
+        style={{ height: isFinal ? 92 : 44, fontSize: isFinal ? 30 : 24 }}
       >
-        <div
-          className={`flex items-center justify-center px-4 text-center font-black uppercase ${tones.top}`}
-          style={{ height: isFinal ? 92 : 44, fontSize: isFinal ? 30 : 24 }}
-        >
-          <span className="truncate">{teamName(match.teamA)}</span>
-        </div>
-        <div className="h-[3px] bg-black" />
-        <div
-          className={`flex items-center justify-center px-4 text-center font-black uppercase ${tones.bottom}`}
-          style={{ height: isFinal ? 92 : 44, fontSize: isFinal ? 30 : 24 }}
-        >
-          <span className="truncate">{teamName(match.teamB)}</span>
-        </div>
+        <span className="truncate">{teamName(match.teamA)}</span>
+      </div>
+      <div className="h-[3px] bg-white/10" />
+      <div
+        className={`flex items-center justify-center px-4 text-center font-black uppercase ${tones.bottom}`}
+        style={{ height: isFinal ? 92 : 44, fontSize: isFinal ? 30 : 24 }}
+      >
+        <span className="truncate">{teamName(match.teamB)}</span>
       </div>
     </div>
   );
@@ -308,7 +290,6 @@ function BracketCanvas({ rounds, isLower }: { rounds: RoundGroup[]; isLower: boo
           y: SECTION_PADDING_Y + centerY - CARD_HEIGHT / 2,
           width: CARD_WIDTH,
           height: CARD_HEIGHT,
-          label: `JOGO ${matchIndex + 1}`,
         });
       }
     }
@@ -396,20 +377,6 @@ function BracketCanvas({ rounds, isLower }: { rounds: RoundGroup[]; isLower: boo
           ))}
         </svg>
 
-        {layout.rounds.map((round) => (
-          <div
-            key={round.key}
-            className={`absolute whitespace-nowrap text-[22px] font-black uppercase tracking-tight ${round.accent}`}
-            style={{
-              left: round.x + (round.isFinal ? 180 : CARD_WIDTH / 2),
-              top: 4,
-              transform: "translateX(-50%) translateY(-100%)",
-            }}
-          >
-            {round.title}
-          </div>
-        ))}
-
         {layout.positioned.map((item) => (
           <div
             key={item.match.id}
@@ -420,8 +387,6 @@ function BracketCanvas({ rounds, isLower }: { rounds: RoundGroup[]; isLower: boo
               match={item.match}
               index={item.matchIndex}
               isLower={isLower}
-              label={item.label}
-              showLabel={item.roundIndex === 0}
               variant={item.roundIndex === rounds.length - 1 ? "final" : "regular"}
             />
           </div>
