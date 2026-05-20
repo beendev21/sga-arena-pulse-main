@@ -78,14 +78,14 @@ function BracketPage() {
   const filteredTournaments = tournamentsData;
 
   const [selectedTourneyId, setSelectedTourneyId] = useState<string>(
-    filteredTournaments[0]?.id || "",
+    String(filteredTournaments[0]?.id || ""),
   );
   const selectedTournament = useMemo(
-    () => filteredTournaments.find((t) => String(t.id) === String(selectedTourneyId)),
+    () => filteredTournaments.find((t: any) => String(t.id) === String(selectedTourneyId)),
     [filteredTournaments, selectedTourneyId],
   );
   const selectedMatches = useMemo(
-    () => matchesData.filter((m) => String(m.tournamentId) === String(selectedTourneyId)),
+    () => matchesData.filter((m: any) => String(m.tournamentId) === String(selectedTourneyId)) as any[],
     [matchesData, selectedTourneyId],
   );
   useEffect(() => {
@@ -94,7 +94,7 @@ function BracketPage() {
       !selectedTourneyId ||
       !filteredTournaments.some((t) => String(t.id) === String(selectedTourneyId))
     ) {
-      setSelectedTourneyId(filteredTournaments[0].id);
+      setSelectedTourneyId(String(filteredTournaments[0]?.id || ""));
     }
   }, [filteredTournaments, selectedTourneyId]);
 
@@ -136,8 +136,8 @@ function BracketPage() {
         <div className="flex flex-wrap gap-3 mb-12">
           {filteredTournaments.map((t) => (
             <button
-              key={t.id}
-              onClick={() => setSelectedTourneyId(t.id)}
+              key={String(t.id)}
+              onClick={() => setSelectedTourneyId(String(t.id))}
               className={`px-4 py-2 border text-[10px] font-black uppercase italic tracking-widest transition-all ${
                 selectedTourneyId === t.id
                   ? "bg-primary border-primary text-white shadow-[0_0_15px_rgba(248,109,131,0.3)]"

@@ -1759,28 +1759,43 @@ function Admin() {
       if (editingEntity.type === "match") {
         if (
           !editMatchDraft.tournamentId ||
-          !editMatchDraft.stageId ||
           !editMatchDraft.statusId ||
           !editMatchDraft.gameId
         ) {
           throw new Error("Preencha campeonato, stage, status e jogo.");
         }
 
+        const resolvedStageId =
+          Number(editMatchDraft.stageId) ||
+          Number(editingEntity.data?.stageId) ||
+          Number(
+            stagesData.find(
+              (stage: any) =>
+                Number(stage.tournamentId) ===
+                  Number(editMatchDraft.tournamentId || selectedTourney),
+            )?.id,
+          ) ||
+          Number(stagesData[0]?.id) ||
+          1;
+
         const payload = {
-          ...editingEntity.data,
+          id: Number(editingEntity.data?.id) || 0,
+          createdAt:
+            formatApiUtcTimestamp(editingEntity.data?.createdAt) ||
+            formatApiUtcTimestamp(new Date()),
+          updatedAt: formatApiUtcTimestamp(new Date()),
+          stageId: resolvedStageId,
           tournamentId: Number(editMatchDraft.tournamentId) || Number(selectedTourney) || 0,
-          stageId: Number(editMatchDraft.stageId) || 0,
           statusId: Number(editMatchDraft.statusId) || 0,
           winnerTeamId: Number(editMatchDraft.winnerTeamId) || 0,
-          teamAId: Number(editMatchDraft.teamAId) || 0,
-          teamBId: Number(editMatchDraft.teamBId) || 0,
           gameId: Number(editMatchDraft.gameId) || 0,
           bestOf: Number(editMatchDraft.bestOf) || 1,
+          bracketPosition:
+            String(editingEntity.data?.bracketPosition || "") || null,
           startedAt: formatApiUtcTimestamp(editMatchDraft.startedAt),
           finishedAt: editMatchDraft.finishedAt
             ? formatApiUtcTimestamp(editMatchDraft.finishedAt)
             : null,
-          updatedAt: formatApiUtcTimestamp(new Date()),
         };
 
         const result = await apiMatches.update(Number(editingEntity.data?.id), payload);
@@ -2176,6 +2191,9 @@ function Admin() {
 
     queryClient.invalidateQueries({ queryKey: ["matches", token] });
     queryClient.invalidateQueries({ queryKey: ["matches"] });
+    queryClient.invalidateQueries({ queryKey: ["match-teams", token] });
+    queryClient.invalidateQueries({ queryKey: ["match-teams"] });
+    queryClient.invalidateQueries({ queryKey: ["matchteams"] });
     queryClient.invalidateQueries({ queryKey: ["bracket-matches", token, selectedTourney] });
     queryClient.invalidateQueries({ queryKey: ["teams", token] });
     queryClient.invalidateQueries({ queryKey: ["teams"] });
@@ -3569,6 +3587,7 @@ function Admin() {
                   <select
                     className="flex h-10 w-full rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
                     value={editMatchDraft.stageId}
+                    disabled={!!editMatchDraft.tournamentId}
                     onChange={(e) =>
                       setEditMatchDraft((current) => ({
                         ...current,
@@ -3576,26 +3595,6 @@ function Admin() {
                       }))
                     }
                   >
-                    <option value={0} disabled>Selecionar stage</option>
-                    {stagesData
-                      .filter((stage: any) => {
-                        const stageTournamentId = Number(editMatchDraft.tournamentId) || Number(selectedTourney);
-                        const candidateTournamentId =
-                          Number(stage?.tournamentId) ||
-                          Number(stage?.tournament?.id) ||
-                          Number(stage?.tournament?.tournamentId) ||
-                          0;
-
-                        return (
-                          !candidateTournamentId ||
-                          candidateTournamentId === stageTournamentId
-                        );
-                      })
-                      .map((stage: any) => (
-                        <option key={stage.id} value={stage.id}>
-                          {stage.name}
-                        </option>
-                      ))}
                   </select>
                 </div>
                 <div className="grid gap-1">
