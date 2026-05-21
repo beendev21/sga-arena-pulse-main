@@ -118,9 +118,19 @@ const CRITICAL_CSS = `
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  body { visibility: visible; }
+  body { visibility: hidden; }
   a { color: inherit; text-decoration: none; }
 `;
+
+const REVEAL_SCRIPT = `(function(){
+  function show(){ document.body.style.visibility='visible'; }
+  var link = document.querySelector('link[rel="stylesheet"]');
+  if (!link){ show(); return; }
+  if (link.sheet){ show(); return; }
+  link.addEventListener('load', show);
+  link.addEventListener('error', show);
+  setTimeout(show, 1500);
+})();`;
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
@@ -132,6 +142,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       <body style={{ backgroundColor: "#1f2227", color: "#f4f4f5" }}>
         {children}
         <Scripts />
+        <script dangerouslySetInnerHTML={{ __html: REVEAL_SCRIPT }} />
       </body>
     </html>
   );
