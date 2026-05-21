@@ -935,94 +935,94 @@ function Admin() {
 
   // Sincronização Global via TanStack Query
   const { data: tr, isLoading: l1 } = useQuery({
-    queryKey: ["tournaments", token],
+    queryKey: ["tournaments", user?.id],
     queryFn: () => apiTournaments.getAll(),
-    enabled: !!token && shouldLoadTab(["campeonatos", "chaveamentos", "ia"]),
+    enabled: !!user && shouldLoadTab(["campeonatos", "chaveamentos", "ia"]),
   });
   const { data: pr, isLoading: l2 } = useQuery({
-    queryKey: ["players", token],
+    queryKey: ["players", user?.id],
     queryFn: () => apiPlayers.getAll(),
-    enabled: !!token && shouldLoadTab(["times", "jogadores", "ia"]),
+    enabled: !!user && shouldLoadTab(["times", "jogadores", "ia"]),
   });
   const { data: ter, isLoading: l3 } = useQuery({
-    queryKey: ["teams", token],
+    queryKey: ["teams", user?.id],
     queryFn: () => apiTeams.getAll(),
-    enabled: !!token && shouldLoadTab(["times", "chaveamentos", "ia"]),
+    enabled: !!user && shouldLoadTab(["times", "chaveamentos", "ia"]),
   });
   const { data: rr } = useQuery({
-    queryKey: ["roles", token],
+    queryKey: ["roles", user?.id],
     queryFn: () => apiRoles.getAll(),
-    enabled: !!token && shouldLoadTab(["times", "ia"]),
+    enabled: !!user && shouldLoadTab(["times", "ia"]),
   });
   const { data: tpr } = useQuery({
-    queryKey: ["team-participants", token],
+    queryKey: ["team-participants", user?.id],
     queryFn: () => apiTeamParticipants.getAll(),
-    enabled: !!token && shouldLoadTab(["times", "jogadores", "ia"]),
+    enabled: !!user && shouldLoadTab(["times", "jogadores", "ia"]),
   });
   const { data: pmsr } = useQuery({
-    queryKey: ["player-match-stats", token],
+    queryKey: ["player-match-stats", user?.id],
     queryFn: () => apiPlayerMatchStats.getAll(),
-    enabled: !!token && shouldLoadTab(["jogadores", "ia"]),
+    enabled: !!user && shouldLoadTab(["jogadores", "ia"]),
   });
   const { data: tmsr } = useQuery({
-    queryKey: ["team-match-stats", token],
+    queryKey: ["team-match-stats", user?.id],
     queryFn: () => apiTeamMatchStats.getAll(),
-    enabled: !!token && shouldLoadTab(["times", "ia"]),
+    enabled: !!user && shouldLoadTab(["times", "ia"]),
   });
   const { data: ur } = useQuery({
-    queryKey: ["users", token],
+    queryKey: ["users", user?.id],
     queryFn: () => apiUsers.getAll(),
-    enabled: !!token && shouldLoadTab(["jogadores", "ia"]),
+    enabled: !!user && shouldLoadTab(["jogadores", "ia"]),
   });
   const { data: garc } = useQuery({
-    queryKey: ["game-accounts", token],
+    queryKey: ["game-accounts", user?.id],
     queryFn: () => apiGameAccounts.getAll(),
-    enabled: !!token && shouldLoadTab(["ia"]),
+    enabled: !!user && shouldLoadTab(["ia"]),
   });
   const { data: gar } = useQuery({
-    queryKey: ["games", token],
+    queryKey: ["games", user?.id],
     queryFn: () => apiGames.getAll(),
-    enabled: !!token && shouldLoadTab(["campeonatos", "times", "ia"]),
+    enabled: !!user && shouldLoadTab(["campeonatos", "times", "ia"]),
   });
   const { data: str } = useQuery({
-    queryKey: ["stages", token],
+    queryKey: ["stages", user?.id],
     queryFn: () => apiStages.getAll(),
-    enabled: !!token && shouldLoadTab(["chaveamentos", "ia"]),
+    enabled: !!user && shouldLoadTab(["chaveamentos", "ia"]),
   });
   const { data: sr, isLoading: lStatus } = useQuery({
-    queryKey: ["statuses", token],
+    queryKey: ["statuses", user?.id],
     queryFn: () => apiStatus.getAll(),
-    enabled: !!token && shouldLoadTab(["campeonatos", "monitoramento", "chaveamentos", "ia"]),
+    enabled: !!user && shouldLoadTab(["campeonatos", "monitoramento", "chaveamentos", "ia"]),
   });
   const { data: mr, isLoading: l4 } = useQuery({
-    queryKey: ["matches", token],
+    queryKey: ["matches", user?.id],
     queryFn: () => apiMatches.getAll(),
-    enabled: !!token && shouldLoadTab(["chaveamentos", "monitoramento", "ia"]),
+    enabled: !!user && shouldLoadTab(["chaveamentos", "monitoramento", "ia"]),
   });
   const { data: mtr } = useQuery({
-    queryKey: ["match-teams", token],
+    queryKey: ["match-teams", user?.id],
     queryFn: () => apiMatchTeams.getAll(),
-    enabled: !!token && shouldLoadTab(["ia"]),
+    enabled: !!user && shouldLoadTab(["ia"]),
   });
   const { data: mlar } = useQuery({
-    queryKey: ["match-lineups", token],
+    queryKey: ["match-lineups", user?.id],
     queryFn: () => apiMatchLineups.getAll(),
-    enabled: !!token && shouldLoadTab(["ia"]),
+    enabled: !!user && shouldLoadTab(["ia"]),
   });
   const { data: mlpar } = useQuery({
-    queryKey: ["match-lineup-players", token],
+    queryKey: ["match-lineup-players", user?.id],
     queryFn: () => apiMatchLineupPlayers.getAll(),
-    enabled: !!token && shouldLoadTab(["ia"]),
+    enabled: !!user && shouldLoadTab(["ia"]),
   });
   const { data: hr } = useQuery({
-    queryKey: ["highlights", token],
+    queryKey: ["highlights", user?.id],
     queryFn: () => apiHighlights.getAll(),
-    enabled: !!token && shouldLoadTab(["highlights"]),
+    enabled: !!user && shouldLoadTab(["highlights"]),
   });
   const { data: gr } = useQuery({
-    queryKey: ["gallery", token],
+    queryKey: ["gallery", user?.id],
     queryFn: () => apiGallery.getAll(),
-    enabled: !!token && shouldLoadTab(["galeria"]),
+    enabled: !!user && shouldLoadTab(["galeria"]),
   });
 
   const parse = (r: any) => {
@@ -1544,9 +1544,9 @@ function Admin() {
         }
 
         toast.success("Campeonato atualizado!");
-        queryClient.invalidateQueries({ queryKey: ["tournaments", token] });
+        queryClient.invalidateQueries({ queryKey: ["tournaments", user?.id] });
         queryClient.invalidateQueries({ queryKey: ["tournaments"] });
-        queryClient.invalidateQueries({ queryKey: ["matches", token] });
+        queryClient.invalidateQueries({ queryKey: ["matches", user?.id] });
         queryClient.invalidateQueries({ queryKey: ["matches"] });
         closeEditModal();
         return;
@@ -1672,12 +1672,12 @@ function Admin() {
         );
 
         toast.success("Time e stats atualizados!");
-        queryClient.invalidateQueries({ queryKey: ["teams", token] });
+        queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
         queryClient.invalidateQueries({ queryKey: ["teams"] });
-        queryClient.invalidateQueries({ queryKey: ["team-match-stats", token] });
+        queryClient.invalidateQueries({ queryKey: ["team-match-stats", user?.id] });
         queryClient.invalidateQueries({ queryKey: ["team-match-stats"] });
-        queryClient.invalidateQueries({ queryKey: ["team-participants", token] });
-        queryClient.invalidateQueries({ queryKey: ["players", token] });
+        queryClient.invalidateQueries({ queryKey: ["team-participants", user?.id] });
+        queryClient.invalidateQueries({ queryKey: ["players", user?.id] });
         queryClient.invalidateQueries({ queryKey: ["players"] });
         closeEditModal();
         return;
@@ -1744,12 +1744,12 @@ function Admin() {
 
         toast.success("Player atualizado!");
         if (selectedMatchId) {
-          queryClient.invalidateQueries({ queryKey: ["player-match-stats", token] });
+          queryClient.invalidateQueries({ queryKey: ["player-match-stats", user?.id] });
           queryClient.invalidateQueries({ queryKey: ["player-match-stats"] });
         } else {
           toast.warning("Player salvo, mas não havia partida vinculada para gravar stats.");
         }
-        queryClient.invalidateQueries({ queryKey: ["players", token] });
+        queryClient.invalidateQueries({ queryKey: ["players", user?.id] });
         queryClient.invalidateQueries({ queryKey: ["players"] });
         closeEditModal();
         return;
@@ -1803,9 +1803,9 @@ function Admin() {
         }
 
         toast.success("Partida atualizada!");
-        queryClient.invalidateQueries({ queryKey: ["matches", token] });
+        queryClient.invalidateQueries({ queryKey: ["matches", user?.id] });
         queryClient.invalidateQueries({ queryKey: ["matches"] });
-        queryClient.invalidateQueries({ queryKey: ["bracket-matches", token, selectedTourney] });
+        queryClient.invalidateQueries({ queryKey: ["bracket-matches", user?.id, selectedTourney] });
         closeEditModal();
       }
     } catch (err: any) {
@@ -1877,9 +1877,9 @@ function Admin() {
   const [selectedTourney, setSelectedTourney] = useState("");
 
   const { data: bmr } = useQuery({
-    queryKey: ["bracket-matches", token, selectedTourney],
+    queryKey: ["bracket-matches", user?.id, selectedTourney],
     queryFn: () => ApiService.get(`api/Matches/GetMatchesByTournamentId/${selectedTourney}`),
-    enabled: !!token && !!selectedTourney,
+    enabled: !!user && !!selectedTourney,
   });
 
   const selectedTournament = useMemo(
@@ -2188,13 +2188,13 @@ function Admin() {
       matchTeamsToDelete.map((matchTeamId) => apiMatchTeams.deleteRecord(matchTeamId)),
     );
 
-    queryClient.invalidateQueries({ queryKey: ["matches", token] });
+    queryClient.invalidateQueries({ queryKey: ["matches", user?.id] });
     queryClient.invalidateQueries({ queryKey: ["matches"] });
-    queryClient.invalidateQueries({ queryKey: ["match-teams", token] });
+    queryClient.invalidateQueries({ queryKey: ["match-teams", user?.id] });
     queryClient.invalidateQueries({ queryKey: ["match-teams"] });
     queryClient.invalidateQueries({ queryKey: ["matchteams"] });
-    queryClient.invalidateQueries({ queryKey: ["bracket-matches", token, selectedTourney] });
-    queryClient.invalidateQueries({ queryKey: ["teams", token] });
+    queryClient.invalidateQueries({ queryKey: ["bracket-matches", user?.id, selectedTourney] });
+    queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
     queryClient.invalidateQueries({ queryKey: ["teams"] });
     toast.success(successMessage || `Slot ${position} atualizado`);
   };
@@ -2548,12 +2548,12 @@ function Admin() {
     if (res !== false) {
       // Invalida a query específica para forçar o refetch
       const queryKey = entity.toLowerCase();
-      queryClient.invalidateQueries({ queryKey: [queryKey, token] });
+      queryClient.invalidateQueries({ queryKey: [queryKey, user?.id] });
       queryClient.invalidateQueries({ queryKey: [queryKey] });
 
       // Se deletar um time ou uma partida, o ranking (teams) deve ser recalculado
       if (entity === "Teams" || entity === "Matches") {
-        queryClient.invalidateQueries({ queryKey: ["teams", token] });
+        queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
         queryClient.invalidateQueries({ queryKey: ["teams"] });
       }
 
@@ -4035,9 +4035,9 @@ function Admin() {
                             setNewTourney(createEmptyTournament());
 
                             // Gatilho de atualização automática
-                            queryClient.invalidateQueries({ queryKey: ["tournaments", token] });
+                            queryClient.invalidateQueries({ queryKey: ["tournaments", user?.id] });
                             queryClient.invalidateQueries({ queryKey: ["tournaments"] });
-                            queryClient.invalidateQueries({ queryKey: ["matches", token] }); // Partidas podem mudar com novos torneios
+                            queryClient.invalidateQueries({ queryKey: ["matches", user?.id] }); // Partidas podem mudar com novos torneios
                             queryClient.invalidateQueries({ queryKey: ["matches"] });
                           } catch (err: any) {
                             console.error("Erro detalhado da API:", err);
@@ -4612,9 +4612,9 @@ function Admin() {
                             setTeamParticipants([createEmptyTeamParticipant()]);
 
                             // Gatilho de atualização automática (afeta squads e rankings)
-                            queryClient.invalidateQueries({ queryKey: ["teams", token] });
+                            queryClient.invalidateQueries({ queryKey: ["teams", user?.id] });
                             queryClient.invalidateQueries({ queryKey: ["teams"] });
-                            queryClient.invalidateQueries({ queryKey: ["players", token] });
+                            queryClient.invalidateQueries({ queryKey: ["players", user?.id] });
                             queryClient.invalidateQueries({ queryKey: ["players"] });
                           } catch (err: any) {
                             toast.error(err.message || "Erro ao registrar time");
@@ -4807,7 +4807,7 @@ function Admin() {
                               setIsCreatingPlayer(false);
                               setNewPlayer(createEmptyPlayer());
 
-                              queryClient.invalidateQueries({ queryKey: ["players", token] });
+                              queryClient.invalidateQueries({ queryKey: ["players", user?.id] });
                               queryClient.invalidateQueries({ queryKey: ["players"] });
                               return;
                             }
