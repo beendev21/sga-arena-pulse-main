@@ -14,7 +14,7 @@ export function StatusBadge({ status }: { status: string }) {
   const resolved = map[status as keyof typeof map] || map.Agendada;
   return (
     <span className={cn(
-      "inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] uppercase tracking-widest font-semibold rounded-sm",
+      "inline-flex items-center gap-1.5 px-2.5 py-1 text-xs uppercase tracking-wide font-bold rounded-sm",
       resolved,
     )}>
       {status === "Ao vivo" && <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}

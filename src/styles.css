@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: 0px; /* Bordas afiadas */
+  --radius-sm: 0px;
   --radius-md: 0px;
   --radius-lg: 0px;
   --radius-xl: 0px;
@@ -35,6 +35,9 @@
   --color-valorant: var(--valorant);
   --color-cs2: var(--cs2);
   --color-lol: var(--lol);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -43,75 +46,95 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-display: "Barlow Condensed", "Orbitron", "Rajdhani", sans-serif;
+  --font-display: "Barlow Condensed", "Orbitron", sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 :root {
-  --radius: 0rem; /* Estilo Valorant/Faceit: bordas afiadas e quadradas */
-  /* Force dark theme always */
-  --background: oklch(0.15 0.02 255); /* Deep Matte Navy/Black (Estilo Faceit/Valorant) */
-  --foreground: oklch(0.98 0.01 255); /* Branco nítido */
-  --card: oklch(0.18 0.02 255); /* Matte Gray para cards */
-  --card-foreground: oklch(0.98 0.01 255);
-  --popover: oklch(0.2 0.02 255);
-  --popover-foreground: oklch(0.98 0.01 255);
-  --primary: oklch(0.6 0.25 25); /* Vermelho Valorant (#ff4655) */
-  --primary-foreground: oklch(0.98 0.01 255);
-  --secondary: oklch(0.25 0.02 255); /* Matte Gray escuro */
-  --secondary-foreground: oklch(0.98 0.01 255);
-  --muted: oklch(0.22 0.01 255);
-  --muted-foreground: oklch(0.7 0.01 255);
-  --accent: oklch(0.65 0.25 45); /* Laranja Faceit (#ff5500) */
-  --accent-foreground: oklch(0.98 0.01 255);
-  --destructive: oklch(0.5 0.2 25);
-  --destructive-foreground: oklch(0.98 0.01 255);
-  --border: oklch(0.35 0.02 255 / 0.8); /* Bordas nítidas e sólidas */
-  --input: oklch(0.22 0.01 255);
-  --ring: oklch(0.6 0.25 25);
-  --neon: oklch(0.65 0.25 45); /* Usando Laranja como destaque */
-  --purple: oklch(0.6 0.25 25); /* Remapeado para Valorant Red */
-  --graphite: oklch(0.15 0.02 255);
-  --success: oklch(0.7 0.2 150); /* Verde padrão */
-  --warning: oklch(0.85 0.2 95); /* Amarelo padrão */
+  --radius: 0rem;
 
-  /* Game Specific Colors */
-  --valorant: oklch(0.6 0.25 25); /* Valorant Red */
-  --cs2: oklch(0.65 0.25 45);      /* CS2 agora puxa pro Laranja Faceit */
-  --lol: oklch(0.58 0.23 255);     /* LoL com um azul mais profissional */
+  /* Hierarquia de superfícies — do mais escuro (page) ao mais claro (elevated) */
+  --background: oklch(0.17 0.008 250);   /* página */
+  --surface-1:  oklch(0.20 0.008 250);   /* seções */
+  --surface-2:  oklch(0.24 0.008 250);   /* cards */
+  --surface-3:  oklch(0.28 0.008 250);   /* hover/elevated */
 
-  --sidebar: oklch(0.12 0.02 255);
-  --sidebar-foreground: oklch(0.98 0.01 255);
-  --sidebar-primary: oklch(0.6 0.25 25);
-  --sidebar-primary-foreground: oklch(0.98 0.01 255);
-  --sidebar-accent: oklch(0.2 0.02 255);
-  --sidebar-accent-foreground: oklch(0.98 0.01 255);
-  --sidebar-border: oklch(0.25 0.02 255);
-  --sidebar-ring: oklch(0.6 0.25 25);
+  --foreground: oklch(0.97 0.005 250);
+  --card: oklch(0.24 0.008 250);
+  --card-foreground: oklch(0.97 0.005 250);
+  --popover: oklch(0.24 0.008 250);
+  --popover-foreground: oklch(0.97 0.005 250);
 
-  --gradient-hero: radial-gradient(1200px 600px at 80% -10%, oklch(0.6 0.25 25 / 0.4), transparent 60%), /* Valorant Red */
-                   radial-gradient(900px 500px at 10% 110%, oklch(0.65 0.25 45 / 0.2), transparent 60%), /* Faceit Orange */
-                   linear-gradient(180deg, oklch(0.18 0.02 255), oklch(0.15 0.02 255)); /* Matte Black */
-  --gradient-card: linear-gradient(145deg, oklch(0.2 0.02 255 / 0.95), oklch(0.18 0.02 255 / 0.95)); /* Tons de cinza matte */
-  --gradient-neon: linear-gradient(135deg, oklch(0.6 0.25 25), oklch(0.65 0.25 45)); /* Vermelho para Laranja */
-  --shadow-neon: 0 0 15px oklch(0.6 0.25 25 / 0.5), 0 0 30px oklch(0.65 0.25 45 / 0.2); /* Sombra mais contida */
-  --shadow-purple: 0 0 20px oklch(0.6 0.25 25 / 0.4); /* Remapeado para Valorant Red */
-  --shadow-card: 0 10px 40px -10px oklch(0 0 0 / 0.6);
+  --primary: oklch(0.62 0.21 22);        /* SGA Red — vibrante, distinto do Valorant */
+  --primary-foreground: oklch(0.98 0.005 250);
+
+  --secondary: oklch(0.28 0.008 250);
+  --secondary-foreground: oklch(0.97 0.005 250);
+
+  --muted: oklch(0.26 0.008 250);
+  --muted-foreground: oklch(0.78 0.01 250);  /* lift de contraste */
+
+  --accent: oklch(0.72 0.19 60);         /* Âmbar */
+  --accent-foreground: oklch(0.15 0.005 250);
+
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.98 0.005 250);
+
+  --border: oklch(0.34 0.008 250 / 0.6);
+  --input: oklch(0.26 0.008 250);
+  --ring: oklch(0.62 0.21 22);
+
+  --neon: oklch(0.72 0.19 60);
+  --purple: oklch(0.62 0.21 22);
+  --graphite: oklch(0.17 0.008 250);
+  --success: oklch(0.72 0.18 150);
+  --warning: oklch(0.85 0.18 80);
+
+  /* Cores por jogo — usadas APENAS dentro de contextos do jogo */
+  --valorant: oklch(0.62 0.22 22);   /* coral/vermelho */
+  --cs2:      oklch(0.72 0.19 60);   /* amber */
+  --lol:      oklch(0.60 0.20 245);  /* azul */
+
+  --sidebar: oklch(0.14 0.008 250);
+  --sidebar-foreground: oklch(0.97 0.005 250);
+  --sidebar-primary: oklch(0.62 0.21 22);
+  --sidebar-primary-foreground: oklch(0.98 0.005 250);
+  --sidebar-accent: oklch(0.22 0.008 250);
+  --sidebar-accent-foreground: oklch(0.97 0.005 250);
+  --sidebar-border: oklch(0.28 0.008 250);
+  --sidebar-ring: oklch(0.62 0.21 22);
+
+  --gradient-hero: radial-gradient(1200px 600px at 80% -10%, oklch(0.62 0.21 22 / 0.22), transparent 60%),
+                   radial-gradient(900px 500px at 10% 110%, oklch(0.72 0.19 60 / 0.12), transparent 60%),
+                   linear-gradient(180deg, oklch(0.20 0.008 250), oklch(0.17 0.008 250));
+  --gradient-card: linear-gradient(145deg, oklch(0.26 0.008 250 / 0.95), oklch(0.22 0.008 250 / 0.95));
+  --gradient-neon: linear-gradient(135deg, oklch(0.62 0.21 22), oklch(0.72 0.19 60));
+  --shadow-neon: 0 0 15px oklch(0.62 0.21 22 / 0.35), 0 0 30px oklch(0.72 0.19 60 / 0.12);
+  --shadow-purple: 0 0 20px oklch(0.62 0.21 22 / 0.3);
+  --shadow-card: 0 10px 40px -10px oklch(0 0 0 / 0.5);
 }
 
 @layer base {
   * { border-color: var(--color-border); }
   html, body { background: var(--color-background); color: var(--color-foreground); }
-  body { font-family: "Rajdhani", "Inter", system-ui, sans-serif; } /* Mantendo as fontes, mas o estilo geral muda */
-  /* Removendo o background-image de pontos para um visual mais limpo */
+  body {
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-weight: 500; /* corpo um pouco mais encorpado pra contraste em fundo escuro */
+  }
 
-  h1,h2,h3,h4 { font-family: var(--font-display); letter-spacing: 0.05em; text-transform: uppercase; font-style: italic; font-weight: 800; line-height: 1.3; }
-  header, footer { font-family: var(--font-display); }
-
-  header a, header button {
+  h1, h2, h3, h4 {
     font-family: var(--font-display);
-    text-transform: uppercase;
-    font-style: italic;
-    letter-spacing: 0.05em;
+    letter-spacing: -0.01em;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+
+  /* Sintaxe de texto auxiliar — labels, captions */
+  .label-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-wider text-muted-foreground;
   }
 }
 
@@ -119,85 +142,83 @@
   .bg-hero { background: var(--gradient-hero); }
   .bg-card-grad { background: var(--gradient-card); }
   .bg-neon { background: var(--gradient-neon); }
-  .text-neon { color: var(--neon); text-shadow: none; } /* Removendo text-shadow para um visual mais matte */
+  .bg-surface-1 { background: var(--surface-1); }
+  .bg-surface-2 { background: var(--surface-2); }
+  .bg-surface-3 { background: var(--surface-3); }
+  .text-neon { color: var(--neon); }
   .shadow-neon { box-shadow: var(--shadow-neon); }
-  .shadow-purple-glow { box-shadow: var(--shadow-purple); } /* Agora usa Valorant Red */
-  .ring-neon { box-shadow: 0 0 0 1px var(--neon), 0 0 10px oklch(0.65 0.25 45 / 0.3); } /* Ring mais sutil */
-  
-  /* Sombras dos jogos remapeadas para as novas cores */
-  .shadow-valorant { box-shadow: 0 0 15px oklch(0.6 0.25 25 / 0.4); }
-  .shadow-cs2 { box-shadow: 0 0 15px oklch(0.65 0.25 45 / 0.4); }
-  .shadow-lol { box-shadow: 0 0 15px oklch(0.58 0.23 255 / 0.4); }
+  .shadow-purple-glow { box-shadow: var(--shadow-purple); }
+  .ring-neon { box-shadow: 0 0 0 1px var(--neon), 0 0 10px oklch(0.72 0.19 60 / 0.25); }
 
-  /* Valorant Header Utilities */
+  .shadow-valorant { box-shadow: 0 0 18px oklch(0.62 0.22 22 / 0.35); }
+  .shadow-cs2 { box-shadow: 0 0 18px oklch(0.72 0.19 60 / 0.35); }
+  .shadow-lol { box-shadow: 0 0 18px oklch(0.60 0.20 245 / 0.35); }
+
   header {
-    @apply sticky top-0 z-50 w-full border-b border-white/5 bg-[#0a0a0c] shadow-2xl;
+    @apply sticky top-0 z-50 w-full border-b border-white/5 shadow-2xl;
+    background: var(--sidebar);
+  }
+
+  header a, header button {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   .nav-link-glow {
-    @apply relative py-7 px-4 transition-all duration-300 text-muted-foreground/50 font-black tracking-widest text-[10px] italic flex items-center gap-1.5 uppercase;
-    @apply relative py-7 px-4 transition-all duration-300 text-white/70 font-black tracking-widest text-xs italic flex items-center gap-2 uppercase;
+    @apply relative py-7 px-4 transition-colors duration-200 text-white/75 font-bold tracking-wide text-sm flex items-center gap-2 uppercase;
   }
 
   .nav-link-glow::after {
     content: '';
-    @apply absolute bottom-0 left-0 w-0 h-[3px] bg-primary transition-all duration-500 ease-out shadow-[0_0_10px_var(--primary)];
+    @apply absolute bottom-0 left-0 w-0 h-[3px] bg-primary transition-all duration-300 ease-out;
   }
 
-  .nav-link-glow::before {
-    content: '';
-    @apply absolute inset-0 bg-primary/0 transition-all duration-300 -z-10;
-    clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
-  }
-
-  .nav-link-glow:hover::after {
-    @apply w-full;
-  }
-
-  .nav-link-glow:hover {
-    @apply text-white/90;
-    background: linear-gradient(180deg, transparent 0%, oklch(0.6 0.25 25 / 0.15) 100%);
-  }
-
-  .nav-link-glow.active {
-    @apply text-white;
-  }
-
-  .nav-link-glow.active::after {
-    @apply w-full;
-  }
+  .nav-link-glow:hover::after { @apply w-full; }
+  .nav-link-glow:hover { @apply text-white bg-white/[0.04]; }
+  .nav-link-glow.active { @apply text-white; }
+  .nav-link-glow.active::after { @apply w-full; }
 
   .btn-slanted {
-    @apply relative overflow-hidden bg-primary text-white px-8 py-2.5 transition-all duration-300 active:scale-95 font-black uppercase italic tracking-[0.15em] text-[10px];
+    @apply relative overflow-hidden bg-primary text-white px-7 py-2.5 transition-all duration-200 active:scale-95 font-bold uppercase tracking-wide text-sm;
     clip-path: polygon(12% 0, 100% 0, 88% 100%, 0% 100%);
   }
-
   .btn-slanted:hover {
-    @apply bg-white text-black drop-shadow-[0_0_15px_rgba(255,255,255,0.4)];
+    @apply bg-white text-black;
   }
 
   .search-hud {
-    @apply bg-[#14151a] border-l-2 border-primary/40 border-r-0 border-y-0 h-9 pl-10 pr-4 text-[10px] font-black italic tracking-[0.15em] uppercase text-white placeholder:text-muted-foreground/20 focus:outline-none focus:bg-[#1c1d26] focus:border-primary transition-all w-48 lg:w-60;
-    clip-path: polygon(4% 0, 100% 0, 96% 100%, 0% 100%);
+    @apply border border-white/10 h-10 pl-10 pr-4 text-sm text-white placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary transition-all w-56 lg:w-72;
+    background: var(--surface-1);
+  }
+  .search-hud:focus { background: var(--surface-2); }
+
+  .clip-slant { clip-path: polygon(0 0, 100% 0, 96% 100%, 0% 100%); }
+  .grid-bg { background-image: none; }
+
+  /* Card padrão do design system */
+  .ds-card {
+    @apply border border-white/[0.06] transition-all;
+    background: var(--surface-2);
+  }
+  .ds-card:hover {
+    @apply border-white/10;
+    background: var(--surface-3);
   }
 
-  .clip-slant { clip-path: polygon(0 0, 100% 0, 96% 100%, 0% 100%); } /* Mantido, mas pode ser removido se não se encaixar */
-  .grid-bg { background-image: none; } /* Removendo grid de fundo para um visual mais limpo */
-
-  @keyframes border-beam {
-    100% { offset-distance: 100%; }
-  }
+  @keyframes border-beam { 100% { offset-distance: 100%; } }
 
   @keyframes pulse-neon {
-    0%,100% { box-shadow: 0 0 10px oklch(0.6 0.25 25 / 0.4); }
-    50% { box-shadow: 0 0 20px oklch(0.6 0.25 25 / 0.7); }
+    0%,100% { box-shadow: 0 0 10px oklch(0.62 0.21 22 / 0.4); }
+    50% { box-shadow: 0 0 20px oklch(0.62 0.21 22 / 0.7); }
   }
   .animate-pulse-neon { animation: pulse-neon 2.2s ease-in-out infinite; }
+
   @keyframes scan {
     0% { transform: translateY(-100%); }
     100% { transform: translateY(100%); }
   }
-  .scanline::after { display: none; } /* Removendo efeito scanline */
+  .scanline::after { display: none; }
 }
 
 @font-face {

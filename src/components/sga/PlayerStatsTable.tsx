@@ -75,21 +75,21 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
     [pRaw, tRaw, tpRaw, rolesRaw, aggregateStats, limit],
   );
 
-  if (l1 || l2 || l3 || l4 || l5) return <div className="p-8 text-center text-muted-foreground animate-pulse font-display uppercase tracking-widest italic">Acessando Dossiê de Atletas...</div>;
+  if (l1 || l2 || l3 || l4 || l5) return <div className="p-8 text-center text-muted-foreground animate-pulse text-sm">Carregando jogadores...</div>;
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border/60 bg-card-grad">
+    <div className="overflow-x-auto ds-card">
       <table className="w-full text-sm min-w-[760px]">
-        <thead className="bg-muted/40 text-[10px] uppercase tracking-widest text-muted-foreground">
+        <thead className="bg-[var(--surface-3)] text-xs uppercase tracking-wide font-bold text-muted-foreground">
           <tr>
-            <th className="px-3 py-3 text-left">#</th>
-            <th className="px-3 py-3 text-left">Jogador</th>
-            <th className="px-3 py-3 text-left">Time</th>
-            <th className="px-3 py-3 text-left">KDA</th>
-            <th className="px-3 py-3 text-left">HS%</th>
-            <th className="px-3 py-3 text-left">Kills</th>
-            <th className="px-3 py-3 text-left">Deaths</th>
-            <th className="px-3 py-3 text-left">Assists</th>
+            <th className="px-4 py-4 text-left w-12">#</th>
+            <th className="px-4 py-4 text-left">Jogador</th>
+            <th className="px-4 py-4 text-left">Time</th>
+            <th className="px-4 py-4 text-right">KDA</th>
+            <th className="px-4 py-4 text-right">HS%</th>
+            <th className="px-4 py-4 text-right">Kills</th>
+            <th className="px-4 py-4 text-right">Deaths</th>
+            <th className="px-4 py-4 text-right">Assists</th>
           </tr>
         </thead>
         <tbody>
@@ -101,42 +101,44 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
               .map((part: string) => part[0]?.toUpperCase() || "")
               .join("");
             return (
-              <tr key={entry.id} className="border-t border-border/40 hover:bg-muted/30 transition">
-                <td className="px-3 py-2 font-display text-muted-foreground">{i + 1}</td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <div className="grid h-8 w-8 place-items-center rounded-full border border-primary/20 bg-primary/10 font-display text-[10px] text-primary">
+              <tr key={entry.id} className="border-t border-white/[0.06] hover:bg-white/[0.03] transition">
+                <td className="px-4 py-3 font-display text-base font-bold">
+                  <span className={i < 3 ? "text-primary" : "text-muted-foreground"}>{i + 1}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-9 w-9 place-items-center rounded-full border border-primary/30 bg-primary/15 font-display text-xs font-bold text-primary">
                       {initials || "P"}
                     </div>
-                    <div>
-                      <div className="font-display">{entry.playerName}</div>
-                      <div className="text-[10px] text-muted-foreground">ID {entry.playerId}</div>
+                    <div className="min-w-0">
+                      <div className="font-display text-sm font-bold uppercase tracking-tight truncate">{entry.playerName}</div>
+                      <div className="text-xs text-muted-foreground font-medium">ID {entry.playerId}</div>
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-4 py-3">
                   {entry.team ? (
                     <div className="flex items-center gap-2">
-                      <TeamLogo team={entry.team} size={24} />
-                      <span className="text-xs">{entry.teamName || entry.teamTag}</span>
+                      <TeamLogo team={entry.team} size={26} />
+                      <span className="text-sm font-semibold">{entry.teamName || entry.teamTag}</span>
                     </div>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground italic">Sem equipe</span>
+                    <span className="text-xs text-muted-foreground">Sem equipe</span>
                   )}
                 </td>
-                <td className="px-3 py-2 font-display text-primary">
+                <td className="px-4 py-3 text-right font-display text-lg font-black text-primary">
                   {Number(entry.kda || 0).toFixed(2)}
                 </td>
-                <td className="px-3 py-2 font-display text-primary">
+                <td className="px-4 py-3 text-right font-display text-base font-bold text-foreground">
                   {Number(entry.hs || 0).toFixed(1)}%
                 </td>
-                <td className="px-3 py-2 font-display text-white">
+                <td className="px-4 py-3 text-right font-display text-base font-bold">
                   {Number(entry.stats?.kills || 0)}
                 </td>
-                <td className="px-3 py-2 font-display text-white">
+                <td className="px-4 py-3 text-right font-display text-base font-bold">
                   {Number(entry.stats?.deaths || 0)}
                 </td>
-                <td className="px-3 py-2 font-display text-white">
+                <td className="px-4 py-3 text-right font-display text-base font-bold">
                   {Number(entry.stats?.assists || 0)}
                 </td>
               </tr>

@@ -779,7 +779,6 @@ function AdminBracketSection({
           <div className="h-0.5 w-12 bg-primary/40" />
         </div>
         <div className="h-px flex-1 bg-white/5 mb-2" />
-        <div className="text-[8px] font-black text-white/10 uppercase tracking-[0.5em] mb-1.5 hidden lg:block">SGA_BRACKET_ENGINE_v2.0</div>
       </div>
 
       <div className="relative max-h-[75vh] w-full overflow-x-auto overflow-y-auto pb-6 pr-4 custom-scrollbar">

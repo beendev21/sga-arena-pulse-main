@@ -53,9 +53,7 @@ function TeamsList() {
         >
           <div className="absolute -left-1 top-0 h-full w-full bg-gradient-to-r from-primary/5 to-transparent pointer-events-none" />
           
-          <div className="bg-primary text-primary-foreground text-[9px] font-black px-2 py-0.5 italic mb-4 inline-block tracking-wider shadow-[2px_2px_0px_rgba(0,0,0,0.5)]">
-            TEAM_HUB_v2.0
-          </div>
+         
           
           <h1 className="font-display text-4xl sm:text-6xl md:text-7xl uppercase leading-[0.95] font-black italic tracking-tight text-white">
             Conheça os <span className="text-primary">Times</span> <br />

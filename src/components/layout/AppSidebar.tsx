@@ -3,14 +3,13 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Link } from "@tanstack/react-router";
-import { Home, Trophy, Swords, User, LayoutDashboard, Image as ImgIcon } from "lucide-react";
+import { Home, Trophy, Swords, User, LayoutDashboard, Image as ImgIcon, X } from "lucide-react";
 
 const items = [
   { title: "Home", url: "/", icon: Home },
@@ -22,25 +21,43 @@ const items = [
 ];
 
 export function AppSidebar() {
-  const { setOpenMobile } = useSidebar();
+  const { setOpenMobile, setOpen } = useSidebar();
+
+  const close = () => {
+    setOpenMobile(false);
+    setOpen(false);
+  };
 
   return (
-    <Sidebar collapsible="offcanvas" className="z-[110] border-none">
-      <SidebarContent className="bg-[#0b0c11] border-none [will-change:transform] overflow-x-hidden">
+    <Sidebar collapsible="offcanvas" className="z-[90] border-none">
+      <SidebarContent className="bg-[var(--sidebar)] border-none overflow-x-hidden">
+        {/* Spacer que fica atrás da navbar fixa (h-20 = 80px) */}
+        <div className="h-20 shrink-0" />
+
+        {/* Header com botão de fechar — aparece logo abaixo da navbar */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
+          <span className="font-display text-xs font-bold uppercase tracking-wider text-white/60">Menu</span>
+          <button
+            type="button"
+            onClick={close}
+            aria-label="Fechar menu"
+            className="h-9 w-9 grid place-items-center text-white/80 hover:text-white hover:bg-white/10 active:bg-white/5 transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
         <SidebarGroup>
-          <SidebarGroupLabel className="font-display text-white/40 font-black uppercase italic tracking-[0.2em] text-[10px] px-6 pt-12 pb-4">
-            Menu Principal
-          </SidebarGroupLabel>
-          <SidebarGroupContent className="px-2">
+          <SidebarGroupContent className="px-2 pt-2">
             <SidebarMenu className="gap-1">
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild onClick={() => setOpenMobile(false)} className="h-auto p-0">
-                    <Link 
-                      to={item.url} 
-                      className="flex items-center gap-4 px-5 py-4 rounded-none hover:bg-primary/5 active:scale-[0.98] transition-all font-display text-sm italic uppercase font-black tracking-widest text-white/70 hover:text-white group-data-[active=true]:text-primary group-data-[active=true]:bg-primary/5 group-data-[active=true]:border-l-2 group-data-[active=true]:border-primary"
+                  <SidebarMenuButton asChild onClick={close} className="h-auto p-0">
+                    <Link
+                      to={item.url}
+                      className="flex items-center gap-4 px-5 py-4 rounded-none hover:bg-primary/5 active:scale-[0.98] transition-all font-display text-sm uppercase font-bold tracking-wide text-white/80 hover:text-white group-data-[active=true]:text-primary group-data-[active=true]:bg-primary/5 group-data-[active=true]:border-l-2 group-data-[active=true]:border-primary"
                     >
-                      <item.icon className="h-4 w-4 text-muted-foreground/40 group-hover:text-primary group-data-[active=true]:text-primary transition-colors" />
+                      <item.icon className="h-4 w-4 text-muted-foreground/60 group-hover:text-primary group-data-[active=true]:text-primary transition-colors" />
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>

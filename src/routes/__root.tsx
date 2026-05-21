@@ -10,17 +10,24 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import appCss from "../styles.css?url";
 
 /**
- * Componente para exibição de erro 404 (Not Found).
- * Integrado nativamente ao TanStack Router para capturar rotas inexistentes.
+ * Página 404 — rota inexistente.
  */
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-hero px-4">
-      <div className="max-w-md text-center">
-        <h1 className="font-display text-8xl text-neon">404</h1>
-        <h2 className="mt-4 text-xl">Página não encontrada</h2>
-        <Link to="/" className="mt-6 inline-flex items-center justify-center rounded-md bg-neon px-6 py-2 font-medium text-primary-foreground shadow-neon">
-          Voltar para Home
+    <div className="flex min-h-[80vh] items-center justify-center bg-background px-6">
+      <div className="ds-card max-w-lg w-full p-10 text-center">
+        <div className="font-display text-7xl md:text-8xl font-black italic text-primary leading-none">404</div>
+        <h2 className="mt-5 font-display text-2xl md:text-3xl font-black uppercase tracking-tight text-white">
+          Página não encontrada
+        </h2>
+        <p className="mt-3 text-base text-muted-foreground">
+          A página que você procurou não existe ou foi movida.
+        </p>
+        <Link
+          to="/"
+          className="mt-7 inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-6 h-11 font-bold uppercase tracking-wide text-sm hover:bg-primary/90 transition-colors"
+        >
+          Voltar para a Home
         </Link>
       </div>
     </div>
@@ -28,20 +35,44 @@ function NotFoundComponent() {
 }
 
 /**
- * Boundary de Erro Global.
- * Captura falhas inesperadas na renderização ou no carregamento de dados (loaders).
+ * Boundary de Erro Global. Em produção mostra mensagem amigável;
+ * em dev mostra o detalhe técnico pra facilitar debug.
  */
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
+  const isDev = typeof import.meta !== "undefined" && (import.meta as any).env?.DEV;
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold">Algo deu errado</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-        <button onClick={() => { router.invalidate(); reset(); }}
-          className="mt-6 rounded-md bg-neon px-4 py-2 text-sm font-medium text-primary-foreground shadow-neon">
-          Tentar novamente
-        </button>
+    <div className="flex min-h-[80vh] items-center justify-center bg-background px-6">
+      <div className="ds-card max-w-lg w-full p-10 text-center">
+        <div className="inline-flex items-center justify-center h-14 w-14 mb-5 bg-primary/15 border border-primary/30 text-primary text-3xl font-bold">
+          !
+        </div>
+        <h2 className="font-display text-2xl md:text-3xl font-black uppercase tracking-tight text-white">
+          Algo deu errado
+        </h2>
+        <p className="mt-3 text-base text-muted-foreground">
+          Não conseguimos carregar essa parte da plataforma. Tente novamente em alguns instantes.
+        </p>
+        {isDev && error?.message && (
+          <pre className="mt-5 text-left text-xs font-mono text-muted-foreground/80 bg-[var(--surface-1)] border border-white/[0.06] p-3 overflow-auto max-h-32">
+            {error.message}
+          </pre>
+        )}
+        <div className="mt-7 flex items-center justify-center gap-3">
+          <button
+            onClick={() => { router.invalidate(); reset(); }}
+            className="inline-flex items-center justify-center bg-primary text-primary-foreground px-6 h-11 font-bold uppercase tracking-wide text-sm hover:bg-primary/90 transition-colors"
+          >
+            Tentar novamente
+          </button>
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center border border-white/15 text-white px-6 h-11 font-bold uppercase tracking-wide text-sm hover:bg-white/5 transition-colors"
+          >
+            Ir para Home
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -63,7 +94,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;700;900&display=swap" },
     ],
   }),
   shellComponent: RootShell,
@@ -72,11 +103,33 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+/**
+ * Critical CSS inline — evita FOUC (flash de conteúdo sem estilo).
+ * Aplica bg/cor/fonte ANTES do appCss carregar.
+ */
+const CRITICAL_CSS = `
+  :root { color-scheme: dark; }
+  html, body {
+    background-color: #1f2227;
+    color: #f4f4f5;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-weight: 500;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body { visibility: visible; }
+  a { color: inherit; text-decoration: none; }
+`;
+
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className="dark">
-      <head><HeadContent /></head>
-      <body>
+    <html lang="pt-BR" className="dark" style={{ backgroundColor: "#1f2227", colorScheme: "dark" }}>
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: CRITICAL_CSS }} />
+        <HeadContent />
+      </head>
+      <body style={{ backgroundColor: "#1f2227", color: "#f4f4f5" }}>
         {children}
         <Scripts />
       </body>

@@ -15,14 +15,14 @@ export function Header() {
   }, [location.pathname]);
 
   const navLinks = [
-    { name: "Home", to: "/", index: "01" },
-    { name: "Ranking", to: "/tournaments", index: "02" },
-    { name: "Times", to: "/teams", index: "03" },
-    { name: "Partidas", to: "/matches", index: "04" },
-    { name: "Jogadores", to: "/players", index: "05" },
-    { name: "Chaveamento", to: "/bracket", index: "06" },
-    { name: "Highlights", to: "/highlights", index: "07" },
-    { name: "Galeria", to: "/gallery", index: "08" },
+    { name: "Home", to: "/" },
+    { name: "Ranking", to: "/tournaments" },
+    { name: "Times", to: "/teams" },
+    { name: "Partidas", to: "/matches" },
+    { name: "Jogadores", to: "/players" },
+    { name: "Chaveamento", to: "/bracket" },
+    { name: "Highlights", to: "/highlights" },
+    { name: "Galeria", to: "/gallery" },
   ];
 
   return (
@@ -39,7 +39,7 @@ export function Header() {
             </div>
             <div className="flex flex-col border-l border-white/10 pl-3">
               <span className="font-display text-xl font-black leading-none tracking-tighter text-white">SGA</span>
-              <span className="font-display text-[8px] text-primary/80 font-bold leading-none tracking-[0.4em] italic uppercase mt-1">Santos Games Arena</span>
+              <span className="font-display text-[10px] text-primary/80 font-bold leading-none tracking-[0.25em] uppercase mt-1">Santos Games Arena</span>
             </div>
           </Link>
 
@@ -50,9 +50,8 @@ export function Header() {
                 key={link.name}
                 to={link.to as any}
                 activeProps={{ className: "active" }}
-                className="nav-link-glow group/nav"
+                className="nav-link-glow"
               >
-                <span className="text-[7px] opacity-30 font-black group-hover/nav:text-primary group-hover/nav:opacity-100 transition-all">{link.index}</span>
                 <span>{link.name}</span>
               </Link>
             ))}
@@ -63,10 +62,10 @@ export function Header() {
         <div className="flex items-center gap-4 h-full">
           {/* SEARCH BAR */}
           <div className="hidden md:flex items-center relative group">
-            <Search className="absolute left-4 h-3.5 w-3.5 text-muted-foreground/30 z-10 transition-all group-focus-within:text-primary group-focus-within:scale-110" />
-            <input 
-              type="text" 
-              placeholder="SGA // SEARCH_HUD" 
+            <Search className="absolute left-4 h-4 w-4 text-muted-foreground/40 z-10 transition-all group-focus-within:text-primary" />
+            <input
+              type="text"
+              placeholder="Buscar times, jogadores..."
               className="search-hud"
             />
           </div>
@@ -82,8 +81,8 @@ export function Header() {
             {user ? (
               <div className="flex items-center gap-3 pl-2 group relative">
                 <div className="flex flex-col items-end hidden md:flex select-none">
-                  <span className="text-[10px] font-black text-white italic leading-none">{user.nick}</span>
-                  <span className="text-[8px] text-primary font-bold tracking-widest uppercase leading-none mt-1">Authorized Player</span>
+                  <span className="text-sm font-bold text-white leading-none">{user.nick}</span>
+                  <span className="text-[11px] text-primary font-semibold tracking-wide uppercase leading-none mt-1">Jogador</span>
                 </div>
                 <div className="relative">
                   <div className="h-9 w-9 border border-primary/40 p-0.5 group-hover:border-primary transition-colors">
@@ -91,7 +90,7 @@ export function Header() {
                   </div>
                   <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-[#0a0a0c] rounded-full" />
                 </div>
-                <button onClick={() => logout()} title="Sair" className="p-2 text-muted-foreground/40 hover:text-primary transition-colors">
+                <button onClick={() => logout()} title="Sair" className="p-2 text-muted-foreground/60 hover:text-primary transition-colors">
                   <LogOut className="h-4 w-4" />
                 </button>
               </div>
@@ -99,7 +98,7 @@ export function Header() {
               <Link to="/login" className="hidden sm:block">
                 <button className="btn-slanted flex items-center gap-2 group">
                   <Play className="h-3 w-3 fill-current transition-transform group-hover:translate-x-0.5" />
-                  <span>Login</span>
+                  <span>Entrar</span>
                 </button>
               </Link>
             )}
@@ -120,25 +119,27 @@ export function Header() {
         <div className="xl:hidden fixed inset-0 top-20 bg-[#0a0a0c] z-50 border-t border-white/5 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex flex-col p-6 gap-1 h-full">
             <div className="flex items-center justify-between mb-4">
-              <div className="text-[9px] font-black tracking-[0.3em] text-primary/40 italic uppercase">System Navigator HUD</div>
-              {user && <span className="text-[10px] text-white/40 italic font-bold">{user.nick} logged_in</span>}
+              <div className="text-xs font-bold tracking-wide text-primary/60 uppercase">Menu</div>
+              {user && (
+                <span className="text-xs text-white/60 font-semibold flex items-center gap-2">
+                  {user.nick}
+                  <span className="inline-block h-2 w-2 bg-green-500 rounded-full" />
+                </span>
+              )}
             </div>
             {navLinks.map((link) => (
               <Link
                 key={link.name}
                 to={link.to as any}
-                className="py-4 border-b border-white/[0.02] text-xs font-black italic tracking-[0.25em] text-muted-foreground/60 hover:text-white hover:bg-primary/5 hover:pl-4 transition-all flex items-center justify-between group"
+                className="py-4 border-b border-white/[0.04] text-sm font-bold tracking-wide text-white/80 hover:text-white hover:bg-primary/5 hover:pl-4 transition-all flex items-center justify-between group uppercase"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-[8px] text-primary/40 font-black">{link.index}</span>
-                  {link.name.toUpperCase()}
-                </div>
+                {link.name}
                 <Play className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
             ))}
             {user && (
-              <button onClick={() => logout()} className="mt-auto py-5 text-xs font-black italic tracking-[0.25em] text-primary hover:text-white transition-all flex items-center justify-between border-t border-white/5">
-                TERMINATE_SESSION <LogOut className="h-4 w-4" />
+              <button onClick={() => logout()} className="mt-auto py-5 text-sm font-bold tracking-wide text-primary hover:text-white transition-all flex items-center justify-between border-t border-white/5 uppercase">
+                Sair <LogOut className="h-4 w-4" />
               </button>
             )}
           </div>

@@ -4,14 +4,13 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { useAuth } from "@/store/auth";
 
 const links = [
-  { to: "/", label: "Home", index: "01" },
-  { to: "/tournaments", label: "Ranking", index: "02" },
-  { to: "/teams", label: "Times", index: "03" },
-  { to: "/matches", label: "Partidas", index: "04" },
-  { to: "/players", label: "Jogadores", index: "05" },
-  { to: "/bracket", label: "Chaveamento", index: "06" },
-  { to: "/highlights", label: "Highlights", index: "07" },
-  { to: "/gallery", label: "Galeria", index: "08" },
+  { to: "/tournaments", label: "Ranking" },
+  { to: "/teams", label: "Times" },
+  { to: "/matches", label: "Partidas" },
+  { to: "/players", label: "Jogadores" },
+  { to: "/bracket", label: "Chaveamento" },
+  { to: "/highlights", label: "Highlights" },
+  { to: "/gallery", label: "Galeria" },
 ];
 
 export function Navbar() {
@@ -32,15 +31,15 @@ export function Navbar() {
             <Menu className="h-6 w-6" />
           </button>
 
-          <Link to="/" className="flex items-center gap-3 group outline-none">
-            <div className="relative h-11 w-11 bg-primary flex items-center justify-center transition-all duration-500 group-hover:bg-white group-hover:scale-110 shadow-[0_0_20px_oklch(0.6_0.25_25_/_0.3)] group-hover:shadow-[0_0_25px_white]">
-              <span className="font-display text-white group-hover:text-black text-xl font-black italic transition-colors">SGA</span>
-              <div className="absolute -top-0.5 -left-0.5 w-2.5 h-2.5 border-t-2 border-l-2 border-primary group-hover:border-white transition-colors" />
-              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 border-b-2 border-r-2 border-primary group-hover:border-white transition-colors" />
-            </div>
-            <div className="flex flex-col border-l border-white/10 pl-3 hidden sm:flex">
-              <span className="font-display text-xl font-black leading-none tracking-tighter text-white">SGA</span>
-              <span className="font-display text-[8px] text-primary/80 font-bold leading-none tracking-[0.4em] italic uppercase mt-1">Santos Games Arena</span>
+          <Link to="/" className="flex shrink-0 items-center gap-3 group outline-none">
+            <img
+              src="/sga-logo.png"
+              alt="Santos Games Arena"
+              className="h-10 w-auto transition-transform duration-300 group-hover:scale-105"
+            />
+            <div className="hidden sm:flex flex-col border-l border-white/10 pl-3">
+              <span className="font-display text-base font-black leading-none tracking-tight text-white uppercase whitespace-nowrap">Santos Games</span>
+              <span className="font-display text-xs text-primary font-bold leading-none tracking-wider uppercase mt-1 whitespace-nowrap">Arena</span>
             </div>
           </Link>
 
@@ -51,9 +50,8 @@ export function Navbar() {
                 key={l.to}
                 to={l.to as any}
                 activeProps={{ className: "active" }}
-                className="nav-link-glow group/nav"
+                className="nav-link-glow"
               >
-                <span className="text-[7px] opacity-30 font-black group-hover/nav:text-primary group-hover/nav:opacity-100 transition-all">{l.index}</span>
                 <span>{l.label}</span>
               </Link>
             ))}
@@ -61,41 +59,39 @@ export function Navbar() {
               <Link
                 to="/admin"
                 activeProps={{ className: "active" }}
-                className="nav-link-glow group/nav"
+                className="nav-link-glow"
               >
-                <span className="text-[7px] opacity-30 font-black group-hover/nav:text-primary group-hover/nav:opacity-100 transition-all">09</span>
                 <span>Admin</span>
               </Link>
             )}
           </nav>
         </div>
 
-        {/* HUD ACTIONS */}
         <div className="flex items-center gap-4 h-full">
           <div className="hidden md:flex items-center relative group">
-            <Search className="absolute left-4 h-3.5 w-3.5 text-muted-foreground/30 z-10 transition-all group-focus-within:text-primary group-focus-within:scale-110" />
-            <input 
-              type="text" 
-              placeholder="SGA // SEARCH_HUD" 
+            <Search className="absolute left-4 h-4 w-4 text-muted-foreground/40 z-10 transition-all group-focus-within:text-primary" />
+            <input
+              type="text"
+              placeholder="Buscar times, jogadores..."
               className="search-hud"
             />
           </div>
 
           <div className="flex items-center gap-2 h-full">
-        <button 
-              className="hidden sm:flex p-2.5 text-muted-foreground/40 hover:text-white transition-all border border-transparent hover:bg-white/5 relative"
+            <button
+              className="hidden sm:flex p-2.5 text-muted-foreground/60 hover:text-white transition-all border border-transparent hover:bg-white/5 relative"
             >
               <Bell className="h-4.5 w-4.5" />
               <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_5px_var(--primary)]" />
             </button>
-            
+
             <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block" />
 
             {user ? (
               <div className="flex items-center gap-3 pl-2 group relative">
                 <div className="flex flex-col items-end hidden lg:flex select-none">
-                  <span className="text-[10px] font-black text-white italic leading-none">{user.nick}</span>
-                  <span className="text-[8px] text-primary font-bold tracking-widest uppercase leading-none mt-1">Authorized Player</span>
+                  <span className="text-sm font-bold text-white leading-none">{user.nick}</span>
+                  <span className="text-[11px] text-primary font-semibold tracking-wide uppercase leading-none mt-1">{user.role === "Administrador" ? "Admin" : "Jogador"}</span>
                 </div>
                 <Link to={user.role === "Administrador" ? "/admin" : "/profile" as any}>
                   <div className="relative">
@@ -105,10 +101,10 @@ export function Navbar() {
                     <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-[#0a0a0c] rounded-full" />
                   </div>
                 </Link>
-                <button 
-                  onClick={() => logout()} 
-                  title="Sair" 
-                  className="p-2 text-muted-foreground/40 hover:text-primary transition-colors"
+                <button
+                  onClick={() => logout()}
+                  title="Sair"
+                  className="p-2 text-muted-foreground/60 hover:text-primary transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
                 </button>
@@ -117,7 +113,7 @@ export function Navbar() {
               <Link to="/login" className="hidden sm:block">
                 <button className="btn-slanted flex items-center gap-2 group">
                   <Play className="h-3 w-3 fill-current transition-transform group-hover:translate-x-0.5" />
-                  <span>Login</span>
+                  <span>Entrar</span>
                 </button>
               </Link>
             )}

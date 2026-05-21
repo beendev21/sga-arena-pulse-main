@@ -25,53 +25,61 @@ export function MatchCard({ m }: { m: Match }) {
   const isCS2 = !isValorant && (name.includes("cs") || name.includes("counter-strike"));
   const isLoL = name.includes("league") || name.includes("lol");
 
+  const accentBorder = isValorant ? "hover:border-valorant/60" :
+                       isCS2 ? "hover:border-cs2/60" :
+                       isLoL ? "hover:border-lol/60" :
+                       "hover:border-primary/60";
+
   return (
     <Link
       to="/matches/$id" params={{ id: m.id } as any}
-      className={`block rounded-lg border border-border/60 bg-card-grad p-4 transition-all ${
-        isValorant ? "hover:bg-valorant/10 hover:border-valorant/40 hover:shadow-valorant" : 
-        isCS2 ? "hover:bg-cs2/10 hover:border-cs2/40 hover:shadow-cs2" : 
-        isLoL ? "hover:bg-lol/20 hover:border-lol/40 hover:shadow-lol" : 
-        "hover:border-primary/60 hover:shadow-neon"
-      }`}
+      className={`block ds-card p-5 ${accentBorder}`}
     >
-      <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
-        <span className="uppercase tracking-widest">{tournamentName}</span>
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">
+          {tournamentName}
+        </span>
         <StatusBadge status={m.status} />
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <div className={`flex items-center gap-3 ${winnerA ? "" : "opacity-80"}`}>
-          <TeamLogo team={teamA} size={44} />
+        <div className={`flex items-center gap-3 ${winnerA ? "" : "opacity-90"}`}>
+          <TeamLogo team={teamA} size={48} />
           <div className="min-w-0">
-            <div className="font-display text-sm md:text-base truncate">{teamA.name || "Aguardando Time A"}</div>
-            <div className="text-xs text-muted-foreground">{teamA.tag || "TBD"}</div>
+            <div className="font-display text-base md:text-lg font-bold uppercase tracking-tight truncate leading-tight">
+              {teamA.name || "Aguardando Time A"}
+            </div>
+            <div className="text-xs font-medium text-muted-foreground mt-0.5">{teamA.tag || "TBD"}</div>
           </div>
         </div>
-        <div className="text-center">
+        <div className="text-center min-w-[80px]">
           {m.status === "Agendada" ? (
             <div>
-              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">VS</div>
-              <div className="text-[10px] md:text-xs mt-1">
+              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">VS</div>
+              <div className="text-xs font-semibold mt-1 text-foreground/80">
                 {m.startsAt ? formatDateTimeBR(m.startsAt) : "Data a confirmar"}
               </div>
             </div>
           ) : (
-            <div className="font-display text-2xl flex items-center gap-2">
-              <span className={winnerA ? "text-primary text-shadow" : ""}>{m.scoreA}</span>
-              <span className="text-muted-foreground">:</span>
-              <span className={winnerB ? "text-primary" : ""}>{m.scoreB}</span>
+            <div className="font-display text-3xl font-black flex items-center justify-center gap-2 leading-none">
+              <span className={winnerA ? "text-primary" : "text-foreground/80"}>{m.scoreA}</span>
+              <span className="text-muted-foreground/60">:</span>
+              <span className={winnerB ? "text-primary" : "text-foreground/80"}>{m.scoreB}</span>
             </div>
           )}
-          <div className="text-[10px] uppercase tracking-widest text-muted-foreground mt-1">
-            {m.map || "Bracket"}
-          </div>
+          {m.map && (
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-2">
+              {m.map}
+            </div>
+          )}
         </div>
-        <div className={`flex items-center gap-3 justify-end ${winnerB ? "" : "opacity-80"}`}>
+        <div className={`flex items-center gap-3 justify-end ${winnerB ? "" : "opacity-90"}`}>
           <div className="min-w-0 text-right">
-            <div className="font-display truncate">{teamB.name || "Aguardando Time B"}</div>
-            <div className="text-xs text-muted-foreground">{teamB.tag || "TBD"}</div>
+            <div className="font-display text-base md:text-lg font-bold uppercase tracking-tight truncate leading-tight">
+              {teamB.name || "Aguardando Time B"}
+            </div>
+            <div className="text-xs font-medium text-muted-foreground mt-0.5">{teamB.tag || "TBD"}</div>
           </div>
-          <TeamLogo team={teamB} size={44} />
+          <TeamLogo team={teamB} size={48} />
         </div>
       </div>
     </Link>
