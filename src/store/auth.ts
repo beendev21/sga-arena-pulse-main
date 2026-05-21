@@ -9,6 +9,7 @@ export type User = {
   role: string;
   isActive: boolean;
   lastLoginAt: string;
+  avatar?: string;
 };
 
 const syncSessionAuth = (user: User | null, token: string | null) => {

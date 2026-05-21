@@ -90,13 +90,23 @@ export function Navbar() {
             {user ? (
               <div className="flex items-center gap-3 pl-2 group relative">
                 <div className="flex flex-col items-end hidden lg:flex select-none">
-                  <span className="text-sm font-bold text-white leading-none">{user.nick}</span>
+                  <span className="text-sm font-bold text-white leading-none">{user.name || user.login}</span>
                   <span className="text-[11px] text-primary font-semibold tracking-wide uppercase leading-none mt-1">{user.role === "Administrador" ? "Admin" : "Jogador"}</span>
                 </div>
                 <Link to={user.role === "Administrador" ? "/admin" : "/profile" as any}>
                   <div className="relative">
                     <div className="h-9 w-9 border border-primary/40 p-0.5 group-hover:border-primary transition-colors">
-                      <img src={user.avatar} alt={user.nick} className="h-full w-full object-cover" />
+                      <img
+                        src={user.avatar || "/avatar-default.svg"}
+                        alt={user.name || user.login}
+                        onError={(event) => {
+                          const target = event.currentTarget;
+                          if (!target.src.endsWith("/avatar-default.svg")) {
+                            target.src = "/avatar-default.svg";
+                          }
+                        }}
+                        className="h-full w-full object-cover"
+                      />
                     </div>
                     <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-[#0a0a0c] rounded-full" />
                   </div>

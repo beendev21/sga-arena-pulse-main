@@ -73,15 +73,25 @@ function ProfilePage() {
                 <div className="relative mb-8">
                   <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full scale-110 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                   <div className="relative overflow-hidden border-2 border-primary/20 group-hover:border-primary transition-colors duration-500">
-                    <img src={user.avatar} alt={user.nick} className="w-40 h-40 object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-110 group-hover:scale-100" />
+                    <img
+                      src={user.avatar || "/avatar-default.svg"}
+                      alt={user.name || user.login}
+                      onError={(event) => {
+                        const target = event.currentTarget;
+                        if (!target.src.endsWith("/avatar-default.svg")) {
+                          target.src = "/avatar-default.svg";
+                        }
+                      }}
+                      className="w-40 h-40 object-cover grayscale group-hover:grayscale-0 transition-all duration-700 scale-110 group-hover:scale-100"
+                    />
                   </div>
                   <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 text-[8px] font-black uppercase italic tracking-widest shadow-xl">
                     Status: Online
                   </div>
                 </div>
-                
-                <h2 className="font-display text-4xl font-black italic text-white uppercase tracking-tighter mb-1">{user.nick}</h2>
-                <p className="text-muted-foreground text-[10px] uppercase tracking-[0.3em] mb-8 italic">{user.name}</p>
+
+                <h2 className="font-display text-4xl font-black italic text-white uppercase tracking-tighter mb-1">{user.name || user.login}</h2>
+                <p className="text-muted-foreground text-[10px] uppercase tracking-[0.3em] mb-8 italic">{user.email}</p>
                 
                 <div className="w-full space-y-4 pt-8 border-t border-white/5">
                   <div className="flex justify-between text-[10px] font-black uppercase italic tracking-widest text-white/40">

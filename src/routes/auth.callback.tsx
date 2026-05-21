@@ -30,17 +30,19 @@ function AuthCallback() {
         }
 
         const userInfo = result.userInfo;
+        const player = userInfo?.player;
         const user = {
           id: result.userId,
-          name: userInfo?.name ?? userInfo?.login ?? "",
+          name: player?.nickname || userInfo?.login || "",
           email: userInfo?.email ?? "",
           login: userInfo?.login ?? "",
           role: userInfo?.role ?? "",
           isActive: userInfo?.isActive ?? true,
-          lastLoginAt: userInfo?.lastLoginAt ?? ""
+          lastLoginAt: userInfo?.lastLoginAt ?? "",
+          avatar: player?.avatarUrl || undefined
         };
 
-        login(user, "", Boolean(userInfo?.playerId));
+        login(user, "", Boolean(player?.id));
         navigate({ to: "/" });
       } catch (err: any) {
         setError(err?.message ?? "Nao foi possivel autenticar.");

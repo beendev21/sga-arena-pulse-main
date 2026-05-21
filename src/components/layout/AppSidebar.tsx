@@ -10,18 +10,22 @@ import {
 } from "@/components/ui/sidebar";
 import { Link } from "@tanstack/react-router";
 import { Home, Trophy, Swords, User, LayoutDashboard, Image as ImgIcon, X } from "lucide-react";
+import { useAuth } from "@/store/auth";
 
-const items = [
+const baseItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Ranking", url: "/tournaments", icon: Trophy },
   { title: "Partidas", url: "/matches", icon: Swords },
   { title: "Jogadores", url: "/players", icon: User },
   { title: "Galeria", url: "/gallery", icon: ImgIcon },
-  { title: "Admin", url: "/admin", icon: LayoutDashboard },
 ];
+
+const adminItem = { title: "Admin", url: "/admin", icon: LayoutDashboard };
 
 export function AppSidebar() {
   const { setOpenMobile, setOpen } = useSidebar();
+  const isAdmin = useAuth((s) => s.isAdmin);
+  const items = isAdmin ? [...baseItems, adminItem] : baseItems;
 
   const close = () => {
     setOpenMobile(false);
