@@ -25,6 +25,7 @@ import { Route as TournamentsIdRouteImport } from './routes/tournaments.$id'
 import { Route as TeamsTeamIdRouteImport } from './routes/teams.$teamId'
 import { Route as PlayersPlayerIdRouteImport } from './routes/players.$playerId'
 import { Route as MatchesIdRouteImport } from './routes/matches.$id'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
 const TournamentsRoute = TournamentsRouteImport.update({
   id: '/tournaments',
@@ -106,6 +107,11 @@ const MatchesIdRoute = MatchesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => MatchesRoute,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/teams': typeof TeamsRouteWithChildren
   '/tournaments': typeof TournamentsRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/matches/$id': typeof MatchesIdRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
   '/teams/$teamId': typeof TeamsTeamIdRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/teams': typeof TeamsRouteWithChildren
   '/tournaments': typeof TournamentsRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/matches/$id': typeof MatchesIdRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
   '/teams/$teamId': typeof TeamsTeamIdRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/teams': typeof TeamsRouteWithChildren
   '/tournaments': typeof TournamentsRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
   '/matches/$id': typeof MatchesIdRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
   '/teams/$teamId': typeof TeamsTeamIdRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/teams'
     | '/tournaments'
+    | '/auth/callback'
     | '/matches/$id'
     | '/players/$playerId'
     | '/teams/$teamId'
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/teams'
     | '/tournaments'
+    | '/auth/callback'
     | '/matches/$id'
     | '/players/$playerId'
     | '/teams/$teamId'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/teams'
     | '/tournaments'
+    | '/auth/callback'
     | '/matches/$id'
     | '/players/$playerId'
     | '/teams/$teamId'
@@ -232,6 +244,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   TeamsRoute: typeof TeamsRouteWithChildren
   TournamentsRoute: typeof TournamentsRouteWithChildren
+  AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -348,6 +361,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MatchesIdRouteImport
       parentRoute: typeof MatchesRoute
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -408,6 +428,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   TeamsRoute: TeamsRouteWithChildren,
   TournamentsRoute: TournamentsRouteWithChildren,
+  AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

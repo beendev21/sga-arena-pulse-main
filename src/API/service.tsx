@@ -92,6 +92,7 @@ const ApiService = {
     const response = await fetch(getFullUrl(endpoint), {
       method: "GET",
       headers: buildHeaders(options),
+      credentials: "include",
     });
     return handleResponse(response);
   },
@@ -102,6 +103,7 @@ const ApiService = {
       method: "POST",
       headers: buildHeaders({ ...options, includeJsonContentType: true }),
       body: JSON.stringify(data),
+      credentials: "include",
     });
     return handleResponse(response);
   },
@@ -111,6 +113,7 @@ const ApiService = {
       method: "POST",
       headers: buildHeaders(options),
       body: formData,
+      credentials: "include",
     });
     return handleResponse(response);
   },
@@ -120,6 +123,7 @@ const ApiService = {
       method: "PUT",
       headers: buildHeaders({ ...options, includeJsonContentType: true }),
       body: JSON.stringify(data),
+      credentials: "include",
     });
     return handleResponse(response);
   },
@@ -127,6 +131,7 @@ const ApiService = {
     const response = await fetch(getFullUrl(endpoint), {
       method: "DELETE",
       headers: buildHeaders(options),
+      credentials: "include",
     });
     return handleResponse(response);
   },
