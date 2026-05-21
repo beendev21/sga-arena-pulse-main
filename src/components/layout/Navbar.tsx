@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Bell, Search, Menu, Play, LogOut } from "lucide-react";
+import { Bell, Search, Menu, Play, LogOut, LayoutDashboard } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAuth } from "@/store/auth";
 
@@ -93,7 +93,16 @@ export function Navbar() {
                   <span className="text-sm font-bold text-white leading-none">{user.name || user.login}</span>
                   <span className="text-[11px] text-primary font-semibold tracking-wide uppercase leading-none mt-1">{user.role === "Administrador" ? "Admin" : "Jogador"}</span>
                 </div>
-                <Link to={user.role === "Administrador" ? "/admin" : "/profile" as any}>
+                {user.role === "Administrador" && (
+                  <Link
+                    to="/admin"
+                    title="Painel Admin"
+                    className="p-2 text-muted-foreground/60 hover:text-primary transition-colors border border-transparent hover:bg-white/5"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                  </Link>
+                )}
+                <Link to="/profile">
                   <div className="relative">
                     <div className="h-9 w-9 border border-primary/40 p-0.5 group-hover:border-primary transition-colors">
                       <img
