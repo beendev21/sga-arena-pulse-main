@@ -88,8 +88,16 @@ function TeamPage() {
   if (l1 || l2 || l3 || !participantsRaw || !rolesRaw) return <div className="p-10 text-center font-display uppercase italic">Recuperando registros de equipe...</div>;
   if (!team) return <div className="p-10 text-center">Time não encontrado.</div>;
 
-  const wins = Number((team as any)?.wins) || 0;
-  const losses = Number((team as any)?.losses) || 0;
+  const { wins, losses } = useMemo(() => {
+    const entries = Array.isArray((matchTeamsRaw as any)?.result)
+      ? (matchTeamsRaw as any).result
+      : (matchTeamsRaw as any)?.result?.$values ?? [];
+    const teamEntries = entries.filter((mt: any) => Number(mt.teamId) === Number(teamId));
+    return {
+      wins: teamEntries.filter((mt: any) => mt.isWinner).length,
+      losses: teamEntries.filter((mt: any) => !mt.isWinner).length,
+    };
+  }, [matchTeamsRaw, teamId]);
   const trophies = Number((team as any)?.trophies) || 0;
   const wr = Math.round((wins / Math.max(wins + losses, 1)) * 100);
 

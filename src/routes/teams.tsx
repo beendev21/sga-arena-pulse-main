@@ -15,18 +15,33 @@ export const Route = createFileRoute("/teams")({
 function TeamsList() {
   const [game, setGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
   const apiTeams = useApiController("Teams");
+  const apiMatchTeams = useApiController("Matchteams");
 
   const { data: tRaw, isLoading } = useQuery({
     queryKey: ["teams"],
     queryFn: () => apiTeams.getAll({ includeAuth: false })
   });
 
+  const { data: mtRaw } = useQuery({
+    queryKey: ["matchteams"],
+    queryFn: () => apiMatchTeams.getAll({ includeAuth: false })
+  });
+
   const parse = useCallback((r: any) => unwrapList(r), []);
 
-  const teams = useMemo(() => parse(tRaw), [tRaw, parse]);
-  
+  const teams = useMemo(() => {
+    const list = parse(tRaw);
+    const matchTeams = parse(mtRaw);
+    return list.map((t: any) => {
+      const entries = matchTeams.filter((mt: any) => Number(mt.teamId) === Number(t.id));
+      const wins = entries.filter((mt: any) => mt.isWinner).length;
+      const losses = entries.filter((mt: any) => !mt.isWinner).length;
+      return { ...t, wins, losses };
+    });
+  }, [tRaw, mtRaw, parse]);
+
   const filteredTeams = useMemo(() => {
-    const list = teams.filter(t => matchesGame((t as any).game, game as GameLabel));
+    const list = teams.filter((t: any) => matchesGame((t as any).game, game as GameLabel));
     return list.length > 0 ? list : teams;
   }, [teams, game]);
 

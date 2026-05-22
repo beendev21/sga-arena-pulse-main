@@ -8,23 +8,35 @@ import { unwrapList } from "@/lib/api";
 
 export function RankingTable({ game }: { game: string }) {
   const api = useApiController("Teams");
+  const apiMatchTeams = useApiController("Matchteams");
 
   const { data: raw, isLoading: loading } = useQuery({
     queryKey: ["teams"],
     queryFn: () => api.getAll({ includeAuth: false })
   });
 
+  const { data: mtRaw } = useQuery({
+    queryKey: ["matchteams"],
+    queryFn: () => apiMatchTeams.getAll({ includeAuth: false })
+  });
+
   const parse = useCallback((r: any) => unwrapList(r), []);
 
   const teams = useMemo(() => {
     const list = parse(raw);
-    const filtered = list.filter((t: any) => 
+    const matchTeams = parse(mtRaw);
+    const enriched = list.map((t: any) => {
+      const entries = matchTeams.filter((mt: any) => Number(mt.teamId) === Number(t.id));
+      const wins = entries.filter((mt: any) => mt.isWinner).length;
+      const losses = entries.filter((mt: any) => !mt.isWinner).length;
+      return { ...t, wins, losses };
+    });
+    const filtered = enriched.filter((t: any) =>
       !game || matchesGame(t.game, game as GameLabel)
     );
-    if (filtered.length === 0) return [...list].sort((a: any, b: any) => (b.elo || 0) - (a.elo || 0));
-    // Ordena por ELO para garantir que o ranking reflita a realidade competitiva
+    if (filtered.length === 0) return [...enriched].sort((a: any, b: any) => (b.elo || 0) - (a.elo || 0));
     return [...filtered].sort((a: any, b: any) => (b.elo || 0) - (a.elo || 0));
-  }, [raw, game, parse]);
+  }, [raw, mtRaw, game, parse]);
 
   if (loading) return <div className="p-8 text-center text-muted-foreground animate-pulse">Buscando ranking...</div>;
 
