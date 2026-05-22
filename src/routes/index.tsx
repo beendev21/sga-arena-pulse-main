@@ -56,8 +56,8 @@ function Section({ title, index, action, children, id, alternate }: { title: str
 
 function Home() {
   const [heroIndex, setHeroIndex] = useState(0);
-  const [rankingGame, setRankingGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
-  const [playerStatsGame, setPlayerStatsGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
+  const [rankingGame, setRankingGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("VALORANT");
+  const [playerStatsGame, setPlayerStatsGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("VALORANT");
 
   const apiTournaments = useApiController("Tournaments");
   const apiMatches = useApiController("Matches");

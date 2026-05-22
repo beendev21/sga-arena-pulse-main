@@ -13,7 +13,7 @@ export const Route = createFileRoute("/teams")({
 });
 
 function TeamsList() {
-  const [game, setGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("COUNTER-STRIKE 2");
+  const [game, setGame] = useState<"COUNTER-STRIKE 2" | "VALORANT" | "LEAGUE OF LEGENDS">("VALORANT");
   const apiTeams = useApiController("Teams");
   const apiMatchTeams = useApiController("Matchteams");
 

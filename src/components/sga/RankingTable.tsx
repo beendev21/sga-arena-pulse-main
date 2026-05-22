@@ -1,44 +1,53 @@
-import { useMemo, useCallback } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import useApiController from "../../API/controler";
 import { TeamLogo } from "./TeamLogo";
 import { Link } from "@tanstack/react-router";
-import { matchesGame, type GameLabel } from "@/lib/game";
+import { normalizeGame, type GameLabel } from "@/lib/game";
 import { unwrapList } from "@/lib/api";
+
+const API_BASE = ((import.meta as any).env?.VITE_API_URL || "https://app.santos-games.com").replace(/\/$/, "");
 
 export function RankingTable({ game }: { game: string }) {
   const api = useApiController("Teams");
-  const apiMatchTeams = useApiController("Matchteams");
 
-  const { data: raw, isLoading: loading } = useQuery({
+  const { data: teamsRaw, isLoading: loading } = useQuery({
     queryKey: ["teams"],
     queryFn: () => api.getAll({ includeAuth: false })
   });
 
-  const { data: mtRaw } = useQuery({
-    queryKey: ["matchteams"],
-    queryFn: () => apiMatchTeams.getAll({ includeAuth: false })
+  const { data: rankingRaw } = useQuery({
+    queryKey: ["ranking-team-per-game"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/api/Games/GetRankingTeamPerGame`);
+      return res.json();
+    }
   });
 
-  const parse = useCallback((r: any) => unwrapList(r), []);
-
   const teams = useMemo(() => {
-    const list = parse(raw);
-    const matchTeams = parse(mtRaw);
-    const enriched = list.map((t: any) => {
-      const entries = matchTeams.filter((mt: any) => Number(mt.teamId) === Number(t.id));
-      const wins = entries.filter((mt: any) => mt.isWinner).length;
-      const losses = entries.filter((mt: any) => !mt.isWinner).length;
-      return { ...t, wins, losses };
-    });
-    const filtered = enriched.filter((t: any) =>
-      !game || matchesGame(t.game, game as GameLabel)
-    );
-    if (filtered.length === 0) return [...enriched].sort((a: any, b: any) => (b.elo || 0) - (a.elo || 0));
-    return [...filtered].sort((a: any, b: any) => (b.elo || 0) - (a.elo || 0));
-  }, [raw, mtRaw, game, parse]);
+    const teamsMap = new Map<number, any>();
+    for (const t of unwrapList(teamsRaw)) {
+      teamsMap.set(Number(t.id), t);
+    }
+
+    const rankingData = Array.isArray(rankingRaw?.result) ? rankingRaw.result : [];
+    const gameEntry = rankingData.find((g: any) => normalizeGame(g.gameName) === (game as GameLabel));
+
+    if (!gameEntry || !gameEntry.teamRankings?.length) return [];
+
+    return gameEntry.teamRankings.map((r: any) => ({
+      ...teamsMap.get(Number(r.teamId)),
+      id: r.teamId,
+      name: r.teamName,
+      wins: r.wins,
+      losses: r.losses,
+      winRate: r.winRate,
+    }));
+  }, [teamsRaw, rankingRaw, game]);
 
   if (loading) return <div className="p-8 text-center text-muted-foreground animate-pulse">Buscando ranking...</div>;
+
+  if (!teams.length) return <div className="p-8 text-center text-muted-foreground text-sm">Nenhum time encontrado para este jogo.</div>;
 
   return (
     <div className="overflow-x-auto ds-card">
@@ -56,9 +65,8 @@ export function RankingTable({ game }: { game: string }) {
         </thead>
         <tbody>
           {teams.map((t, i) => {
-            const wins = Number(t.wins) || 0;
-            const losses = Number(t.losses) || 0;
-            const wr = Math.round((wins / Math.max(wins + losses, 1)) * 100);
+            const wr = Math.round((t.winRate ?? 0) * 100);
+            const saldo = (t.wins ?? 0) - (t.losses ?? 0);
             return (
               <tr key={t.id} className="border-t border-white/[0.06] hover:bg-white/[0.03] transition">
                 <td className="px-4 py-4 font-display text-lg font-black">
@@ -70,11 +78,11 @@ export function RankingTable({ game }: { game: string }) {
                     <span className="font-display text-base font-bold uppercase tracking-tight">{t.name}</span>
                   </Link>
                 </td>
-                <td className="px-4 py-4 text-right text-success font-bold">{wins}</td>
-                <td className="px-4 py-4 text-right text-destructive font-bold">{losses}</td>
-                <td className="px-4 py-4 text-right font-semibold">{t.rounds_diff > 0 ? "+" : ""}{t.rounds_diff}</td>
+                <td className="px-4 py-4 text-right text-success font-bold">{t.wins ?? 0}</td>
+                <td className="px-4 py-4 text-right text-destructive font-bold">{t.losses ?? 0}</td>
+                <td className="px-4 py-4 text-right font-semibold">{saldo > 0 ? "+" : ""}{saldo}</td>
                 <td className="px-4 py-4 text-right font-semibold">{wr}%</td>
-                <td className="px-4 py-4 text-right font-display text-lg font-black text-primary">{t.elo}</td>
+                <td className="px-4 py-4 text-right font-display text-lg font-black text-primary">{t.elo ?? "—"}</td>
               </tr>
             );
           })}
