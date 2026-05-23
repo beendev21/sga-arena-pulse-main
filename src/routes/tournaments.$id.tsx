@@ -34,12 +34,12 @@ function TPage() {
   const { getAll: getAllStatus } = useApiController("Status");
   const { getAll: getAllStages } = useApiController("Stages");
 
-  const { result: t, isLoading: loadingT } = useQuery({
+  const { data: t, isLoading: loadingT } = useQuery({
     queryKey: ["tournament", id],
     queryFn: () => getTourneyById(id, { includeAuth: false }),
   });
 
-  const { result: matchesRaw, isLoading: loadingM } = useQuery({
+  const { data: matchesRaw, isLoading: loadingM } = useQuery({
     queryKey: ["matches"],
     queryFn: () => getAllMatches({ includeAuth: false }),
   });
@@ -49,7 +49,7 @@ function TPage() {
     queryFn: () => getAllMatchTeams({ includeAuth: false }),
   });
 
-  const { result: teamsRaw, isLoading: loadingTeams } = useQuery({
+  const { data: teamsRaw, isLoading: loadingTeams } = useQuery({
     queryKey: ["teams"],
     queryFn: () => getAllTeams({ includeAuth: false }),
   });
@@ -73,7 +73,7 @@ function TPage() {
       statusRaw,
       stagesRaw,
     });
-    return list.filter((m) => String(m.tournamentId) === String(id));
+    return list.filter((m: any) => String(m.tournamentId) === String(id)) as any[];
   }, [matchesRaw, matchTeamsRaw, teamsRaw, statusRaw, stagesRaw, t, id]);
 
   const tournamentTeams = useMemo(() => {
