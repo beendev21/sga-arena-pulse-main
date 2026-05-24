@@ -1,35 +1,30 @@
-
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
-import { loadEnv, type UserConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
+import react from "@vitejs/plugin-react";
+import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
+import tailwindcss from "@tailwindcss/vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const rawAllowedHosts = env.VITE_ALLOWED_HOSTS?.trim();
-  const resolvedAllowedHosts: UserConfig["server"]["allowedHosts"] =
-    rawAllowedHosts === "true" || rawAllowedHosts === "*"
-      ? true
-      : (rawAllowedHosts || "prime.santos-games.com,localhost,127.0.0.1")
-          .split(",")
-          .map((host) => host.trim())
-          .filter(Boolean);
 
   if (mode === "production" && !env.VITE_API_URL?.trim()) {
     throw new Error(
-      "VITE_API_URL is required for production builds. Ensure the build environment provides it before running vite build."
+      "VITE_API_URL is required for production builds."
     );
   }
 
-  const config: UserConfig = {
-    tanstackStart: {
-      server: { entry: "server" },
-    },
+  return {
+    plugins: [
+      tsconfigPaths(),
+      tailwindcss(),
+      TanStackRouterVite(),
+      react(),
+    ],
     server: {
-      allowedHosts: resolvedAllowedHosts,
-    },
-    preview: {
-      allowedHosts: resolvedAllowedHosts,
+      allowedHosts: (env.VITE_ALLOWED_HOSTS || "localhost,127.0.0.1")
+        .split(",")
+        .map((h) => h.trim())
+        .filter(Boolean),
     },
   };
-
-  return config;
 });
