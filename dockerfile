@@ -8,16 +8,14 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:22-alpine AS runner
+FROM node:22-bookworm-slim AS runner
 
 WORKDIR /app
 
+COPY package.json package-lock.json ./
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/start.mjs ./start.mjs
-COPY --from=build /app/node_modules/miniflare ./node_modules/miniflare
-COPY --from=build /app/node_modules/workerd ./node_modules/workerd
-COPY --from=build /app/node_modules/@cloudflare ./node_modules/@cloudflare
 
 EXPOSE 3000
 
-CMD ["node", "start.mjs"]
+CMD ["sh", "-c", "cd /app/dist/server && exec node ../../node_modules/wrangler/bin/wrangler.js dev --config wrangler.json --ip 0.0.0.0 --port ${PORT:-3000}"]
