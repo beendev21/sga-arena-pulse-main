@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import useApiController from "../../API/controler";
 import { TeamLogo } from "./TeamLogo";
@@ -6,7 +6,25 @@ import { unwrapList } from "@/lib/api";
 
 const API_BASE = ((import.meta as any).env?.VITE_API_URL || "https://app.santos-games.com").replace(/\/$/, "");
 
+type SortKey = "kda" | "hs" | "kills" | "deaths" | "assists" | "winRate";
+type SortDir = "desc" | "asc";
+
 export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: string }) {
+  const [search, setSearch] = useState("");
+  const [teamFilter, setTeamFilter] = useState<string>("all");
+  const [minGames, setMinGames] = useState<number>(1);
+  const [sortKey, setSortKey] = useState<SortKey>("kda");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir(d => d === "desc" ? "asc" : "desc");
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  }
+
   const apiTeams = useApiController("Teams");
 
   const { data: teamsRaw, isLoading: l1 } = useQuery({
@@ -22,18 +40,71 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
     }
   });
 
-  const players = useMemo(() => {
+  const allPlayers = useMemo(() => {
     const teamsMap = new Map<number, any>();
     for (const t of unwrapList(teamsRaw)) {
       teamsMap.set(Number(t.id), t);
     }
-
     const list = Array.isArray(rankingRaw?.result) ? rankingRaw.result : [];
-    return list.slice(0, limit).map((p: any) => ({
+    return list.map((p: any) => ({
       ...p,
       teamDetails: teamsMap.get(Number(p.teamRelation?.teamId)),
     }));
-  }, [teamsRaw, rankingRaw, limit]);
+  }, [teamsRaw, rankingRaw]);
+
+  const teamNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const p of allPlayers) {
+      const name = p.teamRelation?.teamName;
+      if (name) names.add(name);
+    }
+    return Array.from(names).sort();
+  }, [allPlayers]);
+
+  const players = useMemo(() => {
+    let list = allPlayers;
+
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter((p: any) =>
+        String(p.playerName ?? "").toLowerCase().includes(q)
+      );
+    }
+
+    if (teamFilter !== "all") {
+      list = list.filter((p: any) => p.teamRelation?.teamName === teamFilter);
+    }
+
+    list = list.filter((p: any) => (p.wins + p.losses) >= minGames);
+
+    list = [...list].sort((a: any, b: any) => {
+      let va = 0, vb = 0;
+      if (sortKey === "kda") {
+        va = Number(a.playerStats?.kda ?? 0);
+        vb = Number(b.playerStats?.kda ?? 0);
+      } else if (sortKey === "hs") {
+        va = Number(a.playerStats?.totalHSPercentage ?? 0);
+        vb = Number(b.playerStats?.totalHSPercentage ?? 0);
+      } else if (sortKey === "kills") {
+        va = Number(a.playerStats?.totalKills ?? 0);
+        vb = Number(b.playerStats?.totalKills ?? 0);
+      } else if (sortKey === "deaths") {
+        va = Number(a.playerStats?.totalDeaths ?? 0);
+        vb = Number(b.playerStats?.totalDeaths ?? 0);
+      } else if (sortKey === "assists") {
+        va = Number(a.playerStats?.totalAssists ?? 0);
+        vb = Number(b.playerStats?.totalAssists ?? 0);
+      } else if (sortKey === "winRate") {
+        const totalA = a.wins + a.losses;
+        const totalB = b.wins + b.losses;
+        va = totalA > 0 ? a.wins / totalA : 0;
+        vb = totalB > 0 ? b.wins / totalB : 0;
+      }
+      return sortDir === "desc" ? vb - va : va - vb;
+    });
+
+    return list.slice(0, limit);
+  }, [allPlayers, search, teamFilter, minGames, sortKey, sortDir, limit]);
 
   if (l1 || l2) return <div className="p-8 text-center text-muted-foreground animate-pulse text-sm">Carregando jogadores...</div>;
 
