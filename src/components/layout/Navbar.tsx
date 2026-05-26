@@ -144,18 +144,19 @@ export function Navbar() {
                 )}
                 <Link to="/profile">
                   <div className="relative">
-                    <div className="h-9 w-9 border border-primary/40 p-0.5 group-hover:border-primary transition-colors">
-                      <img
-                        src={user.avatar || "/avatar-default.svg"}
-                        alt={user.name || user.login}
-                        onError={(event) => {
-                          const target = event.currentTarget;
-                          if (!target.src.endsWith("/avatar-default.svg")) {
-                            target.src = "/avatar-default.svg";
-                          }
-                        }}
-                        className="h-full w-full object-cover"
-                      />
+                    <div className="h-9 w-9 border border-primary/40 group-hover:border-primary transition-colors overflow-hidden">
+                      {user.avatar ? (
+                        <img
+                          src={user.avatar}
+                          alt={user.name || user.login}
+                          onError={(event) => { event.currentTarget.style.display = "none"; }}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full grid place-items-center bg-primary/15 font-display text-xs font-black text-primary uppercase">
+                          {(user.name || user.login || "?").split(" ").filter(Boolean).slice(0, 2).map(w => w[0]).join("")}
+                        </div>
+                      )}
                     </div>
                     <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-[#0a0a0c] rounded-full" />
                   </div>
