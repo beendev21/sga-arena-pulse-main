@@ -24,6 +24,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TournamentsIdRouteImport } from './routes/tournaments.$id'
 import { Route as TeamsTeamIdRouteImport } from './routes/teams.$teamId'
 import { Route as PlayersPlayerIdRouteImport } from './routes/players.$playerId'
+import { Route as PlayCorujaoRouteImport } from './routes/play.corujao'
 import { Route as MatchesIdRouteImport } from './routes/matches.$id'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
@@ -102,6 +103,11 @@ const PlayersPlayerIdRoute = PlayersPlayerIdRouteImport.update({
   path: '/$playerId',
   getParentRoute: () => PlayersRoute,
 } as any)
+const PlayCorujaoRoute = PlayCorujaoRouteImport.update({
+  id: '/play/corujao',
+  path: '/play/corujao',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MatchesIdRoute = MatchesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/tournaments': typeof TournamentsRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/matches/$id': typeof MatchesIdRoute
+  '/play/corujao': typeof PlayCorujaoRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
   '/teams/$teamId': typeof TeamsTeamIdRoute
   '/tournaments/$id': typeof TournamentsIdRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByTo {
   '/tournaments': typeof TournamentsRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/matches/$id': typeof MatchesIdRoute
+  '/play/corujao': typeof PlayCorujaoRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
   '/teams/$teamId': typeof TeamsTeamIdRoute
   '/tournaments/$id': typeof TournamentsIdRoute
@@ -167,6 +175,7 @@ export interface FileRoutesById {
   '/tournaments': typeof TournamentsRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
   '/matches/$id': typeof MatchesIdRoute
+  '/play/corujao': typeof PlayCorujaoRoute
   '/players/$playerId': typeof PlayersPlayerIdRoute
   '/teams/$teamId': typeof TeamsTeamIdRoute
   '/tournaments/$id': typeof TournamentsIdRoute
@@ -188,6 +197,7 @@ export interface FileRouteTypes {
     | '/tournaments'
     | '/auth/callback'
     | '/matches/$id'
+    | '/play/corujao'
     | '/players/$playerId'
     | '/teams/$teamId'
     | '/tournaments/$id'
@@ -207,6 +217,7 @@ export interface FileRouteTypes {
     | '/tournaments'
     | '/auth/callback'
     | '/matches/$id'
+    | '/play/corujao'
     | '/players/$playerId'
     | '/teams/$teamId'
     | '/tournaments/$id'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/tournaments'
     | '/auth/callback'
     | '/matches/$id'
+    | '/play/corujao'
     | '/players/$playerId'
     | '/teams/$teamId'
     | '/tournaments/$id'
@@ -245,6 +257,7 @@ export interface RootRouteChildren {
   TeamsRoute: typeof TeamsRouteWithChildren
   TournamentsRoute: typeof TournamentsRouteWithChildren
   AuthCallbackRoute: typeof AuthCallbackRoute
+  PlayCorujaoRoute: typeof PlayCorujaoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -354,6 +367,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayersPlayerIdRouteImport
       parentRoute: typeof PlayersRoute
     }
+    '/play/corujao': {
+      id: '/play/corujao'
+      path: '/play/corujao'
+      fullPath: '/play/corujao'
+      preLoaderRoute: typeof PlayCorujaoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/matches/$id': {
       id: '/matches/$id'
       path: '/$id'
@@ -429,6 +449,7 @@ const rootRouteChildren: RootRouteChildren = {
   TeamsRoute: TeamsRouteWithChildren,
   TournamentsRoute: TournamentsRouteWithChildren,
   AuthCallbackRoute: AuthCallbackRoute,
+  PlayCorujaoRoute: PlayCorujaoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

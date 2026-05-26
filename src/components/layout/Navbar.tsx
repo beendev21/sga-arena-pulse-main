@@ -1,7 +1,13 @@
 import { Link } from "@tanstack/react-router";
-import { Bell, Search, Menu, Play, LogOut, LayoutDashboard } from "lucide-react";
+import { Bell, Menu, Play, LogOut, LayoutDashboard, ChevronDown } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAuth } from "@/store/auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const links = [
   { to: "/tournaments", label: "Ranking" },
@@ -10,7 +16,6 @@ const links = [
   { to: "/players", label: "Jogadores" },
   { to: "/bracket", label: "Chaveamento" },
   { to: "/highlights", label: "Highlights" },
-  { to: "/gallery", label: "Galeria" },
 ];
 
 export function Navbar() {
@@ -23,7 +28,7 @@ export function Navbar() {
       <div className="mx-auto flex h-full max-w-[1500px] items-center justify-between px-6">
         
         {/* LOGO & BRANDING */}
-        <div className="flex items-center gap-8 h-full">
+        <div className="flex items-center gap-4 h-full">
           <button 
             onClick={toggleSidebar} 
             className="xl:hidden p-2 text-primary hover:bg-primary/10 transition-colors"
@@ -55,6 +60,49 @@ export function Navbar() {
                 <span>{l.label}</span>
               </Link>
             ))}
+
+            <Link
+              to="/gallery"
+              activeProps={{ className: "active" }}
+              className="nav-link-glow"
+            >
+              <span>Galeria</span>
+            </Link>
+
+            {/* JOGAR DROPDOWN */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="nav-link-glow flex items-center gap-1.5 group outline-none">
+                  <span>Jogar</span>
+                  <ChevronDown className="h-3 w-3 text-muted-foreground/60 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                sideOffset={0}
+                className="min-w-[160px] border border-white/10 bg-[#0e0e11] p-1 shadow-2xl"
+              >
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/play/corujao"
+                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-white/80 hover:text-white hover:bg-primary/10 cursor-pointer outline-none transition-colors"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Corujão
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/play/mix"
+                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-white/80 hover:text-white hover:bg-primary/10 cursor-pointer outline-none transition-colors"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    Mix
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {user?.role === "Administrador" && (
               <Link
                 to="/admin"
@@ -68,14 +116,6 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-4 h-full">
-          <div className="hidden md:flex items-center relative group">
-            <Search className="absolute left-4 h-4 w-4 text-muted-foreground/40 z-10 transition-all group-focus-within:text-primary" />
-            <input
-              type="text"
-              placeholder="Buscar times, jogadores..."
-              className="search-hud"
-            />
-          </div>
 
           <div className="flex items-center gap-2 h-full">
             <button

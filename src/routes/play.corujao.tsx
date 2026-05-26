@@ -1,7 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight,
+  Moon, Play, MessageCircle,
+  Monitor, Armchair, Wind, Car, Keyboard,
+  Crosshair, Zap, Gamepad2,
+  type LucideIcon,
+} from "lucide-react";
 
 export const Route = createFileRoute("/play/corujao")({
   head: () => ({
@@ -15,20 +21,16 @@ export const Route = createFileRoute("/play/corujao")({
 
 const SLIDES = [
   {
-    src: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1500&auto=format&fit=crop&q=80",
-    alt: "Gaming Arena",
+    src: "https://imagedelivery.net/M0gutnZx9zz7jFEoo6zT_g/78b155fc-59e7-4327-a717-3276b7397600/public",
+    alt: "Resident Evil Requiem",
   },
   {
-    src: "https://www.esports.net/de/wp-content/uploads/sites/7/2025/11/Valve-Counter-Strike-2.jpg",
-    alt: "Counter-Strike 2",
-  },
-  {
-    src: "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/67fbd4c273f3d5e92a18666c6379db09e74b7cda-1920x1080.jpg?auto=format&fit=fill&q=80&w=1500",
-    alt: "Valorant",
+    src: "https://imagedelivery.net/M0gutnZx9zz7jFEoo6zT_g/10d7d19f-a574-4e85-d8dd-c546a1e89d00/public",
+    alt: "Forza Horizon 6",
   },
 ];
 
-const WA_LINK = "https://wa.me/5513999999999";
+const WA_LINK = "https://wa.me/5516991069776";
 
 function Hero() {
   const [current, setCurrent] = useState(0);
@@ -42,7 +44,7 @@ function Hero() {
   const next = () => setCurrent((p) => (p + 1) % SLIDES.length);
 
   return (
-    <div className="relative w-full aspect-[16/7] overflow-hidden bg-black">
+    <div className="relative w-full h-[75vh] md:h-auto md:aspect-[16/7] overflow-hidden bg-black">
       <AnimatePresence mode="wait">
         <motion.img
           key={current}
@@ -95,8 +97,8 @@ function InfoBar() {
       <div className="mx-auto max-w-[1500px] px-4 md:px-6 py-6 md:py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         {/* Esquerda: título e horário */}
         <div>
-          <div className="inline-block bg-primary text-primary-foreground text-[10px] font-black px-2.5 py-1 uppercase tracking-widest mb-3">
-            🦉 Gaming Night
+          <div className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground text-[10px] font-black px-2.5 py-1 uppercase tracking-widest mb-3">
+            <Moon className="h-3 w-3" /> Gaming Night
           </div>
           <h1 className="font-display text-4xl md:text-5xl uppercase italic font-black tracking-tighter leading-none text-white">
             CORUJÃO <span className="text-primary">SGA</span>
@@ -124,7 +126,7 @@ function InfoBar() {
               rel="noopener noreferrer"
               className="btn-slanted flex items-center gap-2 text-sm"
             >
-              <span>▶ Garantir minha vaga</span>
+              <Play className="h-3 w-3 fill-current" /> Garantir minha vaga
             </a>
             <a
               href={WA_LINK}
@@ -132,7 +134,7 @@ function InfoBar() {
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2.5 border border-[#25d366] text-[#25d366] text-sm font-bold uppercase tracking-wide hover:bg-[#25d366]/10 transition-colors"
             >
-              💬 Suporte
+              <MessageCircle className="h-4 w-4" /> Suporte
             </a>
           </div>
         </div>
@@ -154,27 +156,27 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 const GAMES = [
   {
     name: "Resident Evil Requiem",
-    cover: "https://images.unsplash.com/photo-1668573647936-02c97c143ba2?w=300&auto=format&fit=crop&q=80",
+    cover: "https://imagedelivery.net/M0gutnZx9zz7jFEoo6zT_g/6c16bb8d-b2bb-47a2-4f37-d1b699fc7d00/public",
     isNew: true,
   },
   {
     name: "Forza Horizon 6",
-    cover: "https://images.unsplash.com/photo-1568515045052-f9a854d70bfd?w=300&auto=format&fit=crop&q=80",
+    cover: "https://imagedelivery.net/M0gutnZx9zz7jFEoo6zT_g/5e8c6494-2e7c-4a53-6e3b-d75f1bc71400/public",
     isNew: true,
   },
   {
     name: "GTA FiveM",
-    cover: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=300&auto=format&fit=crop&q=80",
+    cover: "https://imagedelivery.net/M0gutnZx9zz7jFEoo6zT_g/8503bb8b-81f2-4d03-e883-0b682a552100/public",
     isNew: false,
   },
   {
     name: "Counter-Strike 2",
-    cover: "https://www.esports.net/de/wp-content/uploads/sites/7/2025/11/Valve-Counter-Strike-2.jpg",
+    cover: "https://imagedelivery.net/M0gutnZx9zz7jFEoo6zT_g/bbf32985-5791-4a3c-143b-8fed0a6a6600/public",
     isNew: false,
   },
   {
     name: "Valorant",
-    cover: "https://cmsassets.rgpub.io/sanity/images/dsfx7636/news_live/67fbd4c273f3d5e92a18666c6379db09e74b7cda-1920x1080.jpg?auto=format&fit=fill&q=80&w=300",
+    cover: "https://imagedelivery.net/M0gutnZx9zz7jFEoo6zT_g/170f43df-2960-438b-9848-16a6e028f200/public",
     isNew: false,
   },
 ];
@@ -268,12 +270,12 @@ function HowItWorksSection() {
   );
 }
 
-const STRUCTURE = [
-  { icon: "🖥️", label: "PCs Gamer Alta Performance" },
-  { icon: "🪑", label: "Cadeiras Ergonômicas" },
-  { icon: "❄️", label: "Ar-condicionado" },
-  { icon: "🅿️", label: "Estacionamento no local" },
-  { icon: "⌨️", label: "Periféricos Redragon" },
+const STRUCTURE: { icon: LucideIcon; label: string }[] = [
+  { icon: Monitor, label: "PCs Gamer Alta Performance" },
+  { icon: Armchair, label: "Cadeiras Ergonômicas" },
+  { icon: Wind, label: "Ar-condicionado" },
+  { icon: Car, label: "Estacionamento no local" },
+  { icon: Keyboard, label: "Periféricos Redragon" },
 ];
 
 function StructureSection() {
@@ -291,7 +293,7 @@ function StructureSection() {
               transition={{ delay: i * 0.07 }}
               className="flex items-center gap-3 bg-[var(--surface-2)] border border-white/[0.06] hover:border-primary/30 px-5 py-3 transition-colors"
             >
-              <span className="text-xl">{item.icon}</span>
+              <item.icon className="h-5 w-5 text-primary/70" />
               <span className="text-sm font-semibold text-white/80">{item.label}</span>
             </motion.div>
           ))}
@@ -301,22 +303,25 @@ function StructureSection() {
   );
 }
 
-const THEMES = [
+const THEMES: { badge: string; icon: LucideIcon; name: string; desc: string; accent: string }[] = [
   {
     badge: "Temático",
-    name: "🔫 Só CS2",
+    icon: Crosshair,
+    name: "Só CS2",
     desc: "Noite inteira de Faceit e matchmaking competitivo. Para quem respira Counter-Strike.",
     accent: "#e5303a",
   },
   {
     badge: "Temático",
-    name: "⚡ Só Valorant",
+    icon: Zap,
+    name: "Só Valorant",
     desc: "Ranked a noite toda. Duos, cinco fechado, como preferir.",
     accent: "#ff4655",
   },
   {
     badge: "Rodízio",
-    name: "🎮 Rodízio Livre",
+    icon: Gamepad2,
+    name: "Rodízio Livre",
     desc: "Todos os títulos liberados. RE Requiem, Forza, GTA FiveM, CS2, Valorant e mais.",
     accent: "#7c3aed",
   },
@@ -339,10 +344,10 @@ function ThematicSection() {
               style={{ borderTop: `2px solid ${theme.accent}` }}
             >
               <span
-                className="inline-block text-[10px] font-black px-2.5 py-1 uppercase tracking-widest mb-4 text-white"
+                className="inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 uppercase tracking-widest mb-4 text-white"
                 style={{ background: theme.accent }}
               >
-                {theme.badge}
+                <theme.icon className="h-3 w-3" /> {theme.badge}
               </span>
               <p className="font-display text-xl font-black uppercase italic tracking-tight text-white mb-3">
                 {theme.name}
@@ -391,7 +396,7 @@ function FinalCTA() {
               rel="noopener noreferrer"
               className="btn-slanted flex items-center gap-2 text-sm"
             >
-              <span>▶ Garantir minha vaga</span>
+              <Play className="h-3 w-3 fill-current" /> Garantir minha vaga
             </a>
             <a
               href={WA_LINK}
@@ -399,7 +404,7 @@ function FinalCTA() {
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2.5 border border-[#25d366] text-[#25d366] text-sm font-bold uppercase tracking-wide hover:bg-[#25d366]/10 transition-colors"
             >
-              💬 Suporte
+              <MessageCircle className="h-4 w-4" /> Suporte
             </a>
           </div>
         </div>

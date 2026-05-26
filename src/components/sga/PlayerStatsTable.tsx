@@ -6,8 +6,16 @@ import { unwrapList } from "@/lib/api";
 
 const API_BASE = ((import.meta as any).env?.VITE_API_URL || "https://app.santos-games.com").replace(/\/$/, "");
 
-type SortKey = "kda" | "hs" | "kills" | "deaths" | "assists" | "winRate";
+type SortKey = "kda" | "hs" | "kills" | "deaths" | "assists";
 type SortDir = "desc" | "asc";
+
+const defaultSortDir: Record<SortKey, SortDir> = {
+  kda: "desc",
+  hs: "desc",
+  kills: "desc",
+  assists: "desc",
+  deaths: "asc",
+};
 
 export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: string }) {
   const [search, setSearch] = useState("");
@@ -15,15 +23,6 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
   const [minGames, setMinGames] = useState<number>(1);
   const [sortKey, setSortKey] = useState<SortKey>("kda");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-
-  const defaultSortDir: Record<SortKey, SortDir> = {
-    kda: "desc",
-    hs: "desc",
-    kills: "desc",
-    assists: "desc",
-    winRate: "desc",
-    deaths: "asc",
-  };
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -103,11 +102,6 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
       } else if (sortKey === "assists") {
         va = Number(a.playerStats?.totalAssists ?? 0);
         vb = Number(b.playerStats?.totalAssists ?? 0);
-      } else if (sortKey === "winRate") {
-        const totalA = a.wins + a.losses;
-        const totalB = b.wins + b.losses;
-        va = totalA > 0 ? a.wins / totalA : 0;
-        vb = totalB > 0 ? b.wins / totalB : 0;
       }
       return sortDir === "desc" ? vb - va : va - vb;
     });
@@ -131,29 +125,32 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Buscar jogador..."
+          aria-label="Buscar jogador"
           className="flex-1 min-w-[180px] rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
         />
 
         <select
           value={teamFilter}
           onChange={e => setTeamFilter(e.target.value)}
-          className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+          aria-label="Filtrar por time"
+          className="rounded-md border border-white/10 bg-[#13131c] px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
         >
-          <option value="all">Todos os times</option>
+          <option value="all" className="bg-[#13131c] text-foreground">Todos os times</option>
           {teamNames.map(name => (
-            <option key={name} value={name}>{name}</option>
+            <option key={name} value={name} className="bg-[#13131c] text-foreground">{name}</option>
           ))}
         </select>
 
         <select
           value={minGames}
           onChange={e => setMinGames(Number(e.target.value))}
-          className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+          aria-label="Mínimo de jogos"
+          className="rounded-md border border-white/10 bg-[#13131c] px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
         >
-          <option value={1}>Mín. 1 jogo</option>
-          <option value={3}>Mín. 3 jogos</option>
-          <option value={5}>Mín. 5 jogos</option>
-          <option value={10}>Mín. 10 jogos</option>
+          <option value={1} className="bg-[#13131c] text-foreground">Mín. 1 jogo</option>
+          <option value={3} className="bg-[#13131c] text-foreground">Mín. 3 jogos</option>
+          <option value={5} className="bg-[#13131c] text-foreground">Mín. 5 jogos</option>
+          <option value={10} className="bg-[#13131c] text-foreground">Mín. 10 jogos</option>
         </select>
       </div>
 
