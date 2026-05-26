@@ -132,34 +132,48 @@ function Hero() {
   );
 }
 
+function formatDataCorujao(dateStr: string) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" }).replace(".", "");
+}
+
 function VagasCounter({ vagas }: { vagas: VagasData }) {
   if (!vagas) return null;
   const percent = vagas.totalVagas > 0 ? (vagas.vagasVendidas / vagas.totalVagas) * 100 : 0;
   const urgente = vagas.vagasRestantes <= 3;
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
-        <Users className={`h-4 w-4 ${urgente ? "text-red-400" : "text-primary"}`} />
-        <motion.span
-          key={vagas.vagasRestantes}
-          initial={{ scale: 1.4, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className={`font-display text-2xl font-black italic ${urgente ? "text-red-400" : "text-primary"}`}
-        >
-          {vagas.vagasRestantes}
-        </motion.span>
-        <span className="text-xs text-white/50 uppercase tracking-wide">
-          {vagas.vagasRestantes === 1 ? "vaga restante" : "vagas restantes"}
+        <Moon className="h-3 w-3 text-primary/60" />
+        <span className="text-xs font-bold text-white/70 uppercase tracking-widest">
+          {formatDataCorujao(vagas.data)}
         </span>
       </div>
-      <div className="w-24 h-2 bg-white/10 overflow-hidden">
-        <motion.div
-          className={`h-full ${urgente ? "bg-red-400" : "bg-primary"}`}
-          initial={{ width: 0 }}
-          animate={{ width: `${percent}%` }}
-          transition={{ duration: 0.5 }}
-        />
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Users className={`h-4 w-4 ${urgente ? "text-red-400" : "text-primary"}`} />
+          <motion.span
+            key={vagas.vagasRestantes}
+            initial={{ scale: 1.4, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className={`font-display text-2xl font-black italic ${urgente ? "text-red-400" : "text-primary"}`}
+          >
+            {vagas.vagasRestantes}
+          </motion.span>
+          <span className="text-xs text-white/50 uppercase tracking-wide">
+            {vagas.vagasRestantes === 1 ? "vaga restante" : "vagas restantes"}
+          </span>
+        </div>
+        <div className="w-24 h-2 bg-white/10 overflow-hidden">
+          <motion.div
+            className={`h-full ${urgente ? "bg-red-400" : "bg-primary"}`}
+            initial={{ width: 0 }}
+            animate={{ width: `${percent}%` }}
+            transition={{ duration: 0.5 }}
+          />
+        </div>
       </div>
     </div>
   );
