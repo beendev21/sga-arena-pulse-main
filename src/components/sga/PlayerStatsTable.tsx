@@ -16,12 +16,21 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
   const [sortKey, setSortKey] = useState<SortKey>("kda");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
+  const defaultSortDir: Record<SortKey, SortDir> = {
+    kda: "desc",
+    hs: "desc",
+    kills: "desc",
+    assists: "desc",
+    winRate: "desc",
+    deaths: "asc",
+  };
+
   function handleSort(key: SortKey) {
     if (sortKey === key) {
       setSortDir(d => d === "desc" ? "asc" : "desc");
     } else {
       setSortKey(key);
-      setSortDir("desc");
+      setSortDir(defaultSortDir[key]);
     }
   }
 
