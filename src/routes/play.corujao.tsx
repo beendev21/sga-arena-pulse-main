@@ -1,13 +1,54 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight,
   Moon, Play, MessageCircle,
   Monitor, Armchair, Wind, Car, Keyboard,
-  Crosshair, Zap, Gamepad2,
+  Crosshair, Zap, Gamepad2, Users,
   type LucideIcon,
 } from "lucide-react";
+
+const CORUJAO_API_URL = import.meta.env.VITE_CORUJAO_API_URL || "https://painel-adm.santos-tech.com";
+
+type VagasData = {
+  sessaoId: number;
+  data: string;
+  totalVagas: number;
+  vagasVendidas: number;
+  vagasRestantes: number;
+} | null;
+
+function useVagasStream() {
+  const [vagas, setVagas] = useState<VagasData>(null);
+  const [connected, setConnected] = useState(false);
+  const esRef = useRef<EventSource | null>(null);
+
+  const connect = useCallback(() => {
+    const es = new EventSource(`${CORUJAO_API_URL}/api/corujao/public/vagas/stream`);
+    esRef.current = es;
+
+    es.addEventListener("vagas-update", (e) => {
+      try {
+        setVagas(JSON.parse(e.data));
+        setConnected(true);
+      } catch {}
+    });
+
+    es.onerror = () => {
+      setConnected(false);
+      es.close();
+      setTimeout(connect, 5000);
+    };
+  }, []);
+
+  useEffect(() => {
+    connect();
+    return () => esRef.current?.close();
+  }, [connect]);
+
+  return { vagas, connected };
+}
 
 export const Route = createFileRoute("/play/corujao")({
   head: () => ({
@@ -91,7 +132,40 @@ function Hero() {
   );
 }
 
-function InfoBar() {
+function VagasCounter({ vagas }: { vagas: VagasData }) {
+  if (!vagas) return null;
+  const percent = vagas.totalVagas > 0 ? (vagas.vagasVendidas / vagas.totalVagas) * 100 : 0;
+  const urgente = vagas.vagasRestantes <= 3;
+
+  return (
+    <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        <Users className={`h-4 w-4 ${urgente ? "text-red-400" : "text-primary"}`} />
+        <motion.span
+          key={vagas.vagasRestantes}
+          initial={{ scale: 1.4, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className={`font-display text-2xl font-black italic ${urgente ? "text-red-400" : "text-primary"}`}
+        >
+          {vagas.vagasRestantes}
+        </motion.span>
+        <span className="text-xs text-white/50 uppercase tracking-wide">
+          {vagas.vagasRestantes === 1 ? "vaga restante" : "vagas restantes"}
+        </span>
+      </div>
+      <div className="w-24 h-2 bg-white/10 overflow-hidden">
+        <motion.div
+          className={`h-full ${urgente ? "bg-red-400" : "bg-primary"}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${percent}%` }}
+          transition={{ duration: 0.5 }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function InfoBar({ vagas }: { vagas: VagasData }) {
   return (
     <div className="bg-[var(--surface-2)] border-b border-white/[0.06]">
       <div className="mx-auto max-w-[1500px] px-4 md:px-6 py-6 md:py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -119,6 +193,7 @@ function InfoBar() {
               por pessoa · noite inteira
             </div>
           </div>
+          <VagasCounter vagas={vagas} />
           <div className="flex items-center gap-3">
             <a
               href={WA_LINK}
@@ -361,7 +436,7 @@ function ThematicSection() {
   );
 }
 
-function FinalCTA() {
+function FinalCTA({ vagas }: { vagas: VagasData }) {
   return (
     <section
       className="py-16 md:py-20"
@@ -379,6 +454,7 @@ function FinalCTA() {
           <p className="mt-3 text-sm text-white/40 uppercase tracking-wide">
             Das 21H às 8H · Santos Games Arena
           </p>
+          <VagasCounter vagas={vagas} />
         </div>
         <div className="flex flex-col items-start sm:items-end gap-4 flex-shrink-0">
           <div className="text-right">
@@ -414,15 +490,17 @@ function FinalCTA() {
 }
 
 function CorujaoPage() {
+  const { vagas } = useVagasStream();
+
   return (
     <div className="min-h-screen bg-[#06070a]">
       <Hero />
-      <InfoBar />
+      <InfoBar vagas={vagas} />
       <GamesSection />
       <HowItWorksSection />
       <StructureSection />
       <ThematicSection />
-      <FinalCTA />
+      <FinalCTA vagas={vagas} />
     </div>
   );
 }
