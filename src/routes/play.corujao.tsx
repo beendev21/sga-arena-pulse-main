@@ -89,11 +89,63 @@ function Hero() {
   );
 }
 
+function InfoBar() {
+  return (
+    <div className="bg-[var(--surface-2)] border-b border-white/[0.06]">
+      <div className="mx-auto max-w-[1500px] px-4 md:px-6 py-6 md:py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        {/* Esquerda: título e horário */}
+        <div>
+          <div className="inline-block bg-primary text-primary-foreground text-[10px] font-black px-2.5 py-1 uppercase tracking-widest mb-3">
+            🦉 Gaming Night
+          </div>
+          <h1 className="font-display text-4xl md:text-5xl uppercase italic font-black tracking-tighter leading-none text-white">
+            CORUJÃO <span className="text-primary">SGA</span>
+          </h1>
+          <p className="mt-2 text-sm font-semibold text-white/60 uppercase tracking-wide">
+            <span className="text-white font-bold">21H</span> até{" "}
+            <span className="text-white font-bold">8H da manhã</span> · 11 horas sem parar
+          </p>
+        </div>
+
+        {/* Direita: preço e CTAs */}
+        <div className="flex flex-col items-start sm:items-end gap-3">
+          <div className="text-right">
+            <div className="font-display text-5xl font-black text-primary italic leading-none">
+              R$120
+            </div>
+            <div className="text-[11px] text-white/50 uppercase tracking-widest mt-1">
+              por pessoa · noite inteira
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <a
+              href={WA_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-slanted flex items-center gap-2 text-sm"
+            >
+              <span>▶ Garantir minha vaga</span>
+            </a>
+            <a
+              href={WA_LINK}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2.5 border border-[#25d366] text-[#25d366] text-sm font-bold uppercase tracking-wide hover:bg-[#25d366]/10 transition-colors"
+            >
+              💬 Suporte
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CorujaoPage() {
   return (
     <div className="min-h-screen bg-[#06070a]">
       <Hero />
-      {/* demais seções serão adicionadas nas próximas tasks */}
+      <InfoBar />
     </div>
   );
 }
