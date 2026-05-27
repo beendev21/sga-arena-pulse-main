@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  Outlet, Link, createRootRouteWithContext, useRouter, useRouterState,
+  Outlet, Link, createRootRouteWithContext, useRouter, useRouterState, HeadContent,
 } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/sonner";
@@ -15,13 +15,13 @@ function GA4PageTracker() {
 
   useEffect(() => {
     if (isFirst.current) { isFirst.current = false; return; }
-    // Aguarda o TanStack Router atualizar document.title antes de disparar
+    // HeadContent atualiza document.title; aguarda o render completar
     const t = setTimeout(() => {
       window.gtag?.("event", "page_view", {
         page_path: pathname,
         page_title: document.title,
       });
-    }, 150);
+    }, 300);
     return () => clearTimeout(t);
   }, [pathname]);
 
@@ -100,6 +100,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
+      <HeadContent />
       <GA4PageTracker />
       <SidebarProvider defaultOpen={false}>
         <Navbar />
