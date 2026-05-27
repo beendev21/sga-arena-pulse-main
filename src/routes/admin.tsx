@@ -2021,6 +2021,30 @@ function Admin() {
     }
   };
 
+  const updateLiveMatchResult = async (matchId: number, teamId: number, score: number) => {
+    if (!matchId || !teamId) {
+      throw new Error("matchId e teamId são obrigatórios para atualizar placar.");
+    }
+
+    return await ApiService.put("api/Matches/UpdateMatchResult", {
+      matchId,
+      teamId,
+      score,
+    });
+  };
+
+  const finishLiveMatch = async (matchId: number, teamId: number, score: number) => {
+    if (!matchId || !teamId) {
+      throw new Error("matchId e teamId são obrigatórios para finalizar partida.");
+    }
+
+    return await ApiService.post("api/Matches/FinishedMatch", {
+      matchId,
+      teamId,
+      score,
+    });
+  };
+
   const saveBracketMatch = async (
     position: string,
     patch: Record<string, any>,
@@ -2323,6 +2347,9 @@ function Admin() {
         },
         `Vencedor definido em ${position}`,
       );
+
+      const winnerScore = teamField === "teamAId" ? Number(currentMatch?.scoreA || 0) : Number(currentMatch?.scoreB || 0);
+      await finishLiveMatch(Number(currentMatch.id), winnerTeamId, winnerScore);
 
       if (loserSlot && loserTeamId) {
         setOptimisticBracketSlots((current) => ({
@@ -4123,11 +4150,15 @@ function Admin() {
                     try {
                       const currentScore = side === 'A' ? (m.scoreA || 0) : (m.scoreB || 0);
                       const newScore = Math.max(0, currentScore + increment);
-                      
-                      await saveBracketMatch(m.bracketPosition, {
-                        [`score${side}`]: newScore,
-                        statusId: m.statusId // Mantém ao vivo
-                      });
+                      const teamId = side === 'A' ? Number(m.teamAId) : Number(m.teamBId);
+
+                      if (!teamId) {
+                        throw new Error("ID do time não encontrado para atualizar placar.");
+                      }
+
+                      await updateLiveMatchResult(Number(m.id), teamId, newScore);
+                      queryClient.invalidateQueries({ queryKey: ["matches"] });
+                      queryClient.invalidateQueries({ queryKey: ["match-teams"] });
                       toast.success(`Placar atualizado: ${newScore}`);
                     } catch (err) {
                       toast.error("Erro ao sincronizar placar");
