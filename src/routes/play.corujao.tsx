@@ -54,7 +54,7 @@ function useVagasStream() {
 export const Route = createFileRoute("/play/corujao")({
   head: () => ({
     meta: [
-      { title: "Corujão — SGA Gaming Night" },
+      { title: "Corujão — Santos Games Arena" },
       { name: "description", content: "Das 21H às 8H da manhã. 11 horas de jogatina por R$120. PCs gamer, cadeiras ergonômicas, ar-condicionado e estacionamento." },
     ],
   }),
