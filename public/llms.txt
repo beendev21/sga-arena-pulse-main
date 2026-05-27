@@ -1,0 +1,50 @@
+# Santos Games Arena (SGA)
+
+> A casa do e-sport competitivo de Santos, São Paulo, Brasil.
+
+A Santos Games Arena é uma plataforma e arena física de e-sports localizada em Santos (SP). Organizamos campeonatos, mantemos ranking de times e jogadores, e realizamos eventos de gaming presenciais e online.
+
+## Sobre a SGA
+
+- **Nome completo:** Santos Games Arena
+- **Sigla:** SGA
+- **Localização:** Santos, São Paulo, Brasil
+- **Contato:** +55 16 99106-9776 | contato@santosgamesarena.com.br
+- **Site:** https://santos-games.com
+- **Checkout:** https://checkout.santos-games.com
+
+## Jogos e modalidades
+
+- Counter-Strike 2 (CS2) — Competitivo FaceIT e Matchmaking
+- Valorant — Ranked
+- League of Legends (LoL) — Online
+- GTA FiveM, Forza Horizon, Resident Evil (eventos noturnos)
+
+## Eventos principais
+
+### Corujão SGA — Gaming Night
+Evento noturno presencial na arena. Das 21H às 8H da manhã (11 horas contínuas). PCs gamer de alta performance, cadeiras ergonômicas, ar-condicionado e estacionamento. Ingresso: R$120/pessoa. Compra em: https://checkout.santos-games.com/produto/20
+
+Modalidades disponíveis no Corujão:
+- Só CS2 — Competitivo FaceIT e Matchmaking a noite toda
+- Só Valorant — Ranked a noite toda
+- Rodízio Livre — Todos os títulos liberados
+
+### Mix SGA — Jogatina em Grupo
+Evento em grupo (10 jogadores por lobby). Presencial ou online. Lobbies de CS2, Valorant e LoL. Reserva com sinal de 50%. Página: https://santos-games.com/play/mix
+
+## Plataforma online
+
+- Campeonatos abertos com inscrição pelo site
+- Ranking de times e jogadores por jogo
+- Agenda de partidas ao vivo
+- Highlights e galeria de eventos passados
+- Perfis de times e jogadores
+
+## Infraestrutura da arena
+
+- PCs Gamer de Alta Performance
+- Cadeiras Ergonômicas
+- Ar-condicionado
+- Estacionamento no local
+- Periféricos Redragon

@@ -20,6 +20,274 @@
         -moz-osx-font-smoothing: grayscale;
       }
     </style>
+  <!-- Open Graph / Social -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://santos-games.com" />
+  <meta property="og:title" content="Santos Games Arena — SGA | CS2, Valorant & CS" />
+  <meta property="og:description" content="A casa do e-sport competitivo de Santos. Campeonatos, ranking de times e jogadores, partidas ao vivo e highlights de CS2, Valorant e League of Legends." />
+  <meta property="og:image" content="https://santos-games.com/sga-logo.png" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Santos Games Arena — SGA | CS2, Valorant & CS" />
+  <meta name="twitter:description" content="A casa do e-sport competitivo de Santos. Campeonatos, ranking de times e jogadores, partidas ao vivo e highlights de CS2, Valorant e League of Legends." />
+  <meta name="twitter:image" content="https://santos-games.com/sga-logo.png" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://santos-games.com" />
+
+  <!-- Schema.org — WebSite -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Santos Games Arena — SGA",
+    "alternateName": "SGA",
+    "url": "https://santos-games.com",
+    "description": "Plataforma de e-sports SGA: campeonatos, ranking de times e jogadores, partidas ao vivo e highlights de CS2, Valorant e CS.",
+    "inLanguage": "pt-BR",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://santos-games.com/players?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
+  <!-- Schema.org — Organization + SportsOrganization -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": ["Organization", "SportsOrganization"],
+    "@id": "https://santos-games.com/#organization",
+    "name": "Santos Games Arena",
+    "alternateName": "SGA",
+    "url": "https://santos-games.com",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://santos-games.com/sga-logo.png",
+      "width": 512,
+      "height": 512
+    },
+    "description": "A casa do e-sport competitivo de Santos. Organizamos campeonatos, gerenciamos rankings de times e jogadores e transmitimos partidas ao vivo de CS2, Valorant e League of Legends.",
+    "foundingDate": "2024",
+    "sport": ["Counter-Strike 2", "Valorant", "League of Legends"],
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Santos",
+      "addressRegion": "São Paulo",
+      "addressCountry": "BR"
+    },
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "telephone": "+55-16-99106-9776",
+      "contactType": "customer support",
+      "contactOption": "TollFree",
+      "availableLanguage": {
+        "@type": "Language",
+        "name": "Portuguese"
+      }
+    },
+    "email": "contato@santosgamesarena.com.br"
+  }
+  </script>
+
+  <!-- Schema.org — LocalBusiness (arena física) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": ["LocalBusiness", "EntertainmentBusiness", "SportsActivityLocation"],
+    "@id": "https://santos-games.com/#localbusiness",
+    "name": "Santos Games Arena",
+    "alternateName": "SGA",
+    "description": "Arena de e-sports em Santos com PCs gamer de alta performance, cadeiras ergonômicas, ar-condicionado e estacionamento no local. Competições presenciais de CS2, Valorant e League of Legends.",
+    "url": "https://santos-games.com",
+    "telephone": "+55-16-99106-9776",
+    "email": "contato@santosgamesarena.com.br",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Santos",
+      "addressRegion": "São Paulo",
+      "addressCountry": "BR"
+    },
+    "priceRange": "R$120",
+    "currenciesAccepted": "BRL",
+    "paymentAccepted": "PIX",
+    "amenityFeature": [
+      {"@type": "LocationFeatureSpecification", "name": "PCs Gamer Alta Performance", "value": true},
+      {"@type": "LocationFeatureSpecification", "name": "Cadeiras Ergonômicas", "value": true},
+      {"@type": "LocationFeatureSpecification", "name": "Ar-condicionado", "value": true},
+      {"@type": "LocationFeatureSpecification", "name": "Estacionamento", "value": true},
+      {"@type": "LocationFeatureSpecification", "name": "Periféricos Redragon", "value": true}
+    ],
+    "parentOrganization": {
+      "@id": "https://santos-games.com/#organization"
+    }
+  }
+  </script>
+
+  <!-- Schema.org — Event: Corujão SGA (Gaming Night) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": "Corujão SGA — Gaming Night",
+    "alternateName": "Corujão SGA",
+    "description": "Evento de gaming noturno na Santos Games Arena. 11 horas de jogatina ininterrupta das 21H às 8H da manhã. Modalidades: CS2 Competitivo, Valorant Ranked e Rodízio Livre com GTA FiveM, Forza Horizon e Resident Evil. PCs gamer de alta performance com periféricos Redragon.",
+    "url": "https://santos-games.com/play/corujao",
+    "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+    "eventStatus": "https://schema.org/EventScheduled",
+    "startDate": "T21:00:00-03:00",
+    "endDate": "T08:00:00-03:00",
+    "duration": "PT11H",
+    "location": {
+      "@type": "Place",
+      "name": "Santos Games Arena",
+      "@id": "https://santos-games.com/#localbusiness",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Santos",
+        "addressRegion": "São Paulo",
+        "addressCountry": "BR"
+      }
+    },
+    "organizer": {
+      "@type": "Organization",
+      "@id": "https://santos-games.com/#organization",
+      "name": "Santos Games Arena",
+      "url": "https://santos-games.com"
+    },
+    "offers": {
+      "@type": "Offer",
+      "name": "Ingresso Corujão SGA",
+      "price": "120",
+      "priceCurrency": "BRL",
+      "availability": "https://schema.org/InStock",
+      "url": "https://checkout.santos-games.com/produto/20",
+      "acceptedPaymentMethod": "https://schema.org/PaymentMethod"
+    },
+    "about": [
+      {"@type": "VideoGame", "name": "Counter-Strike 2", "alternateName": "CS2"},
+      {"@type": "VideoGame", "name": "Valorant"},
+      {"@type": "VideoGame", "name": "Grand Theft Auto V Online", "alternateName": "GTA FiveM"},
+      {"@type": "VideoGame", "name": "Forza Horizon 6"},
+      {"@type": "VideoGame", "name": "Resident Evil"}
+    ],
+    "audience": {
+      "@type": "Audience",
+      "audienceType": "Gamers e entusiastas de e-sports"
+    },
+    "inLanguage": "pt-BR"
+  }
+  </script>
+
+  <!-- Schema.org — Event: Mix SGA (Jogatina em Grupo) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    "name": "Mix SGA — Jogatina em Grupo",
+    "alternateName": "Mix SGA",
+    "description": "Evento de gaming em grupo na Santos Games Arena. Lobbies de CS2 Competitivo, Valorant Ranked e League of Legends (online). Grupos fechados de 10 jogadores. Pague 50% para garantir sua vaga.",
+    "url": "https://santos-games.com/play/mix",
+    "eventAttendanceMode": "https://schema.org/MixedEventAttendanceMode",
+    "eventStatus": "https://schema.org/EventScheduled",
+    "location": [
+      {
+        "@type": "Place",
+        "name": "Santos Games Arena",
+        "@id": "https://santos-games.com/#localbusiness",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Santos",
+          "addressRegion": "São Paulo",
+          "addressCountry": "BR"
+        }
+      },
+      {
+        "@type": "VirtualLocation",
+        "name": "Online — League of Legends",
+        "url": "https://santos-games.com/play/mix"
+      }
+    ],
+    "organizer": {
+      "@type": "Organization",
+      "@id": "https://santos-games.com/#organization",
+      "name": "Santos Games Arena",
+      "url": "https://santos-games.com"
+    },
+    "offers": {
+      "@type": "Offer",
+      "name": "Sinal de 50% para garantir vaga no grupo",
+      "description": "Pague 50% agora para reservar seu lugar. O restante é cobrado após confirmação do grupo.",
+      "priceCurrency": "BRL",
+      "availability": "https://schema.org/InStock",
+      "url": "https://santos-games.com/play/mix"
+    },
+    "about": [
+      {"@type": "VideoGame", "name": "Counter-Strike 2", "alternateName": "CS2"},
+      {"@type": "VideoGame", "name": "Valorant"},
+      {"@type": "VideoGame", "name": "League of Legends", "alternateName": "LoL"}
+    ],
+    "audience": {
+      "@type": "Audience",
+      "audienceType": "Grupos de amigos gamers"
+    },
+    "inLanguage": "pt-BR"
+  }
+  </script>
+
+  <!-- Schema.org — FAQPage (GEO: respostas diretas para IAs) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "O que é o Corujão SGA?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "O Corujão SGA é um evento de gaming noturno realizado na Santos Games Arena, em Santos (SP). São 11 horas de jogatina ininterrupta, das 21H às 8H da manhã, em PCs gamer de alta performance. O ingresso custa R$120 por pessoa e inclui acesso a CS2, Valorant, GTA FiveM, Forza Horizon e Resident Evil."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "O que é o Mix SGA?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "O Mix SGA é um evento de gaming em grupo organizado pela Santos Games Arena. São montados lobbies de CS2 Competitivo, Valorant Ranked e League of Legends (online), sempre com grupos de 10 jogadores. Para garantir a vaga, é cobrado um sinal de 50% do valor total."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Onde fica a Santos Games Arena?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A Santos Games Arena (SGA) fica em Santos, São Paulo, Brasil. A arena possui PCs gamer de alta performance, cadeiras ergonômicas, ar-condicionado e estacionamento no local."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quais jogos estão disponíveis na Santos Games Arena?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A Santos Games Arena oferece competições e eventos de Counter-Strike 2 (CS2), Valorant e League of Legends (LoL). Nos eventos noturnos como o Corujão, também estão disponíveis GTA FiveM, Forza Horizon e Resident Evil."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Como comprar ingresso para os eventos da SGA?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Os ingressos para o Corujão SGA podem ser comprados diretamente em https://checkout.santos-games.com/produto/20. Para o Mix SGA, o interesse pode ser manifestado pelo site https://santos-games.com/play/mix ou pelo WhatsApp +55 16 99106-9776."
+        }
+      }
+    ]
+  }
+  </script>
+
   <!-- Microsoft Clarity -->
   <script type="text/javascript">
     (function(c,l,a,r,i,t,y){
