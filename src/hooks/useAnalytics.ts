@@ -17,6 +17,10 @@ export function useAnalytics() {
     gtag('event', 'whatsapp_click', { page_label: page });
   }
 
+  function trackCheckoutClick(page: SalesPage) {
+    gtag('event', 'checkout_click', { page_label: page });
+  }
+
   function trackCTAVisible(page: SalesPage) {
     gtag('event', 'cta_visible', { page_label: page });
   }
@@ -25,5 +29,5 @@ export function useAnalytics() {
     gtag('event', 'page_view', { page_path: path });
   }
 
-  return { trackWhatsAppClick, trackCTAVisible, trackPageView };
+  return { trackWhatsAppClick, trackCheckoutClick, trackCTAVisible, trackPageView };
 }

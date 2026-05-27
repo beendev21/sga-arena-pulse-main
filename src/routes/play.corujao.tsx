@@ -182,7 +182,7 @@ function VagasCounter({ vagas }: { vagas: VagasData }) {
 }
 
 function InfoBar({ vagas }: { vagas: VagasData }) {
-  const { trackWhatsAppClick } = useAnalytics();
+  const { trackWhatsAppClick, trackCheckoutClick } = useAnalytics();
   return (
     <div className="bg-[var(--surface-2)] border-b border-white/[0.06]">
       <div className="mx-auto max-w-[1500px] px-4 md:px-6 py-6 md:py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -217,6 +217,7 @@ function InfoBar({ vagas }: { vagas: VagasData }) {
               target="_blank"
               rel="noopener noreferrer"
               className="btn-slanted flex items-center gap-2 text-sm"
+              onClick={() => trackCheckoutClick('corujao')}
             >
               <Play className="h-3 w-3 fill-current" /> Garantir minha vaga
             </a>
@@ -455,7 +456,7 @@ function ThematicSection() {
 }
 
 function FinalCTA({ vagas }: { vagas: VagasData }) {
-  const { trackWhatsAppClick, trackCTAVisible } = useAnalytics();
+  const { trackWhatsAppClick, trackCheckoutClick, trackCTAVisible } = useAnalytics();
   const sectionRef = useRef<HTMLElement>(null);
   const firedRef = useRef<boolean>(false);
 
@@ -510,6 +511,7 @@ function FinalCTA({ vagas }: { vagas: VagasData }) {
               target="_blank"
               rel="noopener noreferrer"
               className="btn-slanted flex items-center gap-2 text-sm"
+              onClick={() => trackCheckoutClick('corujao')}
             >
               <Play className="h-3 w-3 fill-current" /> Garantir minha vaga
             </a>
