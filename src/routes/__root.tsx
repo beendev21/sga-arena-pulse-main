@@ -1,12 +1,32 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  Outlet, Link, createRootRouteWithContext, useRouter,
+  Outlet, Link, createRootRouteWithContext, useRouter, useRouterState,
 } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+
+function GA4PageTracker() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isFirst = useRef(true);
+
+  useEffect(() => {
+    if (isFirst.current) { isFirst.current = false; return; }
+    // Aguarda o TanStack Router atualizar document.title antes de disparar
+    const t = setTimeout(() => {
+      window.gtag?.("event", "page_view", {
+        page_path: pathname,
+        page_title: document.title,
+      });
+    }, 150);
+    return () => clearTimeout(t);
+  }, [pathname]);
+
+  return null;
+}
 
 function NotFoundComponent() {
   return (
@@ -80,6 +100,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
+      <GA4PageTracker />
       <SidebarProvider defaultOpen={false}>
         <Navbar />
         <AppSidebar />
