@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight,
@@ -180,6 +181,7 @@ function VagasCounter({ vagas }: { vagas: VagasData }) {
 }
 
 function InfoBar({ vagas }: { vagas: VagasData }) {
+  const { trackWhatsAppClick } = useAnalytics();
   return (
     <div className="bg-[var(--surface-2)] border-b border-white/[0.06]">
       <div className="mx-auto max-w-[1500px] px-4 md:px-6 py-6 md:py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -214,6 +216,7 @@ function InfoBar({ vagas }: { vagas: VagasData }) {
               target="_blank"
               rel="noopener noreferrer"
               className="btn-slanted flex items-center gap-2 text-sm"
+              onClick={() => trackWhatsAppClick('corujao')}
             >
               <Play className="h-3 w-3 fill-current" /> Garantir minha vaga
             </a>
@@ -222,6 +225,7 @@ function InfoBar({ vagas }: { vagas: VagasData }) {
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2.5 border border-[#25d366] text-[#25d366] text-sm font-bold uppercase tracking-wide hover:bg-[#25d366]/10 transition-colors"
+              onClick={() => trackWhatsAppClick('corujao')}
             >
               <MessageCircle className="h-4 w-4" /> Suporte
             </a>
@@ -451,8 +455,29 @@ function ThematicSection() {
 }
 
 function FinalCTA({ vagas }: { vagas: VagasData }) {
+  const { trackWhatsAppClick, trackCTAVisible } = useAnalytics();
+  const sectionRef = useRef<HTMLElement>(null);
+  const firedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !firedRef.current) {
+          firedRef.current = true;
+          trackCTAVisible('corujao');
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [trackCTAVisible]);
+
   return (
     <section
+      ref={sectionRef}
       className="py-16 md:py-20"
       style={{
         background: "linear-gradient(135deg, #1a0008 0%, #06070a 60%)",
@@ -485,6 +510,7 @@ function FinalCTA({ vagas }: { vagas: VagasData }) {
               target="_blank"
               rel="noopener noreferrer"
               className="btn-slanted flex items-center gap-2 text-sm"
+              onClick={() => trackWhatsAppClick('corujao')}
             >
               <Play className="h-3 w-3 fill-current" /> Garantir minha vaga
             </a>
@@ -493,6 +519,7 @@ function FinalCTA({ vagas }: { vagas: VagasData }) {
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2.5 border border-[#25d366] text-[#25d366] text-sm font-bold uppercase tracking-wide hover:bg-[#25d366]/10 transition-colors"
+              onClick={() => trackWhatsAppClick('corujao')}
             >
               <MessageCircle className="h-4 w-4" /> Suporte
             </a>

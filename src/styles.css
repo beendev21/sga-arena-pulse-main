@@ -187,6 +187,15 @@
     @apply bg-white text-black;
   }
 
+  .btn-slanted-amber {
+    @apply relative overflow-hidden text-black px-7 py-2.5 transition-all duration-200 active:scale-95 font-bold uppercase tracking-wide text-sm;
+    background: #f59e0b;
+    clip-path: polygon(12% 0, 100% 0, 88% 100%, 0% 100%);
+  }
+  .btn-slanted-amber:hover {
+    @apply bg-white text-black;
+  }
+
   .search-hud {
     @apply border border-white/10 h-10 pl-10 pr-4 text-sm text-white placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary transition-all w-56 lg:w-72;
     background: var(--surface-1);
