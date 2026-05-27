@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet, Link, createRootRouteWithContext, useRouter, useRouterState, HeadContent,
 } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -11,11 +11,9 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 
 function GA4PageTracker() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isFirst = useRef(true);
 
   useEffect(() => {
-    if (isFirst.current) { isFirst.current = false; return; }
-    // HeadContent atualiza document.title; aguarda o render completar
+    // Aguarda HeadContent atualizar document.title (inclusive na carga direta por URL)
     const t = setTimeout(() => {
       window.gtag?.("event", "page_view", {
         page_path: pathname,
