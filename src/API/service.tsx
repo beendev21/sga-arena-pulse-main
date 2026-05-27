@@ -7,7 +7,7 @@ const viteEnv = (import.meta as any).env || {};
 const processEnv = typeof process !== "undefined" ? (process.env as any) : {};
 const envUrl = viteEnv.VITE_API_URL || processEnv.VITE_API_URL || processEnv.REACT_APP_API_URL;
 
-const API_BASE_URL = (envUrl || "https://app.santos-games.com").trim();
+const API_BASE_URL = (envUrl).trim();
 
 /**
  * Interface para erros da API, permitindo acessar o status HTTP
@@ -119,6 +119,7 @@ const ApiService = {
   },
 
   put: async (endpoint: string, data: any, options: ApiRequestOptions = {}): Promise<any> => {
+    console.log(`%c[API PUT] Enviando para: ${getFullUrl(endpoint)}`, "color: #f59e0b; font-weight: bold;", data);
     const response = await fetch(getFullUrl(endpoint), {
       method: "PUT",
       headers: buildHeaders({ ...options, includeJsonContentType: true }),

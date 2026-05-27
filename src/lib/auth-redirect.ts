@@ -1,6 +1,5 @@
 const AUTH_BASE_URL =
-  ((import.meta as any).env?.VITE_AUTH_URL as string | undefined)?.trim() ||
-  "https://auth.santos-games.com";
+  ((import.meta as any).env?.VITE_AUTH_URL as string | undefined)?.trim();
 
 const SGA_CLIENT_ID =
   ((import.meta as any).env?.VITE_AUTH_CLIENT_ID as string | undefined)?.trim() || "sga";

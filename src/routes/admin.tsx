@@ -4232,7 +4232,7 @@ function Admin() {
               </div>
               <div>
                 <h3 className="font-display text-2xl uppercase italic font-black text-white">Live Match Control</h3>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest italic">Sincronização de placar em tempo real via API_</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest italic">Sincronização de placar em tempo real</p>
               </div>
             </div>
 
@@ -4249,8 +4249,33 @@ function Admin() {
                   const statusLabel = getTournamentStatusLabel(m.statusId).toLowerCase();
                   return statusLabel.includes("vivo") || statusLabel.includes("live") || statusLabel.includes("andam") || statusLabel.includes("ativo");
                 }).map((m: any) => {
-                  const teamA = getTeamById(m.teamAId);
-                  const teamB = getTeamById(m.teamBId);
+                  const teams = Array.isArray(m?.teams) ? m.teams : m?.teams?.$values || [];
+                  const liveRelationA = matchTeamsData.find(
+                    (entry: any) =>
+                      Number(entry?.matchId) === Number(m.id) &&
+                      String(entry?.side || "").toUpperCase() === "A",
+                  );
+                  const liveRelationB = matchTeamsData.find(
+                    (entry: any) =>
+                      Number(entry?.matchId) === Number(m.id) &&
+                      String(entry?.side || "").toUpperCase() === "B",
+                  );
+                  const liveTeamAId = resolveMatchTeamId(
+                    m?.teamAId,
+                    m?.teamA?.id,
+                    m?.teamA?.teamId,
+                    teams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "A")?.teamId,
+                    liveRelationA?.teamId,
+                  );
+                  const liveTeamBId = resolveMatchTeamId(
+                    m?.teamBId,
+                    m?.teamB?.id,
+                    m?.teamB?.teamId,
+                    teams.find((candidate: any) => String(candidate?.side || "").toUpperCase() === "B")?.teamId,
+                    liveRelationB?.teamId,
+                  );
+                  const teamA = getTeamById(liveTeamAId);
+                  const teamB = getTeamById(liveTeamBId);
                   const displayScoreA = Number(getMatchScore(m, 'A'));
                   const displayScoreB = Number(getMatchScore(m, 'B'));
                   
@@ -4259,7 +4284,21 @@ function Admin() {
                     try {
                       const currentScore = side === 'A' ? displayScoreA : displayScoreB;
                       const newScore = Math.max(0, currentScore + increment);
-                      const teamId = side === 'A' ? Number(m.teamAId) : Number(m.teamBId);
+                      const teamId = side === 'A' ? liveTeamAId : liveTeamBId;
+
+                      console.log("[LiveMatch] updateScore click", {
+                        matchId: Number(m.id),
+                        side,
+                        increment,
+                        currentScore,
+                        newScore,
+                        teamId,
+                        liveTeamAId,
+                        liveTeamBId,
+                        rawTeamAId: m?.teamAId,
+                        rawTeamBId: m?.teamBId,
+                        match: m,
+                      });
 
                       if (!teamId) {
                         throw new Error("ID do time não encontrado para atualizar placar.");
@@ -4295,9 +4334,33 @@ function Admin() {
                           <TeamLogo team={teamA} size={64} />
                           <div className="font-display text-lg uppercase text-white">{teamA?.name}</div>
                           <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={() => updateScore('A', -1)} className="h-10 w-10 border-white/10">-</Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                void updateScore('A', -1);
+                              }}
+                              className="h-10 w-10 border-white/10"
+                            >
+                              -
+                            </Button>
                             <div className="font-display text-5xl text-primary px-4">{displayScoreA}</div>
-                            <Button variant="outline" size="sm" onClick={() => updateScore('A', 1)} className="h-10 w-10 border-white/10">+</Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                void updateScore('A', 1);
+                              }}
+                              className="h-10 w-10 border-white/10"
+                            >
+                              +
+                            </Button>
                           </div>
                         </div>
 
@@ -4310,12 +4373,15 @@ function Admin() {
                           </div>
                           <div className="flex gap-2">
                              <Button 
+                              type="button"
                               variant="destructive" 
                               size="sm" 
                               className="h-8 text-[9px] font-black italic uppercase tracking-widest"
-                              onClick={() => {
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
                                 if (confirm("Deseja encerrar esta partida oficialmente?")) {
-                                  handleMatchWinner(
+                                  void handleMatchWinner(
                                     m.bracketPosition,
                                     displayScoreA > displayScoreB ? 'teamAId' : 'teamBId',
                                   );
@@ -4337,9 +4403,33 @@ function Admin() {
                           <TeamLogo team={teamB} size={64} />
                           <div className="font-display text-lg uppercase text-white">{teamB?.name}</div>
                           <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={() => updateScore('B', -1)} className="h-10 w-10 border-white/10">-</Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                void updateScore('B', -1);
+                              }}
+                              className="h-10 w-10 border-white/10"
+                            >
+                              -
+                            </Button>
                             <div className="font-display text-5xl text-white px-4">{displayScoreB}</div>
-                            <Button variant="outline" size="sm" onClick={() => updateScore('B', 1)} className="h-10 w-10 border-white/10">+</Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                void updateScore('B', 1);
+                              }}
+                              className="h-10 w-10 border-white/10"
+                            >
+                              +
+                            </Button>
                           </div>
                         </div>
                       </div>

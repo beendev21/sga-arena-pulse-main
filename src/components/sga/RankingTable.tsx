@@ -6,7 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { normalizeGame, type GameLabel } from "@/lib/game";
 import { unwrapList } from "@/lib/api";
 
-const API_BASE = ((import.meta as any).env?.VITE_API_URL || "https://app.santos-games.com").replace(/\/$/, "");
+const API_BASE = ((import.meta as any).env?.VITE_API_URL).replace(/\/$/, "");
 
 export function RankingTable({ game }: { game: string }) {
   const api = useApiController("Teams");
