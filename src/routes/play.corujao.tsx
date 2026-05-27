@@ -73,6 +73,7 @@ const SLIDES = [
 ];
 
 const WA_LINK = "https://wa.me/5516991069776";
+const CHECKOUT_LINK = "https://checkout.santos-games.com/produto/20";
 
 function Hero() {
   const [current, setCurrent] = useState(0);
@@ -212,11 +213,10 @@ function InfoBar({ vagas }: { vagas: VagasData }) {
           <VagasCounter vagas={vagas} />
           <div className="flex items-center gap-3">
             <a
-              href={WA_LINK}
+              href={CHECKOUT_LINK}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-slanted flex items-center gap-2 text-sm"
-              onClick={() => trackWhatsAppClick('corujao')}
             >
               <Play className="h-3 w-3 fill-current" /> Garantir minha vaga
             </a>
@@ -506,11 +506,10 @@ function FinalCTA({ vagas }: { vagas: VagasData }) {
           </div>
           <div className="flex items-center gap-3">
             <a
-              href={WA_LINK}
+              href={CHECKOUT_LINK}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-slanted flex items-center gap-2 text-sm"
-              onClick={() => trackWhatsAppClick('corujao')}
             >
               <Play className="h-3 w-3 fill-current" /> Garantir minha vaga
             </a>
