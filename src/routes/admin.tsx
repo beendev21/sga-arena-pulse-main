@@ -1002,7 +1002,7 @@ function Admin() {
   const { data: mtr } = useQuery({
     queryKey: ["match-teams", user?.id],
     queryFn: () => apiMatchTeams.getAll(),
-    enabled: !!user && shouldLoadTab(["ia"]),
+    enabled: !!user && shouldLoadTab(["monitoramento", "ia"]),
   });
   const { data: mlar } = useQuery({
     queryKey: ["match-lineups", user?.id],
@@ -2021,27 +2021,117 @@ function Admin() {
     }
   };
 
-  const updateLiveMatchResult = async (matchId: number, teamId: number, score: number) => {
-    if (!matchId || !teamId) {
-      throw new Error("matchId e teamId são obrigatórios para atualizar placar.");
+  const getMatchScore = (match: any, side: "A" | "B") => {
+    const defaultScore = side === "A" ? Number(match?.scoreA || 0) : Number(match?.scoreB || 0);
+    if (!matchTeamsData?.length || !match?.id) return defaultScore;
+
+    const relation = matchTeamsData.find(
+      (entry: any) =>
+        Number(entry?.matchId) === Number(match.id) &&
+        String(entry?.side || "").toUpperCase() === side,
+    );
+
+    if (relation && relation.score !== undefined && relation.score !== null) {
+      return Number(relation.score);
+    }
+
+    return defaultScore;
+  };
+
+  const updateCollectionCache = (queryKey: any[], updater: (entries: any[]) => any[]) => {
+    queryClient.setQueryData(queryKey, (oldData: any) => {
+      if (!oldData) return oldData;
+
+      const entries = Array.isArray(oldData)
+        ? oldData
+        : oldData.result ?? oldData.$values ?? null;
+
+      if (!Array.isArray(entries)) return oldData;
+
+      const updatedEntries = updater(entries);
+
+      if (Array.isArray(oldData)) return updatedEntries;
+      if (oldData.result) return { ...oldData, result: updatedEntries };
+      if (oldData.$values) return { ...oldData, $values: updatedEntries };
+      return updatedEntries;
+    });
+  };
+
+  const syncLiveMatchCaches = (matchId: number, teamId: number, score: number) => {
+    updateCollectionCache(["match-teams", user?.id], (entries: any[]) =>
+      entries.map((entry: any) =>
+        Number(entry.matchId) === Number(matchId) && Number(entry.teamId) === Number(teamId)
+          ? { ...entry, score }
+          : entry,
+      ),
+    );
+
+    updateCollectionCache(["matchteams"], (entries: any[]) =>
+      entries.map((entry: any) =>
+        Number(entry.matchId) === Number(matchId) && Number(entry.teamId) === Number(teamId)
+          ? { ...entry, score }
+          : entry,
+      ),
+    );
+
+    updateCollectionCache(["matches", user?.id], (entries: any[]) =>
+      entries.map((match: any) => {
+        const matchTeamAId = Number(match.teamAId || match.matchTeamAId || 0);
+        const matchTeamBId = Number(match.teamBId || match.matchTeamBId || 0);
+
+        if (Number(match.id) !== Number(matchId)) return match;
+
+        return {
+          ...match,
+          scoreA: matchTeamAId === Number(teamId) ? Number(score) : Number(match.scoreA || 0),
+          scoreB: matchTeamBId === Number(teamId) ? Number(score) : Number(match.scoreB || 0),
+        };
+      }),
+    );
+
+    updateCollectionCache(["matches"], (entries: any[]) =>
+      entries.map((match: any) => {
+        const matchTeamAId = Number(match.teamAId || match.matchTeamAId || 0);
+        const matchTeamBId = Number(match.teamBId || match.matchTeamBId || 0);
+
+        if (Number(match.id) !== Number(matchId)) return match;
+
+        return {
+          ...match,
+          scoreA: matchTeamAId === Number(teamId) ? Number(score) : Number(match.scoreA || 0),
+          scoreB: matchTeamBId === Number(teamId) ? Number(score) : Number(match.scoreB || 0),
+        };
+      }),
+    );
+  };
+
+  const updateLiveMatchResult = async (matchId: number, teamIdUpdate: number, scoreUpdate: number) => {
+    if (!matchId || !teamIdUpdate) {
+      throw new Error("matchId e teamIdUpdate são obrigatórios para atualizar placar.");
     }
 
     return await ApiService.put("api/Matches/UpdateMatchResult", {
       matchId,
-      teamId,
-      score,
+      teamIdUpdate,
+      scoreUpdate,
     });
   };
 
-  const finishLiveMatch = async (matchId: number, teamId: number, score: number) => {
-    if (!matchId || !teamId) {
-      throw new Error("matchId e teamId são obrigatórios para finalizar partida.");
+  const finishLiveMatch = async (
+    matchId: number,
+    winnerTeamId: number,
+    scoreTeam1: number,
+    scoreTeam2: number,
+  ) => {
+    if (!matchId || !winnerTeamId) {
+      throw new Error("id e winnerTeamId são obrigatórios para finalizar partida.");
     }
 
     return await ApiService.post("api/Matches/FinishedMatch", {
-      matchId,
-      teamId,
-      score,
+      id: matchId,
+      winnerTeamId,
+      scoreTeam1,
+      scoreTeam2,
     });
   };
 
@@ -2337,6 +2427,8 @@ function Admin() {
       const loserSlot = isDoubleEliminationTournament
         ? BRACKET_LOSER_PROGRESS_MAP[position]
         : undefined;
+      const resolvedScoreA = Number(getMatchScore(currentMatch, 'A'));
+      const resolvedScoreB = Number(getMatchScore(currentMatch, 'B'));
 
       await saveBracketMatch(
         position,
@@ -2348,8 +2440,23 @@ function Admin() {
         `Vencedor definido em ${position}`,
       );
 
-      const winnerScore = teamField === "teamAId" ? Number(currentMatch?.scoreA || 0) : Number(currentMatch?.scoreB || 0);
-      await finishLiveMatch(Number(currentMatch.id), winnerTeamId, winnerScore);
+      await finishLiveMatch(
+        Number(currentMatch.id),
+        winnerTeamId,
+        resolvedScoreA,
+        resolvedScoreB,
+      );
+
+      queryClient.invalidateQueries({ queryKey: ["matches"] });
+      queryClient.invalidateQueries({ queryKey: ["matches", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["matches", token] });
+      queryClient.invalidateQueries({ queryKey: ["match-teams"] });
+      queryClient.invalidateQueries({ queryKey: ["match-teams", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["match-teams", token] });
+      queryClient.invalidateQueries({ queryKey: ["matchteams"] });
+      queryClient.invalidateQueries({ queryKey: ["matchteams", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["matchteams", token] });
+      toast.success(`Partida finalizada com ${resolvedScoreA} x ${resolvedScoreB}`);
 
       if (loserSlot && loserTeamId) {
         setOptimisticBracketSlots((current) => ({
@@ -4144,11 +4251,13 @@ function Admin() {
                 }).map((m: any) => {
                   const teamA = getTeamById(m.teamAId);
                   const teamB = getTeamById(m.teamBId);
+                  const displayScoreA = Number(getMatchScore(m, 'A'));
+                  const displayScoreB = Number(getMatchScore(m, 'B'));
                   
                   // Função interna para atualizar placar rápido
                   const updateScore = async (side: 'A' | 'B', increment: number) => {
                     try {
-                      const currentScore = side === 'A' ? (m.scoreA || 0) : (m.scoreB || 0);
+                      const currentScore = side === 'A' ? displayScoreA : displayScoreB;
                       const newScore = Math.max(0, currentScore + increment);
                       const teamId = side === 'A' ? Number(m.teamAId) : Number(m.teamBId);
 
@@ -4158,10 +4267,21 @@ function Admin() {
 
                       await updateLiveMatchResult(Number(m.id), teamId, newScore);
                       queryClient.invalidateQueries({ queryKey: ["matches"] });
+                      queryClient.invalidateQueries({ queryKey: ["matches", user?.id] });
+                      queryClient.invalidateQueries({ queryKey: ["matches", token] });
                       queryClient.invalidateQueries({ queryKey: ["match-teams"] });
+                      queryClient.invalidateQueries({ queryKey: ["match-teams", user?.id] });
+                      queryClient.invalidateQueries({ queryKey: ["match-teams", token] });
+                      queryClient.invalidateQueries({ queryKey: ["matchteams"] });
+                      queryClient.invalidateQueries({ queryKey: ["matchteams", user?.id] });
+                      queryClient.invalidateQueries({ queryKey: ["matchteams", token] });
+                      queryClient.invalidateQueries({ queryKey: ["bracket-matches"] });
+                      queryClient.invalidateQueries({ queryKey: ["bracket-matches", user?.id, selectedTourney] });
                       toast.success(`Placar atualizado: ${newScore}`);
-                    } catch (err) {
-                      toast.error("Erro ao sincronizar placar");
+                    } catch (err: any) {
+                      const errorMessage = err?.message || "Falha ao sincronizar placar.";
+                      console.error("Erro ao sincronizar placar", err);
+                      toast.error(`Erro ao sincronizar placar: ${errorMessage}`);
                     }
                   };
 
@@ -4176,7 +4296,7 @@ function Admin() {
                           <div className="font-display text-lg uppercase text-white">{teamA?.name}</div>
                           <div className="flex items-center gap-2">
                             <Button variant="outline" size="sm" onClick={() => updateScore('A', -1)} className="h-10 w-10 border-white/10">-</Button>
-                            <div className="font-display text-5xl text-primary px-4">{m.scoreA || 0}</div>
+                            <div className="font-display text-5xl text-primary px-4">{displayScoreA}</div>
                             <Button variant="outline" size="sm" onClick={() => updateScore('A', 1)} className="h-10 w-10 border-white/10">+</Button>
                           </div>
                         </div>
@@ -4194,8 +4314,11 @@ function Admin() {
                               size="sm" 
                               className="h-8 text-[9px] font-black italic uppercase tracking-widest"
                               onClick={() => {
-                                if(confirm("Deseja encerrar esta partida oficialmente?")) {
-                                  handleMatchWinner(m.bracketPosition, m.scoreA > m.scoreB ? 'teamAId' : 'teamBId');
+                                if (confirm("Deseja encerrar esta partida oficialmente?")) {
+                                  handleMatchWinner(
+                                    m.bracketPosition,
+                                    displayScoreA > displayScoreB ? 'teamAId' : 'teamBId',
+                                  );
                                 }
                               }}
                              >
@@ -4215,7 +4338,7 @@ function Admin() {
                           <div className="font-display text-lg uppercase text-white">{teamB?.name}</div>
                           <div className="flex items-center gap-2">
                             <Button variant="outline" size="sm" onClick={() => updateScore('B', -1)} className="h-10 w-10 border-white/10">-</Button>
-                            <div className="font-display text-5xl text-white px-4">{m.scoreB || 0}</div>
+                            <div className="font-display text-5xl text-white px-4">{displayScoreB}</div>
                             <Button variant="outline" size="sm" onClick={() => updateScore('B', 1)} className="h-10 w-10 border-white/10">+</Button>
                           </div>
                         </div>
