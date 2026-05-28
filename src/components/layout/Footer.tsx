@@ -59,12 +59,12 @@ export function Footer() {
           <ul className="space-y-3 text-sm text-muted-foreground">
             <li className="flex items-start gap-2.5">
               <MapPin className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-              <span className="font-medium">Santos · São Paulo, Brasil</span>
+              <span className="font-medium">Av. Nove de Julho, 1992 - Jardim America, Ribeirão Preto - SP, 14020-170</span>
             </li>
             <li className="flex items-start gap-2.5">
               <Mail className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-              <a href="mailto:contato@santosgamesarena.com.br" className="font-medium hover:text-primary transition-colors break-all">
-                contato@santosgamesarena.com.br
+              <a href="mailto:ceo.santosgames@gmail.com" className="font-medium hover:text-primary transition-colors break-all">
+                ceo.santosgames@gmail.com
               </a>
             </li>
           </ul>
