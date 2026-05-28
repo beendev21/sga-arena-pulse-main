@@ -147,10 +147,17 @@ export function Header() {
                 <Play className="h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
             ))}
-            {user && (
+            {user ? (
               <button onClick={() => logout()} className="mt-auto py-5 text-sm font-bold tracking-wide text-primary hover:text-white transition-all flex items-center justify-between border-t border-white/5 uppercase">
                 Sair <LogOut className="h-4 w-4" />
               </button>
+            ) : (
+              <Link to="/login" className="mt-auto border-t border-white/5">
+                <button className="btn-slanted w-full flex items-center justify-center gap-2 group py-4 mt-5">
+                  <Play className="h-3 w-3 fill-current transition-transform group-hover:translate-x-0.5" />
+                  <span>Entrar</span>
+                </button>
+              </Link>
             )}
           </div>
         </div>
