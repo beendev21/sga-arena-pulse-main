@@ -6,12 +6,11 @@ import { unwrapList } from "@/lib/api";
 
 const API_BASE = ((import.meta as any).env?.VITE_API_URL).replace(/\/$/, "");
 
-type SortKey = "kda" | "kd" | "hs" | "kills" | "deaths" | "assists";
+type SortKey = "kda" | "hs" | "kills" | "deaths" | "assists";
 type SortDir = "desc" | "asc";
 
 const defaultSortDir: Record<SortKey, SortDir> = {
   kda: "desc",
-  kd: "desc",
   hs: "desc",
   kills: "desc",
   assists: "desc",
@@ -22,6 +21,7 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
   const [search, setSearch] = useState("");
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [minGames, setMinGames] = useState<number>(1);
+  const [minKD, setMinKD] = useState<number>(0);
   const [sortKey, setSortKey] = useState<SortKey>("kda");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -87,18 +87,20 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
 
     list = list.filter((p: any) => (p.wins + p.losses) >= minGames);
 
+    if (minKD > 0) {
+      list = list.filter((p: any) => {
+        const kills = Number(p.playerStats?.totalKills ?? 0);
+        const deaths = Number(p.playerStats?.totalDeaths ?? 0);
+        const kd = deaths > 0 ? kills / deaths : kills;
+        return kd >= minKD;
+      });
+    }
+
     list = [...list].sort((a: any, b: any) => {
       let va = 0, vb = 0;
       if (sortKey === "kda") {
         va = Number(a.playerStats?.kda ?? 0);
         vb = Number(b.playerStats?.kda ?? 0);
-      } else if (sortKey === "kd") {
-        const aKills = Number(a.playerStats?.totalKills ?? 0);
-        const aDeaths = Number(a.playerStats?.totalDeaths ?? 0);
-        const bKills = Number(b.playerStats?.totalKills ?? 0);
-        const bDeaths = Number(b.playerStats?.totalDeaths ?? 0);
-        va = aDeaths > 0 ? aKills / aDeaths : aKills;
-        vb = bDeaths > 0 ? bKills / bDeaths : bKills;
       } else if (sortKey === "hs") {
         va = Number(a.playerStats?.totalHSPercentage ?? 0);
         vb = Number(b.playerStats?.totalHSPercentage ?? 0);
@@ -116,7 +118,7 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
     });
 
     return list.slice(0, limit);
-  }, [allPlayers, search, teamFilter, minGames, sortKey, sortDir, limit]);
+  }, [allPlayers, search, teamFilter, minGames, minKD, sortKey, sortDir, limit]);
 
   if (l1 || l2) return <div className="p-8 text-center text-muted-foreground animate-pulse text-sm">Carregando jogadores...</div>;
 
@@ -129,6 +131,19 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
     <div className="flex flex-col gap-3">
       {/* Barra de controles */}
       <div className="flex flex-wrap gap-2 items-center px-1">
+        <select
+          value={minKD}
+          onChange={e => setMinKD(Number(e.target.value))}
+          aria-label="K/D mínimo"
+          className="rounded-md border border-white/10 bg-[#13131c] px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+        >
+          <option value={0} className="bg-[#13131c] text-foreground">Todo K/D</option>
+          <option value={0.5} className="bg-[#13131c] text-foreground">K/D ≥ 0.5</option>
+          <option value={1} className="bg-[#13131c] text-foreground">K/D ≥ 1.0</option>
+          <option value={1.5} className="bg-[#13131c] text-foreground">K/D ≥ 1.5</option>
+          <option value={2} className="bg-[#13131c] text-foreground">K/D ≥ 2.0</option>
+        </select>
+
         <input
           type="text"
           value={search}
@@ -179,12 +194,6 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
               </th>
               <th
                 className="px-4 py-4 text-right cursor-pointer select-none hover:text-foreground transition-colors"
-                onClick={() => handleSort("kd")}
-              >
-                K/D{sortArrow("kd")}
-              </th>
-              <th
-                className="px-4 py-4 text-right cursor-pointer select-none hover:text-foreground transition-colors"
                 onClick={() => handleSort("hs")}
               >
                 HS%{sortArrow("hs")}
@@ -212,7 +221,7 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
           <tbody>
             {players.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">
+                <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground text-sm">
                   Nenhum jogador encontrado.
                 </td>
               </tr>
@@ -226,9 +235,6 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
                 .map((part: string) => part[0]?.toUpperCase() || "")
                 .join("");
               const kda = Number(p.playerStats?.kda ?? 0).toFixed(2);
-              const kills = Number(p.playerStats?.totalKills ?? 0);
-              const deaths = Number(p.playerStats?.totalDeaths ?? 0);
-              const kd = (deaths > 0 ? kills / deaths : kills).toFixed(2);
               const hs = Number(p.playerStats?.totalHSPercentage ?? 0).toFixed(1);
               return (
                 <tr key={p.playerId} className="border-t border-white/[0.06] hover:bg-white/[0.03] transition">
@@ -259,9 +265,8 @@ export function PlayerStatsTable({ limit = 40, game }: { limit?: number; game?: 
                     )}
                   </td>
                   <td className="px-4 py-3 text-right font-display text-lg font-black text-primary">{kda}</td>
-                  <td className="px-4 py-3 text-right font-display text-base font-bold text-foreground/70">{kd}</td>
                   <td className="px-4 py-3 text-right font-display text-base font-bold text-foreground">{hs}%</td>
-                  <td className="px-4 py-3 text-right font-display text-base font-bold">{kills}</td>
+                  <td className="px-4 py-3 text-right font-display text-base font-bold">{p.playerStats?.totalKills ?? 0}</td>
                   <td className="px-4 py-3 text-right font-display text-base font-bold">{p.playerStats?.totalDeaths ?? 0}</td>
                   <td className="px-4 py-3 text-right font-display text-base font-bold">{p.playerStats?.totalAssists ?? 0}</td>
                 </tr>
