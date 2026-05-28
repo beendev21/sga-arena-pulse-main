@@ -192,14 +192,14 @@ function Home() {
         <div className="relative z-10 mx-auto max-w-[1500px] px-4 md:px-6 py-16 md:py-24 grid lg:grid-cols-2 gap-12 items-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-sm font-bold uppercase tracking-wider text-primary-foreground">
-              <Flame className="h-4 w-4" /> Plataforma oficial de e-sports
+              <Flame className="h-4 w-4" /> A arena oficial dos e-sports
             </div>
             <h1 className="mt-5 font-display text-4xl sm:text-6xl md:text-7xl leading-[1.05] uppercase italic font-black tracking-tighter break-words text-white">
-              Domine o <span className="text-cs2">CS2</span>,<br/>
+              Entre na arena do <span className="text-cs2">CS2</span>,<br/>
               <span className="text-valorant">Valorant</span> e <span className="text-lol">LoL</span>
             </h1>
             <p className="mt-5 text-foreground/80 max-w-lg text-base md:text-lg leading-relaxed">
-              A casa do e-sport competitivo de Santos Games. Participe de torneios, suba no ranking e conquiste sua glória nos maiores títulos da atualidade.
+              A plataforma competitiva da Santos Games. Monte seu time, dispute torneios, escale no ranking e prove que você é o melhor nos maiores títulos do momento.
             </p>
             <div className="mt-7 flex items-center gap-8 opacity-70">
               <img src="https://tipspace.gg/images/cs2/cs2-logo.webp" alt="CS2" className="h-8 w-auto" title="Counter-Strike 2" />
