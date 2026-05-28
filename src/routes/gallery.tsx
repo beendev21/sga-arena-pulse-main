@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { GalleryGrid } from "@/components/sga/GalleryGrid";
+import { ogMeta } from "@/lib/og";
 
 export const Route = createFileRoute("/gallery")({
-  head: () => ({ meta: [{ title: "Galeria — SGA" }] }),
+  head: () => ({ meta: ogMeta({ title: "Galeria — SGA", description: "Galeria de fotos dos campeonatos e eventos da Santos Games Arena.", path: "/gallery" }) }),
   component: G,
 });
 function G() {

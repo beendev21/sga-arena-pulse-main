@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { motion, AnimatePresence } from "framer-motion";
 import { RankingTable } from "@/components/sga/RankingTable";
 import { normalizeGame, type GameLabel } from "@/lib/game";
 
 export const Route = createFileRoute("/tournaments")({
-  head: () => ({ meta: [{ title: "Ranking de Equipes — SGA" }, { name: "description", content: "Ranking oficial das melhores equipes da Santos Games Arena." }] }),
+  head: () => ({ meta: ogMeta({ title: "Ranking de Equipes — SGA", description: "Ranking oficial das melhores equipes da Santos Games Arena.", path: "/tournaments" }) }),
   component: RankingPage,
 });
 

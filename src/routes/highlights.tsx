@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useCallback } from "react";
@@ -7,7 +8,7 @@ import { HighlightCard } from "@/components/sga/HighlightCard";
 import { unwrapList } from "@/lib/api";
 
 export const Route = createFileRoute("/highlights")({
-  head: () => ({ meta: [{ title: "Highlights — SGA" }] }),
+  head: () => ({ meta: ogMeta({ title: "Highlights — SGA", description: "Melhores momentos e highlights dos campeonatos da Santos Games Arena.", path: "/highlights" }) }),
   component: H,
 });
 function H() {

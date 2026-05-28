@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -68,12 +69,7 @@ const LOBBIES = [
 type Lobby = (typeof LOBBIES)[number];
 
 export const Route = createFileRoute("/play/mix")({
-  head: () => ({
-    meta: [
-      { title: "Mix — SGA Gaming" },
-      { name: "description", content: "Jogue em grupo. Pague meio ingresso. Mix de CS2, Valorant e LoL na Santos Games Arena." },
-    ],
-  }),
+  head: () => ({ meta: ogMeta({ title: "Mix — SGA Gaming", description: "Jogue em grupo. Pague meio ingresso. Mix de CS2, Valorant e LoL na Santos Games Arena.", path: "/play/mix" }) }),
   component: MixPage,
 });
 

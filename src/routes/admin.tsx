@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { useState, useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,7 @@ import { AiMatchTab } from "@/components/admin/AiMatchTab";
  * O meta-dado 'head' garante SEO e títulos dinâmicos.
  */
 export const Route = createFileRoute("/admin")({
-  head: () => ({ meta: [{ title: "Admin — SGA" }] }),
+  head: () => ({ meta: ogMeta({ title: "Admin — SGA", description: "Painel administrativo da Santos Games Arena.", path: "/admin" }) }),
   component: Admin,
 });
 

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import useApiController from "@/API/controler";
@@ -8,7 +9,7 @@ import { matchesGame, type GameLabel } from "@/lib/game";
 import { unwrapList } from "@/lib/api";
 
 export const Route = createFileRoute("/teams")({
-  head: () => ({ meta: [{ title: "Times — SGA" }, { name: "description", content: "Conheça os times da SGA: estatísticas, ELO, vitórias e troféus." }] }),
+  head: () => ({ meta: ogMeta({ title: "Times — SGA", description: "Conheça os times da SGA: estatísticas, vitórias e troféus.", path: "/teams" }) }),
   component: TeamsList,
 });
 

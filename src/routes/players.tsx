@@ -2,9 +2,10 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { PlayerStatsTable } from "@/components/sga/PlayerStatsTable";
+import { ogMeta } from "@/lib/og";
 
 export const Route = createFileRoute("/players")({
-  head: () => ({ meta: [{ title: "Top 40 Jogadores — SGA" }, { name: "description", content: "Ranking individual: KDA, kills, defuse, plant e rating dos top 40 jogadores." }] }),
+  head: () => ({ meta: ogMeta({ title: "Top 40 Jogadores — SGA", description: "Ranking individual: KDA, K/D, kills e headshot dos top 40 jogadores da Santos Games Arena.", path: "/players" }) }),
   component: P,
 });
 

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
@@ -19,7 +20,7 @@ interface Match {
 }
 
 export const Route = createFileRoute("/matches")({
-  head: () => ({ meta: [{ title: "Partidas — SGA" }, { name: "description", content: "Partidas ao vivo, agendadas e encerradas na SGA." }] }),
+  head: () => ({ meta: ogMeta({ title: "Partidas — SGA", description: "Partidas ao vivo, agendadas e encerradas na Santos Games Arena.", path: "/matches" }) }),
   component: MatchesPage,
 });
 

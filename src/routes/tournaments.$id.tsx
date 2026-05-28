@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import useApiController from "@/API/controler";
@@ -22,7 +23,10 @@ type TeamListItem = {
   name?: string;
 };
 
-export const Route = createFileRoute("/tournaments/$id")({ component: TPage });
+export const Route = createFileRoute("/tournaments/$id")({
+  head: () => ({ meta: ogMeta({ title: "Campeonato — SGA", description: "Detalhes, chaveamento e resultados do campeonato na Santos Games Arena.", path: "/tournaments" }) }),
+  component: TPage,
+});
 
 function TPage() {
   // O ID do torneio dita todo o conteúdo da página.

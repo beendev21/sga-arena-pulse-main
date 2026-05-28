@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import useApiController from "@/API/controler";
@@ -8,7 +9,10 @@ import { Trophy, Map as MapIcon, Users } from "lucide-react";
 import { buildPublicMatches, buildPublicRoster } from "@/lib/publicApi";
 import { unwrapList } from "@/lib/api";
 
-export const Route = createFileRoute("/matches/$id")({ component: MatchPage });
+export const Route = createFileRoute("/matches/$id")({
+  head: () => ({ meta: ogMeta({ title: "Partida — SGA", description: "Estatísticas, lineup e resultado da partida na Santos Games Arena.", path: "/matches" }) }),
+  component: MatchPage,
+});
 
 function MatchPage() {
   const { id } = Route.useParams();

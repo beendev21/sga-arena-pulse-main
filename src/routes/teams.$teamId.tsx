@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { useQuery } from "@tanstack/react-query";
 import useApiController from "@/API/controler";
 import { TeamLogo } from "@/components/sga/TeamLogo";
@@ -8,7 +9,10 @@ import { StatsCard } from "@/components/sga/StatsCard";
 import { useMemo } from "react";
 import { buildPublicMatches, buildPublicRoster } from "@/lib/publicApi";
 
-export const Route = createFileRoute("/teams/$teamId")({ component: TeamPage });
+export const Route = createFileRoute("/teams/$teamId")({
+  head: () => ({ meta: ogMeta({ title: "Perfil do Time — SGA", description: "Estatísticas, roster e histórico do time na Santos Games Arena.", path: "/teams" }) }),
+  component: TeamPage,
+});
 
 function TeamPage() {
   // Captura o parâmetro de ID da URL (ex: /teams/team-uuid).

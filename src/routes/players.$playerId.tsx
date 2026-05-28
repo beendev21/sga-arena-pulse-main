@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -11,6 +12,7 @@ import { buildPublicMatches, buildPublicRoster } from "@/lib/publicApi";
 import { unwrapList } from "@/lib/api";
 
 export const Route = createFileRoute("/players/$playerId")({
+  head: () => ({ meta: ogMeta({ title: "Perfil do Jogador — SGA", description: "Estatísticas individuais, KDA, K/D e histórico de partidas na Santos Games Arena.", path: "/players" }) }),
   component: PlayerProfilePage,
 });
 

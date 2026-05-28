@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import useApiController from "@/API/controler";
@@ -16,12 +17,7 @@ type TournamentListItem = {
 };
 
 export const Route = createFileRoute("/bracket")({
-  head: () => ({
-    meta: [
-      { title: "Chaveamento — SGA" },
-      { name: "description", content: "Chaveamento do campeonato em formato profissional." },
-    ],
-  }),
+  head: () => ({ meta: ogMeta({ title: "Chaveamento — SGA", description: "Chaveamento dos campeonatos da Santos Games Arena em formato profissional.", path: "/bracket" }) }),
   component: BracketPage,
 });
 

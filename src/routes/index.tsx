@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Trophy, Users, Swords, Flame, ChevronRight, Crown, Medal, Award } from "lucide-react";
@@ -15,10 +16,11 @@ import { unwrapList } from "@/lib/api";
 import { buildPublicMatches } from "@/lib/publicApi";
 export const Route = createFileRoute("/")({
   head: () => ({
-    meta: [
-      { title: "SGA — Santos Games Arena | CS2, Valorant & CS" },
-      { name: "description", content: "Campeonatos, ranking e partidas ao vivo de CS2, Valorant e CS na plataforma oficial da Santos Games Arena." },
-    ],
+    meta: ogMeta({
+      title: "SGA — Santos Games Arena | CS2, Valorant & CS",
+      description: "Campeonatos, ranking e partidas ao vivo de CS2, Valorant e CS na plataforma oficial da Santos Games Arena.",
+      path: "/",
+    }),
   }),
   component: Home,
 });

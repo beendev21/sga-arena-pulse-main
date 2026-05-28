@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { motion } from "framer-motion";
 import { useAuth } from "@/store/auth";
 import { StatsCard } from "@/components/sga/StatsCard";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Trophy, Target, Crosshair, Award, Settings, User as UserIcon, Calendar, Zap, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/profile")({ 
-  head: () => ({ meta: [{ title: "Meu Perfil — SGA" }] }),
+  head: () => ({ meta: ogMeta({ title: "Meu Perfil — SGA", description: "Seu perfil na Santos Games Arena: estatísticas, conquistas e histórico.", path: "/profile" }) }),
   component: ProfilePage 
 });
 

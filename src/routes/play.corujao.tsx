@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ogMeta } from "@/lib/og";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { motion, AnimatePresence } from "framer-motion";
@@ -52,12 +53,7 @@ function useVagasStream() {
 }
 
 export const Route = createFileRoute("/play/corujao")({
-  head: () => ({
-    meta: [
-      { title: "Corujão — Santos Games Arena" },
-      { name: "description", content: "Das 21H às 8H da manhã. 11 horas de jogatina por R$120. PCs gamer, cadeiras ergonômicas, ar-condicionado e estacionamento." },
-    ],
-  }),
+  head: () => ({ meta: ogMeta({ title: "Corujão — Santos Games Arena", description: "Das 21H às 8H da manhã. 11 horas de jogatina por R$120. PCs gamer, cadeiras ergonômicas, ar-condicionado e estacionamento.", path: "/play/corujao" }) }),
   component: CorujaoPage,
 });
 
