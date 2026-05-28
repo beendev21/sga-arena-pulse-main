@@ -199,7 +199,7 @@ function Home() {
               <span className="text-valorant">Valorant</span> e <span className="text-lol">LoL</span>
             </h1>
             <p className="mt-5 text-foreground/80 max-w-lg text-base md:text-lg leading-relaxed">
-              A casa do e-sport competitivo de Santos. Participe de torneios, suba no ranking e conquiste sua glória nos maiores títulos da atualidade.
+              A casa do e-sport competitivo de Santos Games. Participe de torneios, suba no ranking e conquiste sua glória nos maiores títulos da atualidade.
             </p>
             <div className="mt-7 flex items-center gap-8 opacity-70">
               <img src="https://tipspace.gg/images/cs2/cs2-logo.webp" alt="CS2" className="h-8 w-auto" title="Counter-Strike 2" />
