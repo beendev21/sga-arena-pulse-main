@@ -14,6 +14,7 @@ import { Route as TeamsRouteImport } from './routes/teams'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PlayersRouteImport } from './routes/players'
+import { Route as MeusMixesRouteImport } from './routes/meus-mixes'
 import { Route as MatchesRouteImport } from './routes/matches'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HighlightsRouteImport } from './routes/highlights'
@@ -52,6 +53,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const PlayersRoute = PlayersRouteImport.update({
   id: '/players',
   path: '/players',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MeusMixesRoute = MeusMixesRouteImport.update({
+  id: '/meus-mixes',
+  path: '/meus-mixes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MatchesRoute = MatchesRouteImport.update({
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/highlights': typeof HighlightsRoute
   '/login': typeof LoginRoute
   '/matches': typeof MatchesRouteWithChildren
+  '/meus-mixes': typeof MeusMixesRoute
   '/players': typeof PlayersRouteWithChildren
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/highlights': typeof HighlightsRoute
   '/login': typeof LoginRoute
   '/matches': typeof MatchesRouteWithChildren
+  '/meus-mixes': typeof MeusMixesRoute
   '/players': typeof PlayersRouteWithChildren
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
@@ -176,6 +184,7 @@ export interface FileRoutesById {
   '/highlights': typeof HighlightsRoute
   '/login': typeof LoginRoute
   '/matches': typeof MatchesRouteWithChildren
+  '/meus-mixes': typeof MeusMixesRoute
   '/players': typeof PlayersRouteWithChildren
   '/profile': typeof ProfileRoute
   '/register': typeof RegisterRoute
@@ -199,6 +208,7 @@ export interface FileRouteTypes {
     | '/highlights'
     | '/login'
     | '/matches'
+    | '/meus-mixes'
     | '/players'
     | '/profile'
     | '/register'
@@ -220,6 +230,7 @@ export interface FileRouteTypes {
     | '/highlights'
     | '/login'
     | '/matches'
+    | '/meus-mixes'
     | '/players'
     | '/profile'
     | '/register'
@@ -241,6 +252,7 @@ export interface FileRouteTypes {
     | '/highlights'
     | '/login'
     | '/matches'
+    | '/meus-mixes'
     | '/players'
     | '/profile'
     | '/register'
@@ -263,6 +275,7 @@ export interface RootRouteChildren {
   HighlightsRoute: typeof HighlightsRoute
   LoginRoute: typeof LoginRoute
   MatchesRoute: typeof MatchesRouteWithChildren
+  MeusMixesRoute: typeof MeusMixesRoute
   PlayersRoute: typeof PlayersRouteWithChildren
   ProfileRoute: typeof ProfileRoute
   RegisterRoute: typeof RegisterRoute
@@ -308,6 +321,13 @@ declare module '@tanstack/react-router' {
       path: '/players'
       fullPath: '/players'
       preLoaderRoute: typeof PlayersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meus-mixes': {
+      id: '/meus-mixes'
+      path: '/meus-mixes'
+      fullPath: '/meus-mixes'
+      preLoaderRoute: typeof MeusMixesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/matches': {
@@ -463,6 +483,7 @@ const rootRouteChildren: RootRouteChildren = {
   HighlightsRoute: HighlightsRoute,
   LoginRoute: LoginRoute,
   MatchesRoute: MatchesRouteWithChildren,
+  MeusMixesRoute: MeusMixesRoute,
   PlayersRoute: PlayersRouteWithChildren,
   ProfileRoute: ProfileRoute,
   RegisterRoute: RegisterRoute,
