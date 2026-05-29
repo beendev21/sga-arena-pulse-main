@@ -1,528 +1,456 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ogMeta } from "@/lib/og";
-import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  ChevronLeft, ChevronRight,
-  Play, MessageCircle, Users,
-  Crosshair, Zap, Trophy,
-  Monitor, MapPin, Wifi, Armchair,
-  type LucideIcon,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { ChevronLeft, ChevronRight, MapPin, Wifi, MessageCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/store/auth";
 import { useAnalytics } from "@/hooks/useAnalytics";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { fetchSessoes, inscreverSessao, type MixSessao } from "@/lib/mix-api";
 
-const MIX_WA_LINK = "https://wa.me/5516991069776";
 const AMBER = "#f59e0b";
+const MIX_WA_LINK = "https://wa.me/5516991069776";
+const INTENT_KEY = "mix_intent_sessao_id";
 
-const MIX_SLIDES = [
-  {
-    src: "https://imagedelivery.net/M0gutnZx9zz7jFEoo6zT_g/bbf32985-5791-4a3c-143b-8fed0a6a6600/public",
-    alt: "Counter-Strike 2",
-  },
-  {
-    src: "https://imagedelivery.net/M0gutnZx9zz7jFEoo6zT_g/170f43df-2960-438b-9848-16a6e028f200/public",
-    alt: "Valorant",
-  },
-];
+const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const DIAS_SEMANA = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 
-const LOBBIES = [
-  {
-    id: 1,
-    game: "CS2",
-    fullName: "Counter-Strike 2",
-    Icon: Crosshair,
-    cover: "https://imagedelivery.net/M0gutnZx9zz7jFEoo6zT_g/bbf32985-5791-4a3c-143b-8fed0a6a6600/public",
-    mode: "PRESENCIAL" as const,
-    location: "Santos Games Arena",
-    participants: 6,
-    max: 10,
-    accent: AMBER,
-  },
-  {
-    id: 2,
-    game: "VALORANT",
-    fullName: "Valorant",
-    Icon: Zap,
-    cover: "https://imagedelivery.net/M0gutnZx9zz7jFEoo6zT_g/170f43df-2960-438b-9848-16a6e028f200/public",
-    mode: "PRESENCIAL" as const,
-    location: "Santos Games Arena",
-    participants: 3,
-    max: 10,
-    accent: "#ff4655",
-  },
-  {
-    id: 3,
-    game: "LOL",
-    fullName: "League of Legends",
-    Icon: Trophy,
-    cover: null,
-    mode: "ONLINE" as const,
-    location: "Em casa",
-    participants: 0,
-    max: 10,
-    accent: "#3b82f6",
-  },
-] as const;
-
-type Lobby = (typeof LOBBIES)[number];
+const JOGO_CONFIG = {
+  cs2:     { label: "CS2",      cor: AMBER,     chipCls: "border-l-amber-500 bg-amber-500/10 text-amber-400" },
+  valorant:{ label: "VALORANT", cor: "#ff4655",  chipCls: "border-l-red-500 bg-red-500/10 text-red-400" },
+  lol:     { label: "LoL",      cor: "#3b82f6",  chipCls: "border-l-blue-500 bg-blue-500/10 text-blue-400" },
+} as const;
 
 export const Route = createFileRoute("/play/mix")({
-  head: () => ({ meta: ogMeta({ title: "Mix — SGA Gaming", description: "Jogue em grupo. Pague meio ingresso. Mix de CS2, Valorant e LoL na Santos Games Arena.", path: "/play/mix" }) }),
+  head: () => ({
+    meta: ogMeta({
+      title: "Mix — SGA Gaming",
+      description: "Jogue em grupo. Calendário de mixes em aberto. CS2, Valorant e LoL na Santos Games Arena.",
+      path: "/play/mix"
+    })
+  }),
   component: MixPage,
 });
 
-function Hero() {
-  const [current, setCurrent] = useState(0);
+// ── helpers ───────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    const t = setInterval(() => setCurrent((p) => (p + 1) % MIX_SLIDES.length), 4500);
-    return () => clearInterval(t);
-  }, []);
+function buildDias(ano: number, mes: number) {
+  const primeiro = new Date(ano, mes, 1).getDay();
+  const totalMes = new Date(ano, mes + 1, 0).getDate();
+  const totalPrev = new Date(ano, mes, 0).getDate();
+  const dias: { dia: number; mesAtual: boolean }[] = [];
+  for (let i = primeiro - 1; i >= 0; i--) dias.push({ dia: totalPrev - i, mesAtual: false });
+  for (let d = 1; d <= totalMes; d++) dias.push({ dia: d, mesAtual: true });
+  const restante = dias.length % 7 === 0 ? 0 : 7 - (dias.length % 7);
+  for (let i = 1; i <= restante; i++) dias.push({ dia: i, mesAtual: false });
+  return dias;
+}
 
-  const prev = () => setCurrent((p) => (p - 1 + MIX_SLIDES.length) % MIX_SLIDES.length);
-  const next = () => setCurrent((p) => (p + 1) % MIX_SLIDES.length);
+// ── Calendário ────────────────────────────────────────────────────────────────
+
+function Calendario({
+  sessoes,
+  sessaoSelecionada,
+  onSelecionarSessao,
+}: {
+  sessoes: MixSessao[];
+  sessaoSelecionada: MixSessao | null;
+  onSelecionarSessao: (s: MixSessao) => void;
+}) {
+  const hoje = new Date();
+  const [ano, setAno] = useState(hoje.getFullYear());
+  const [mes, setMes] = useState(hoje.getMonth());
+
+  function prevMes() {
+    if (mes === 0) { setAno(a => a - 1); setMes(11); } else setMes(m => m - 1);
+  }
+  function nextMes() {
+    if (mes === 11) { setAno(a => a + 1); setMes(0); } else setMes(m => m + 1);
+  }
+
+  const dias = buildDias(ano, mes);
 
   return (
-    <div className="relative w-full h-[75vh] md:h-auto md:aspect-[16/7] overflow-hidden bg-black">
-      <AnimatePresence mode="wait">
-        <motion.img
-          key={current}
-          src={MIX_SLIDES[current].src}
-          alt={MIX_SLIDES[current].alt}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.7 }}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-      </AnimatePresence>
+    <div className="flex-1 p-6 border-r border-white/[0.05] min-w-0">
+      <div className="flex items-center justify-between mb-5">
+        <button
+          onClick={prevMes}
+          className="h-8 w-8 flex items-center justify-center bg-white/[0.04] border border-white/[0.08] text-white/50 hover:border-amber-500/50 hover:text-amber-500 transition-colors"
+          aria-label="Mês anterior"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="text-sm font-black uppercase tracking-[0.12em]">
+          {MESES[mes]} <span style={{ color: AMBER }}>{ano}</span>
+        </span>
+        <button
+          onClick={nextMes}
+          className="h-8 w-8 flex items-center justify-center bg-white/[0.04] border border-white/[0.08] text-white/50 hover:border-amber-500/50 hover:text-amber-500 transition-colors"
+          aria-label="Próximo mês"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+      </div>
 
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ background: "linear-gradient(to top, rgba(245,158,11,0.06) 0%, transparent 50%)" }}
-      />
-      <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: AMBER }} />
-
-      <button
-        onClick={prev}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 flex items-center justify-center bg-black/50 border border-white/10 text-white hover:bg-amber-500/80 transition-colors"
-        aria-label="Slide anterior"
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </button>
-      <button
-        onClick={next}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 flex items-center justify-center bg-black/50 border border-white/10 text-white hover:bg-amber-500/80 transition-colors"
-        aria-label="Próximo slide"
-      >
-        <ChevronRight className="h-5 w-5" />
-      </button>
-
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
-        {MIX_SLIDES.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrent(i)}
-            className={`transition-all duration-300 rounded-sm h-1.5 ${i === current ? "w-6" : "w-1.5 bg-white/40"}`}
-            style={i === current ? { background: AMBER } : {}}
-            aria-label={`Slide ${i + 1}`}
-          />
+      <div className="grid grid-cols-7 mb-1">
+        {DIAS_SEMANA.map(d => (
+          <div key={d} className="text-center text-[9px] font-bold text-white/25 uppercase tracking-[0.1em] py-1">
+            {d}
+          </div>
         ))}
       </div>
-    </div>
-  );
-}
 
-function InfoBar({ onParticipate }: { onParticipate: () => void }) {
-  const { trackWhatsAppClick } = useAnalytics();
-  return (
-    <div className="bg-[var(--surface-2)] border-b border-white/[0.06]">
-      <div className="mx-auto max-w-[1500px] px-4 md:px-6 py-6 md:py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div>
-          <div
-            className="inline-flex items-center gap-1.5 text-black text-[10px] font-black px-2.5 py-1 uppercase tracking-widest mb-3"
-            style={{ background: AMBER }}
-          >
-            <Crosshair className="h-3 w-3" /> Jogatina em Grupo
-          </div>
-          <h1 className="font-display text-4xl md:text-5xl uppercase italic font-black tracking-tighter leading-none text-white">
-            MIX <span style={{ color: AMBER }}>SGA</span>
-          </h1>
-          <p className="mt-2 text-sm font-semibold text-white/60 uppercase tracking-wide">
-            <span className="text-white font-bold">10 pessoas</span> por lobby · Presencial e Online · CS2, Valorant e LoL
-          </p>
-        </div>
+      <div className="grid grid-cols-7 gap-[3px]">
+        {dias.map(({ dia, mesAtual }, idx) => {
+          const dataStr = mesAtual
+            ? `${ano}-${String(mes + 1).padStart(2, "0")}-${String(dia).padStart(2, "0")}`
+            : null;
+          const sessoesNoDia = dataStr
+            ? sessoes.filter(s => s.dataPrevista === dataStr)
+            : [];
+          const isHoje =
+            mesAtual &&
+            hoje.getFullYear() === ano &&
+            hoje.getMonth() === mes &&
+            hoje.getDate() === dia;
 
-        <div className="flex flex-col items-start sm:items-end gap-3">
-          <div className="text-right">
-            <div className="font-display text-3xl md:text-4xl font-black italic leading-none" style={{ color: AMBER }}>
-              MEIO INGRESSO
-            </div>
-            <div className="text-[11px] text-white/50 uppercase tracking-widest mt-1">
-              sinal de 50% · vaga garantida no grupo
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={onParticipate} className="btn-slanted-amber flex items-center gap-2 text-sm">
-              <Play className="h-3 w-3 fill-current" /> Quero Participar
-            </button>
-            <a
-              href={MIX_WA_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2.5 border border-[#25d366] text-[#25d366] text-sm font-bold uppercase tracking-wide hover:bg-[#25d366]/10 transition-colors"
-              onClick={() => trackWhatsAppClick("mix")}
+          return (
+            <div
+              key={idx}
+              className={`min-h-[68px] p-1 border transition-colors ${
+                mesAtual ? "bg-white/[0.02] border-white/[0.04]" : "bg-transparent border-transparent"
+              } ${sessoesNoDia.length ? "cursor-pointer hover:border-white/15 hover:bg-white/[0.04]" : ""} ${
+                isHoje ? "border-amber-500/30 bg-amber-500/[0.04]" : ""
+              }`}
+              onClick={() => sessoesNoDia.length === 1 && onSelecionarSessao(sessoesNoDia[0])}
             >
-              <MessageCircle className="h-4 w-4" /> Suporte
-            </a>
-          </div>
-        </div>
+              <span className={`text-[10px] block mb-[3px] ${
+                mesAtual
+                  ? isHoje ? "text-amber-400 font-black" : "text-white/40 font-semibold"
+                  : "text-white/12"
+              }`}>
+                {dia}
+              </span>
+              {sessoesNoDia.map(s => (
+                <button
+                  key={s.id}
+                  onClick={e => { e.stopPropagation(); onSelecionarSessao(s); }}
+                  className={`w-full text-left text-[8px] font-black uppercase tracking-[0.06em] px-1 py-[2px] mb-[2px] border-l-2 truncate transition-opacity hover:opacity-80 ${
+                    JOGO_CONFIG[s.jogo].chipCls
+                  } ${sessaoSelecionada?.id === s.id ? "ring-1 ring-amber-500/40" : ""}`}
+                >
+                  {JOGO_CONFIG[s.jogo].label}{s.status === "confirmado" ? " ✓" : ""}
+                </button>
+              ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-3 mb-2">
-      <span className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: AMBER }}>//</span>
-      <h2 className="text-xs font-black uppercase tracking-[0.15em] text-white/40">{children}</h2>
-      <div className="flex-1 h-px bg-white/[0.04]" />
-    </div>
-  );
-}
+// ── Sidebar ───────────────────────────────────────────────────────────────────
 
-function LobbyCard({ lobby, onParticipate }: { lobby: Lobby; onParticipate: (l: Lobby) => void }) {
-  const pct = (lobby.participants / lobby.max) * 100;
-  const { Icon } = lobby;
-  const isOnline = lobby.mode === "ONLINE";
+function SidebarMixes({
+  sessoes,
+  sessaoSelecionada,
+  onSelecionarSessao,
+  onParticipar,
+}: {
+  sessoes: MixSessao[];
+  sessaoSelecionada: MixSessao | null;
+  onSelecionarSessao: (s: MixSessao) => void;
+  onParticipar: (s: MixSessao) => void;
+}) {
+  const emAberto = sessoes.filter(s => s.status !== "realizado" && s.status !== "cancelado");
 
   return (
-    <div
-      className="relative bg-[var(--surface-2)] border border-white/[0.06] hover:border-white/20 overflow-hidden transition-colors"
-      style={{ borderTop: `2px solid ${lobby.accent}` }}
-    >
-      {lobby.cover ? (
-        <div className="relative h-36 overflow-hidden">
-          <img src={lobby.cover} alt={lobby.fullName} className="w-full h-full object-cover opacity-40" />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--surface-2)]" />
-          <div className="absolute bottom-3 left-5">
-            <p className="font-display text-2xl font-black uppercase italic tracking-tight text-white drop-shadow-lg">
-              {lobby.game}
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="h-36 flex flex-col items-center justify-center gap-2" style={{ background: `${lobby.accent}08` }}>
-          <Icon className="h-10 w-10 opacity-15" style={{ color: lobby.accent }} />
-          <p className="font-display text-2xl font-black uppercase italic tracking-tight text-white">{lobby.game}</p>
-        </div>
+    <div className="w-72 flex-shrink-0 p-5 bg-[#0a0b0e] flex flex-col">
+      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/25 mb-4 flex items-center gap-2">
+        Mixes em Aberto
+        <span className="flex-1 h-px bg-white/[0.05]" />
+      </p>
+
+      <div className="flex-1 overflow-y-auto space-y-2">
+        {emAberto.length === 0 && (
+          <p className="text-xs text-white/25 text-center py-8">Nenhum mix em aberto</p>
+        )}
+        {emAberto.map(s => {
+          const pct = Math.round((s.vagasPreenchidas / s.totalVagas) * 100);
+          const cor = JOGO_CONFIG[s.jogo].cor;
+          const selecionado = sessaoSelecionada?.id === s.id;
+          const dataFmt = new Date(`${s.dataPrevista}T12:00:00`).toLocaleDateString("pt-BR", {
+            weekday: "short", day: "2-digit", month: "short"
+          });
+
+          return (
+            <motion.div
+              key={s.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`bg-[#0d0e12] border border-white/[0.06] p-3 cursor-pointer transition-colors ${
+                selecionado ? "border-amber-500/30 bg-amber-500/[0.03]" : "hover:border-white/15"
+              }`}
+              style={{ borderLeftWidth: 3, borderLeftColor: cor }}
+              onClick={() => onSelecionarSessao(s)}
+            >
+              <p className="text-xs font-black uppercase italic mb-1" style={{ color: cor }}>
+                {JOGO_CONFIG[s.jogo].label}
+              </p>
+              <p className="text-[10px] text-white/35 mb-2 flex items-center gap-1">
+                {s.modalidade === "presencial"
+                  ? <><MapPin className="h-2.5 w-2.5 flex-shrink-0" />{dataFmt} · {s.horario}</>
+                  : <><Wifi className="h-2.5 w-2.5 flex-shrink-0" />{dataFmt} · {s.horario}</>
+                }
+              </p>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="flex-1 h-[3px] bg-white/[0.06]">
+                  <div className="h-full transition-all" style={{ width: `${pct}%`, background: cor }} />
+                </div>
+                <span className="text-[10px] font-bold" style={{ color: cor }}>
+                  {s.vagasPreenchidas}/{s.totalVagas}
+                </span>
+              </div>
+              <span className={`text-[8px] font-black uppercase tracking-[0.12em] ${
+                s.status === "confirmado" ? "text-green-400" : "text-amber-400"
+              }`}>
+                {s.status === "confirmado" ? "✓ Confirmado" : "Confirmando…"}
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {sessaoSelecionada && (
+        <button
+          onClick={() => onParticipar(sessaoSelecionada)}
+          className="mt-4 w-full py-3 text-[11px] font-black uppercase tracking-[0.14em] text-black transition-opacity hover:opacity-85"
+          style={{ background: JOGO_CONFIG[sessaoSelecionada.jogo].cor }}
+        >
+          ▶ Quero Participar
+        </button>
       )}
-
-      <div className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs text-white/40 uppercase tracking-wide">{lobby.fullName}</p>
-          <span
-            className="text-[9px] font-black px-2 py-1 uppercase tracking-widest"
-            style={
-              isOnline
-                ? { background: "rgba(59,130,246,0.12)", color: "#60a5fa", border: "1px solid rgba(59,130,246,0.25)" }
-                : { background: `${lobby.accent}18`, color: lobby.accent, border: `1px solid ${lobby.accent}35` }
-            }
-          >
-            {lobby.mode}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1.5 mb-4">
-          <MapPin className="h-3 w-3 text-white/30" />
-          <p className="text-xs text-white/40 uppercase tracking-wide">{lobby.location}</p>
-        </div>
-
-        <div className="mb-5">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <Users className="h-3.5 w-3.5 text-white/40" />
-              <span className="text-xs font-bold text-white/70">
-                <span className="font-black" style={{ color: lobby.accent }}>{lobby.participants}</span>
-                <span className="text-white/30">/{lobby.max}</span> participantes
-              </span>
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: lobby.accent }}>
-              {lobby.participants === 0 ? "ABERTO" : lobby.participants >= lobby.max ? "COMPLETO" : "PREENCHENDO"}
-            </span>
-          </div>
-          <div className="h-1.5 bg-white/[0.06] overflow-hidden">
-            <motion.div
-              className="h-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${pct}%` }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              style={{ background: lobby.accent }}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] text-white/25 uppercase tracking-widest">Organizando próximo Mix</p>
-          <button
-            onClick={() => onParticipate(lobby)}
-            className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-black transition-opacity hover:opacity-80"
-            style={{ background: lobby.accent }}
-          >
-            <Play className="h-2.5 w-2.5 fill-current" /> Quero Participar
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
 
-function LobbiesSection({ onParticipate }: { onParticipate: (l: Lobby) => void }) {
-  return (
-    <section className="py-12 md:py-16 border-b border-white/[0.06]">
-      <div className="mx-auto max-w-[1500px] px-4 md:px-6">
-        <SectionLabel>Lobbies Ativos</SectionLabel>
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          {LOBBIES.map((lobby, i) => (
-            <motion.div
-              key={lobby.id}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-            >
-              <LobbyCard lobby={lobby} onParticipate={onParticipate} />
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+// ── Modal ─────────────────────────────────────────────────────────────────────
 
-const MIX_STEPS = [
-  {
-    num: "01",
-    title: "Escolha seu lobby",
-    desc: "CS2, Valorant ou LoL. Presencial na SGA ou online em casa. Você decide.",
-  },
-  {
-    num: "02",
-    title: "Reserve com meio ingresso",
-    desc: "Pague 50% para garantir sua vaga. Sem fila, sem perda de lugar.",
-  },
-  {
-    num: "03",
-    title: "Jogue quando fechar 10",
-    desc: "Com o grupo completo, combinamos a data e hora. É só aparecer e jogar.",
-  },
-];
-
-function HowItWorksSection() {
-  return (
-    <section className="py-12 md:py-16 bg-[var(--surface-1)] border-b border-white/[0.06]">
-      <div className="mx-auto max-w-[1500px] px-4 md:px-6">
-        <SectionLabel>Como funciona</SectionLabel>
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          {MIX_STEPS.map((step, i) => (
-            <motion.div
-              key={step.num}
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="relative bg-[var(--surface-2)] border border-white/[0.06] p-6 overflow-hidden"
-              style={{ borderTop: `2px solid ${AMBER}` }}
-            >
-              <span
-                className="absolute top-3 right-4 font-display text-5xl font-black italic select-none leading-none"
-                style={{ color: "rgba(245,158,11,0.07)" }}
-              >
-                {step.num}
-              </span>
-              <p className="font-display text-base font-black uppercase tracking-wide text-white mb-2">{step.title}</p>
-              <p className="text-sm text-white/50 leading-relaxed">{step.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-const MIX_STRUCTURE: { icon: LucideIcon; label: string }[] = [
-  { icon: Crosshair, label: "CS2 Competitivo" },
-  { icon: Zap, label: "Valorant Ranked" },
-  { icon: Trophy, label: "League of Legends" },
-  { icon: Monitor, label: "PCs Gamer Alta Performance" },
-  { icon: Armchair, label: "Cadeiras Ergonômicas" },
-  { icon: MapPin, label: "Santos Games Arena" },
-  { icon: Wifi, label: "Modo Online disponível" },
-];
-
-function StructureSection() {
-  return (
-    <section className="py-12 md:py-16 border-b border-white/[0.06]">
-      <div className="mx-auto max-w-[1500px] px-4 md:px-6">
-        <SectionLabel>Jogos e Estrutura</SectionLabel>
-        <div className="mt-6 flex flex-wrap gap-3">
-          {MIX_STRUCTURE.map((item, i) => (
-            <motion.div
-              key={item.label}
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.07 }}
-              className="flex items-center gap-3 bg-[var(--surface-2)] border border-white/[0.06] hover:border-amber-500/30 px-5 py-3 transition-colors"
-            >
-              <item.icon className="h-5 w-5 opacity-70" style={{ color: AMBER }} />
-              <span className="text-sm font-semibold text-white/80">{item.label}</span>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FinalCTA({ onParticipate }: { onParticipate: () => void }) {
-  const { trackWhatsAppClick, trackCTAVisible } = useAnalytics();
-  const sectionRef = useRef<HTMLElement>(null);
-  const firedRef = useRef<boolean>(false);
+function ModalCheckout({
+  sessao,
+  onClose,
+}: {
+  sessao: MixSessao | null;
+  onClose: () => void;
+}) {
+  const user = useAuth(s => s.user);
+  const navigate = useNavigate();
+  const [aceite, setAceite] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
-    const el = sectionRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !firedRef.current) {
-          firedRef.current = true;
-          trackCTAVisible("mix");
-        }
-      },
-      { threshold: 0.3 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [trackCTAVisible]);
+    setAceite(false);
+    setErro(null);
+  }, [sessao?.id]);
+
+  if (!sessao) return null;
+
+  const cor = JOGO_CONFIG[sessao.jogo].cor;
+  const vagasRestantes = sessao.totalVagas - sessao.vagasPreenchidas;
+  const dataFmt = new Date(`${sessao.dataPrevista}T12:00:00`).toLocaleDateString("pt-BR", {
+    weekday: "long", day: "2-digit", month: "long"
+  });
+
+  async function handleParticipar() {
+    if (!user) {
+      sessionStorage.setItem(INTENT_KEY, String(sessao!.id));
+      navigate({ to: "/login" });
+      return;
+    }
+    if (sessao!.status === "confirmando" && !aceite) return;
+
+    setLoading(true);
+    setErro(null);
+    try {
+      const resultado = await inscreverSessao(sessao!.id);
+      if (resultado.checkoutUrl) {
+        window.location.href = resultado.checkoutUrl;
+      } else {
+        window.open(MIX_WA_LINK, "_blank");
+        onClose();
+      }
+    } catch (e: unknown) {
+      setErro((e as { message?: string })?.message ?? "Erro ao criar inscrição.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <section
-      ref={sectionRef}
-      className="py-16 md:py-20"
-      style={{
-        background: "linear-gradient(135deg, #0f0b00 0%, #06070a 60%)",
-        borderTop: "1px solid rgba(245,158,11,0.15)",
-      }}
-    >
-      <div className="mx-auto max-w-[1500px] px-4 md:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8">
-        <div>
-          <h2 className="font-display text-3xl md:text-4xl font-black uppercase italic tracking-tighter text-white leading-none">
-            Pronto pra jogar{" "}
-            <span style={{ color: AMBER }}>em grupo?</span>
-          </h2>
-          <p className="mt-3 text-sm text-white/40 uppercase tracking-wide">
-            CS2 · Valorant · LoL · Santos Games Arena
-          </p>
-        </div>
-        <div className="flex flex-col items-start sm:items-end gap-4 flex-shrink-0">
-          <div className="text-right">
-            <div className="font-display text-3xl font-black italic leading-none" style={{ color: AMBER }}>
-              MEIO INGRESSO
-            </div>
-            <div className="text-[11px] text-white/40 uppercase tracking-widest mt-1">
-              sinal de 50% · vaga garantida
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={onParticipate} className="btn-slanted-amber flex items-center gap-2 text-sm">
-              <Play className="h-3 w-3 fill-current" /> Quero Participar
-            </button>
-            <a
-              href={MIX_WA_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2.5 border border-[#25d366] text-[#25d366] text-sm font-bold uppercase tracking-wide hover:bg-[#25d366]/10 transition-colors"
-              onClick={() => trackWhatsAppClick("mix")}
-            >
-              <MessageCircle className="h-4 w-4" /> Suporte
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ParticipateModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { trackWhatsAppClick } = useAnalytics();
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+    <Dialog open={!!sessao} onOpenChange={v => !v && onClose()}>
       <DialogContent
-        className="max-w-md border"
-        style={{ background: "#0f0b00", borderColor: "rgba(245,158,11,0.25)" }}
+        className="max-w-sm border"
+        style={{ background: "#0d0e12", borderColor: "rgba(245,158,11,0.22)" }}
       >
-        <DialogTitle className="font-display text-xl font-black uppercase italic tracking-tight text-white">
-          Meio ingresso necessário
+        <DialogTitle className="font-display text-lg font-black uppercase italic tracking-tight text-white">
+          Garantir Vaga — {JOGO_CONFIG[sessao.jogo].label}
         </DialogTitle>
-        <div className="mt-2 space-y-2">
-          <p className="text-sm text-white/70 leading-relaxed">
-            Para participar de um grupo de Mix você precisa de meio ingresso.
-          </p>
-          <p className="text-xs text-white/40 leading-relaxed">Necessário realizar um sinal de 50%.</p>
+
+        <div className="mt-1 space-y-[1px]">
+          {([
+            ["Mix", `${JOGO_CONFIG[sessao.jogo].label} — Santos Games Arena`],
+            ["Data prevista", `${dataFmt} às ${sessao.horario}`],
+            ["Modalidade", sessao.modalidade === "presencial" ? "Presencial" : "Online"],
+            ["Vagas restantes", String(vagasRestantes)],
+          ] as [string, string][]).map(([lbl, val]) => (
+            <div key={lbl} className="flex justify-between items-center py-2 border-b border-white/[0.05]">
+              <span className="text-[10px] uppercase tracking-[0.1em] text-white/35">{lbl}</span>
+              <span className="text-xs font-bold text-white">{val}</span>
+            </div>
+          ))}
         </div>
-        <div className="mt-6 flex flex-col gap-3">
-          <a
-            href={MIX_WA_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 px-5 py-3 text-sm font-black uppercase tracking-widest text-black text-center transition-opacity hover:opacity-80"
-            style={{ background: AMBER }}
-            onClick={() => trackWhatsAppClick("mix")}
-          >
-            QUERO MEU INGRESSO DO MIX
-          </a>
-          <a
-            href={MIX_WA_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 px-5 py-3 text-sm font-bold uppercase tracking-widest text-center transition-colors hover:bg-[#25d366]/10 border"
-            style={{ borderColor: "#25d366", color: "#25d366" }}
-            onClick={() => trackWhatsAppClick("mix")}
-          >
-            <MessageCircle className="h-4 w-4" /> Suporte no WhatsApp
-          </a>
-        </div>
+
+        {sessao.status === "confirmando" && (
+          <div className="mt-3 bg-amber-500/[0.08] border border-amber-500/20 p-3">
+            <p className="text-[11px] text-amber-400/90 leading-relaxed">
+              ⚠ A data pode ajustar até o grupo fechar. Se não puder na nova data: reembolso integral ou troca por outro mix.
+            </p>
+          </div>
+        )}
+
+        {!user ? (
+          <div className="mt-4 space-y-2">
+            <button
+              onClick={handleParticipar}
+              className="w-full py-3 text-[11px] font-black uppercase tracking-[0.14em] text-black transition-opacity hover:opacity-85"
+              style={{ background: cor }}
+            >
+              Entrar para Participar →
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30 border border-white/[0.08] hover:text-white/50 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {sessao.status === "confirmando" && (
+              <label className="flex gap-2 items-start cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={aceite}
+                  onChange={e => setAceite(e.target.checked)}
+                  className="mt-0.5 accent-amber-500"
+                />
+                <span className="text-[11px] text-white/30 leading-relaxed">
+                  Concordo que a data pode ser ajustada até o grupo fechar e estou ciente da política de reembolso.
+                </span>
+              </label>
+            )}
+            {erro && <p className="text-[11px] text-red-400">{erro}</p>}
+            <button
+              onClick={handleParticipar}
+              disabled={(sessao.status === "confirmando" && !aceite) || loading || vagasRestantes <= 0}
+              className="w-full py-3 text-[11px] font-black uppercase tracking-[0.14em] text-black transition-opacity hover:opacity-85 disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{ background: cor }}
+            >
+              {loading ? "Aguarde…" : vagasRestantes <= 0 ? "Lotado" : "Ir para o Checkout →"}
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white/30 border border-white/[0.08] hover:text-white/50 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function MixPage() {
-  const user = useAuth((s) => s.user);
-  const navigate = useNavigate();
-  const [modalOpen, setModalOpen] = useState(false);
+// ── Página principal ──────────────────────────────────────────────────────────
 
-  function handleParticipate(_lobby?: Lobby) {
-    if (!user) {
-      navigate({ to: "/login" });
-      return;
-    }
-    setModalOpen(true);
-  }
+function MixPage() {
+  const [sessoes, setSessoes] = useState<MixSessao[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [sessaoSelecionada, setSessaoSelecionada] = useState<MixSessao | null>(null);
+  const [modalAberto, setModalAberto] = useState(false);
+  const { trackWhatsAppClick } = useAnalytics();
+
+  useEffect(() => {
+    fetchSessoes()
+      .then(data => {
+        setSessoes(data);
+        const intentId = sessionStorage.getItem(INTENT_KEY);
+        if (intentId) {
+          sessionStorage.removeItem(INTENT_KEY);
+          const alvo = data.find(s => s.id === Number(intentId));
+          if (alvo) {
+            setSessaoSelecionada(alvo);
+            setModalAberto(true);
+            return;
+          }
+        }
+        if (data.length > 0) setSessaoSelecionada(data[0]);
+      })
+      .catch(() => {})
+      .finally(() => setCarregando(false));
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#06070a]">
-      <Hero />
-      <InfoBar onParticipate={handleParticipate} />
-      <LobbiesSection onParticipate={handleParticipate} />
-      <HowItWorksSection />
-      <StructureSection />
-      <FinalCTA onParticipate={handleParticipate} />
-      <ParticipateModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <div className="bg-[#0d0e12] border-b-2 border-amber-500 px-7 py-5 flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <div className="inline-flex items-center gap-1.5 bg-amber-500 text-black text-[9px] font-black px-2.5 py-1 uppercase tracking-[0.18em] mb-2">
+            ⚡ Jogatina em Grupo
+          </div>
+          <h1 className="font-display text-4xl font-black uppercase italic tracking-tighter leading-none text-white">
+            MIX <span style={{ color: AMBER }}>SGA</span>
+          </h1>
+          <p className="mt-1 text-[10px] text-white/35 uppercase tracking-[0.12em]">
+            CS2 · Valorant · LoL · Santos Games Arena
+          </p>
+        </div>
+        <a
+          href={MIX_WA_LINK}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => trackWhatsAppClick("mix")}
+          className="flex items-center gap-2 px-4 py-2.5 border border-[#25d366] text-[#25d366] text-xs font-bold uppercase tracking-wide hover:bg-[#25d366]/10 transition-colors"
+        >
+          <MessageCircle className="h-4 w-4" /> Suporte
+        </a>
+      </div>
+
+      {carregando ? (
+        <div className="flex items-center justify-center py-24 text-white/30 text-xs uppercase tracking-widest">
+          Carregando…
+        </div>
+      ) : (
+        <div className="flex min-h-[calc(100vh-90px)]">
+          <Calendario
+            sessoes={sessoes}
+            sessaoSelecionada={sessaoSelecionada}
+            onSelecionarSessao={setSessaoSelecionada}
+          />
+          <SidebarMixes
+            sessoes={sessoes}
+            sessaoSelecionada={sessaoSelecionada}
+            onSelecionarSessao={setSessaoSelecionada}
+            onParticipar={s => { setSessaoSelecionada(s); setModalAberto(true); }}
+          />
+        </div>
+      )}
+
+      <ModalCheckout
+        sessao={modalAberto ? sessaoSelecionada : null}
+        onClose={() => setModalAberto(false)}
+      />
     </div>
   );
 }
