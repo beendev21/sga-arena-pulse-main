@@ -100,6 +100,9 @@ export function Header() {
                   </div>
                   <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-[#0a0a0c] rounded-full" />
                 </div>
+                <Link to="/meus-mixes" className="hidden md:flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white/50 hover:text-amber-500 transition-colors px-2">
+                  Meus Mixes
+                </Link>
                 <button onClick={() => logout()} title="Sair" className="p-2 text-muted-foreground/60 hover:text-primary transition-colors">
                   <LogOut className="h-4 w-4" />
                 </button>
@@ -148,9 +151,18 @@ export function Header() {
               </Link>
             ))}
             {user ? (
-              <button onClick={() => logout()} className="mt-auto py-5 text-sm font-bold tracking-wide text-primary hover:text-white transition-all flex items-center justify-between border-t border-white/5 uppercase">
-                Sair <LogOut className="h-4 w-4" />
-              </button>
+              <>
+                <Link
+                  to="/meus-mixes"
+                  className="py-4 border-b border-white/[0.04] text-sm font-bold tracking-wide text-white/80 hover:text-white hover:bg-amber-500/5 hover:pl-4 transition-all flex items-center justify-between group uppercase"
+                >
+                  Meus Mixes
+                  <Play className="h-3 w-3 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+                <button onClick={() => logout()} className="mt-auto py-5 text-sm font-bold tracking-wide text-primary hover:text-white transition-all flex items-center justify-between border-t border-white/5 uppercase">
+                  Sair <LogOut className="h-4 w-4" />
+                </button>
+              </>
             ) : (
               <Link to="/login" className="mt-auto border-t border-white/5">
                 <button className="btn-slanted w-full flex items-center justify-center gap-2 group py-4 mt-5">
