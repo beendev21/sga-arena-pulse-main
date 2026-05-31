@@ -20,6 +20,7 @@ import ApiService from "@/API/service";
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import QRCode from "react-qr-code";
 
 const AUTH_URL = ((import.meta as any).env?.VITE_AUTH_URL as string | undefined)?.trim()?.replace(/\/$/, "") ?? "";
 
@@ -851,18 +852,24 @@ function TwoFactorBlock() {
       {/* Setup — exibe URI e campo de código */}
       {step === "setup" && (
         <div className="space-y-4">
-          <div className="bg-white/[0.03] border border-white/[0.06] p-4 space-y-3">
+          <div className="bg-white/[0.03] border border-white/[0.06] p-4 space-y-4">
             <p className="text-xs text-white/60">
               1. Abra seu app autenticador (Google Authenticator, Authy, etc.) e escaneie o QR code ou adicione a chave manualmente.
             </p>
+            {otpauthUrl && (
+              <div className="flex justify-center">
+                <div className="bg-white p-3 rounded-sm inline-block">
+                  <QRCode value={otpauthUrl} size={160} />
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <code className="text-xs font-mono text-primary bg-primary/10 px-2 py-1 break-all flex-1">{secret}</code>
               <button type="button" onClick={() => navigator.clipboard.writeText(secret)}
-                className="p-1.5 text-muted-foreground hover:text-white transition-colors" title="Copiar">
+                className="p-1.5 text-muted-foreground hover:text-white transition-colors" title="Copiar chave">
                 <Copy className="h-3.5 w-3.5" />
               </button>
             </div>
-            <p className="text-xs text-white/40 font-mono break-all">{otpauthUrl}</p>
           </div>
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
