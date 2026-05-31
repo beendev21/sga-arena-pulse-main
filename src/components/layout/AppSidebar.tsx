@@ -9,7 +9,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Link } from "@tanstack/react-router";
-import { Home, Trophy, Swords, User, LayoutDashboard, Image as ImgIcon, X, Gamepad2 } from "lucide-react";
+import { Home, Trophy, Swords, User, LayoutDashboard, Image as ImgIcon, X, Gamepad2, LogOut, Play, Settings } from "lucide-react";
 import { useAuth } from "@/store/auth";
 
 const baseItems = [
@@ -29,6 +29,8 @@ const playItems = [
 
 export function AppSidebar() {
   const { setOpenMobile, setOpen } = useSidebar();
+  const user = useAuth((s) => s.user);
+  const logout = useAuth((s) => s.logout);
   const isAdmin = useAuth((s) => s.isAdmin);
   const items = isAdmin ? [...baseItems, adminItem] : baseItems;
 
@@ -101,6 +103,48 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {/* Auth section */}
+        <div className="mt-auto border-t border-white/[0.06] p-4">
+          {user ? (
+            <div className="flex items-center gap-3">
+              <Link to="/profile" onClick={close} className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="h-9 w-9 shrink-0 border border-primary/40 overflow-hidden">
+                  {user.avatar ? (
+                    <img src={user.avatar} alt={user.name || user.login} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full grid place-items-center bg-primary/15 font-display text-xs font-black text-primary uppercase">
+                      {(user.name || user.login || "?").split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0]).join("")}
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-white truncate">{user.name || user.login}</div>
+                  <div className="text-[11px] text-primary font-semibold uppercase tracking-wide">{user.role === "Administrador" ? "Admin" : "Jogador"}</div>
+                </div>
+              </Link>
+              <Link
+                to="/settings"
+                onClick={close}
+                title="Configurações"
+                className="shrink-0 p-2 text-muted-foreground/60 hover:text-primary transition-colors"
+              >
+                <Settings className="h-4 w-4" />
+              </Link>
+              <button
+                onClick={() => { logout(); close(); }}
+                title="Sair"
+                className="shrink-0 p-2 text-muted-foreground/60 hover:text-primary transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <Link to="/login" onClick={close} className="flex items-center justify-center gap-2 w-full bg-primary text-primary-foreground px-4 py-3 font-bold uppercase tracking-wider text-sm hover:bg-primary/90 transition-colors">
+              <Play className="h-3.5 w-3.5 fill-current" />
+              Entrar na Arena
+            </Link>
+          )}
+        </div>
       </SidebarContent>
     </Sidebar>
   );

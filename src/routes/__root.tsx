@@ -1,13 +1,107 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
-  Outlet, Link, createRootRouteWithContext, useRouter, useRouterState, HeadContent,
+  Outlet, Link, createRootRouteWithContext, useRouter, useRouterState, HeadContent, useLocation,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { PersistentSidebar } from "@/components/layout/PersistentSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { CustomCursor } from "@/components/CustomCursor";
+import { useAuth, mapRole } from "@/store/auth";
+import { usePreferences, applyAccent, applyBgTheme } from "@/store/preferences";
+
+const API_BASE = ((import.meta as any).env?.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
+
+const AUTH_URL = ((import.meta as any).env?.VITE_AUTH_URL as string | undefined)?.trim()?.replace(/\/$/, "") ?? "";
+// Em dev com DEV_TOKEN_LOGIN, cookies não são enviados cross-site — não forçamos logout
+const IS_DEV_LOGIN = ((import.meta as any).env?.VITE_DEV_TOKEN_LOGIN as string | undefined)?.trim() === "true";
+
+function SessionSync() {
+  const login = useAuth((s) => s.login);
+  const logout = useAuth((s) => s.logout);
+  const setSyncing = useAuth((s) => s.setSyncing);
+  const applyServerPreferences = usePreferences((s) => s.applyServerPreferences);
+
+  useEffect(() => {
+    if (!AUTH_URL) {
+      setSyncing(false);
+      return;
+    }
+    async function fetchSession(): Promise<any> {
+      const r = await fetch(`${AUTH_URL}/api/auth/session`, { credentials: "include" });
+      return r.ok ? r.json() : null;
+    }
+
+    async function tryRefresh(): Promise<boolean> {
+      try {
+        const r = await fetch(`${AUTH_URL}/api/auth/refresh`, {
+          method: "POST",
+          credentials: "include",
+        });
+        return r.ok;
+      } catch {
+        return false;
+      }
+    }
+
+    (async () => {
+      try {
+        let data = await fetchSession();
+
+        // Token expirado → tenta refresh e repete a sessão
+        if (!data?.authenticated) {
+          const refreshed = await tryRefresh();
+          if (refreshed) data = await fetchSession();
+        }
+
+        if (data?.authenticated && data.user?.id) {
+          const u = data.user;
+          login(
+            {
+              id: u.id,
+              name: u.login,
+              email: u.email ?? "",
+              login: u.login,
+              role: mapRole(u.role),
+              isActive: true,
+              lastLoginAt: new Date().toISOString(),
+              createdAt: u.createdAt ?? null,
+            },
+            "",
+            false
+          );
+          if (API_BASE) {
+            fetch(`${API_BASE}/api/User/me`, { credentials: "include" })
+              .then((r) => r.ok ? r.json() : null)
+              .then((meData) => {
+                if (meData?.result) {
+                  const r = meData.result;
+                  applyServerPreferences({
+                    cursorStyle: r.cursorStyle,
+                    accentColor: r.accentColor,
+                    bgTheme: r.bgTheme,
+                    navLayout: r.navLayout,
+                    sidebarAutoExpand: r.sidebarAutoExpand,
+                    reducedMotion: r.reducedMotion,
+                  });
+                }
+              })
+              .catch(() => {});
+          }
+        } else {
+          logout();
+        }
+      } catch {
+        setSyncing(false);
+      }
+    })();
+  }, []);
+
+  return null;
+}
 
 function GA4PageTracker() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -94,20 +188,52 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+function PreferencesApplier() {
+  const accent      = usePreferences((s) => s.accent);
+  const bgTheme     = usePreferences((s) => s.bgTheme);
+  const reducedMotion = usePreferences((s) => s.reducedMotion);
+  useEffect(() => {
+    applyAccent(accent);
+  }, [accent]);
+  useEffect(() => {
+    applyBgTheme(bgTheme);
+  }, [bgTheme]);
+  useEffect(() => {
+    document.documentElement.classList.toggle("reduce-motion", reducedMotion);
+  }, [reducedMotion]);
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const navLayout  = usePreferences((s) => s.navLayout);
+  const isSidebar  = navLayout === "sidebar";
+  const location   = useLocation();
+  const isAdmin    = location.pathname.startsWith("/admin");
+
   return (
     <QueryClientProvider client={queryClient}>
       <HeadContent />
       <GA4PageTracker />
+      <SessionSync />
+      <PreferencesApplier />
       <SidebarProvider defaultOpen={false}>
-        <Navbar />
+        <CustomCursor />
+        {isSidebar ? (
+          <>
+            {/* Mobile: navbar normal; desktop: sidebar persistente */}
+            <div className="md:hidden"><Navbar /></div>
+            <PersistentSidebar />
+          </>
+        ) : (
+          <Navbar />
+        )}
         <AppSidebar />
-        <div className="flex min-h-dvh w-full flex-col overflow-x-hidden">
-          <main className="flex-1 pt-16 w-full relative">
+        <div className="flex min-h-dvh w-full flex-col overflow-x-hidden" style={{ background: "var(--bg-base, #06070a)" }}>
+          <main className={`flex-1 w-full relative ${isSidebar ? "pt-20 md:pt-0 md:pl-16" : "pt-20"}`}>
             <Outlet />
           </main>
-          <Footer />
+          {!isAdmin && <Footer />}
         </div>
         <Toaster />
       </SidebarProvider>

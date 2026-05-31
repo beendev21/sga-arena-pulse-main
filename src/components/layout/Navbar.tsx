@@ -1,5 +1,6 @@
-import { Link } from "@tanstack/react-router";
-import { Bell, Menu, Play, LogOut, LayoutDashboard, ChevronDown } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { Bell, Menu, Play, LogOut, LayoutDashboard, ChevronDown, Settings } from "lucide-react";
+import { SgaAnimatedLogo } from "@/components/SgaAnimatedLogo";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useAuth } from "@/store/auth";
 import {
@@ -8,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { UserMenuDropdown } from "@/components/layout/UserMenuDropdown";
 
 const links = [
   { to: "/tournaments", label: "Ranking" },
@@ -22,6 +24,7 @@ export function Navbar() {
   const { toggleSidebar } = useSidebar();
   const user = useAuth((s) => s.user);
   const logout = useAuth((s) => s.logout);
+  const navigate = useNavigate();
 
   return (
     <header className="fixed top-0 inset-x-0 z-[100] h-20 w-full border-b border-white/5 bg-[#0a0a0c] [transform:translateZ(0)] shadow-2xl">
@@ -37,11 +40,7 @@ export function Navbar() {
           </button>
 
           <Link to="/" className="flex shrink-0 items-center gap-3 group outline-none">
-            <img
-              src="/sga-logo.png"
-              alt="Santos Games Arena"
-              className="h-10 w-auto transition-transform duration-300 group-hover:scale-105"
-            />
+            <SgaAnimatedLogo className="h-10 w-auto" />
             <div className="hidden sm:flex flex-col border-l border-white/10 pl-3">
               <span className="font-display text-base font-black leading-none tracking-tight text-white uppercase whitespace-nowrap">Santos Games</span>
               <span className="font-display text-xs text-primary font-bold leading-none tracking-wider uppercase mt-1 whitespace-nowrap">Arena</span>
@@ -103,15 +102,6 @@ export function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {user?.role === "Administrador" && (
-              <Link
-                to="/admin"
-                activeProps={{ className: "active" }}
-                className="nav-link-glow"
-              >
-                <span>Admin</span>
-              </Link>
-            )}
           </nav>
         </div>
 
@@ -122,13 +112,13 @@ export function Navbar() {
               className="hidden sm:flex p-2.5 text-muted-foreground/60 hover:text-white transition-all border border-transparent hover:bg-white/5 relative"
             >
               <Bell className="h-4.5 w-4.5" />
-              <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_5px_var(--primary)]" />
+              <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-primary rounded-full shadow-[0_0_5px_var(--primary)]" />
             </button>
 
             <div className="h-6 w-px bg-white/10 mx-1 hidden sm:block" />
 
             {user ? (
-              <div className="flex items-center gap-3 pl-2 group relative">
+              <div className="flex items-center gap-4 pl-3 group relative">
                 <div className="flex flex-col items-end hidden lg:flex select-none">
                   <span className="text-sm font-bold text-white leading-none">{user.name || user.login}</span>
                   <span className="text-[11px] text-primary font-semibold tracking-wide uppercase leading-none mt-1">{user.role === "Administrador" ? "Admin" : "Jogador"}</span>
@@ -142,9 +132,9 @@ export function Navbar() {
                     <LayoutDashboard className="h-4 w-4" />
                   </Link>
                 )}
-                <Link to="/profile">
-                  <div className="relative">
-                    <div className="h-9 w-9 border border-primary/40 group-hover:border-primary transition-colors overflow-hidden">
+                <UserMenuDropdown side="bottom" align="end">
+                  <button className="relative group/avatar focus:outline-none">
+                    <div className="h-9 w-9 border border-primary/40 group-hover/avatar:border-primary transition-colors overflow-hidden">
                       {user.avatar ? (
                         <img
                           src={user.avatar}
@@ -159,15 +149,8 @@ export function Navbar() {
                       )}
                     </div>
                     <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-[#0a0a0c] rounded-full" />
-                  </div>
-                </Link>
-                <button
-                  onClick={() => logout()}
-                  title="Sair"
-                  className="p-2 text-muted-foreground/60 hover:text-primary transition-colors"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
+                  </button>
+                </UserMenuDropdown>
               </div>
             ) : (
               <Link to="/login" className="hidden sm:block">
