@@ -747,7 +747,7 @@ function TwoFactorBlock() {
     if (!user) return;
     fetch(`${AUTH_URL}/api/auth/session`, { credentials: "include" })
       .then(r => r.json())
-      .then(d => { if (d?.totpEnabled !== undefined) setTotpEnabled(d.totpEnabled); })
+      .then(d => { if (d?.user?.totpEnabled !== undefined) setTotpEnabled(d.user.totpEnabled); })
       .catch(() => {});
   }, [user]);
 
