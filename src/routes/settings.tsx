@@ -858,14 +858,12 @@ function TwoFactorBlock() {
   }
 
   async function handleDisable() {
-    if (!disableCode) { setError("Informe o código ou sua senha."); return; }
+    if (!disableCode) { setError("Informe o código."); return; }
     setError(null); setDisabling(true);
     try {
-      const isNumeric = /^\d{6}$/.test(disableCode);
-      const body = isNumeric ? { code: disableCode } : { password: disableCode };
       const res = await fetch(`${AUTH_URL}/api/auth/2fa/disable`, {
         method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify({ code: disableCode }),
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
@@ -1049,7 +1047,7 @@ function TwoFactorBlock() {
         <div className="mt-4 pt-4 border-t border-white/[0.05] space-y-3">
           {totpMethod === "email" ? (
             <>
-              <p className="text-xs text-muted-foreground">Para desabilitar, informe o código enviado ao seu e-mail ou sua senha:</p>
+              <p className="text-xs text-muted-foreground">Para desabilitar, informe o código enviado ao seu e-mail:</p>
               {!disableOtpSent && (
                 <button onClick={sendDisableOtp} disabled={sendingDisableOtp}
                   className="flex items-center gap-2 border border-blue-500/30 text-blue-400 hover:border-blue-400 px-4 py-2 text-xs font-black uppercase tracking-widest disabled:opacity-40 transition-colors">
@@ -1062,11 +1060,11 @@ function TwoFactorBlock() {
               )}
             </>
           ) : (
-            <p className="text-xs text-muted-foreground">Para desabilitar, informe o código TOTP ou sua senha:</p>
+            <p className="text-xs text-muted-foreground">Para desabilitar, informe o código do app autenticador:</p>
           )}
           <div className="flex gap-2">
             <input type="text" value={disableCode} onChange={e => setDisableCode(e.target.value)}
-              placeholder={totpMethod === "email" ? "Código de e-mail ou senha" : "Código TOTP ou senha"}
+              placeholder={totpMethod === "email" ? "Código de 6 dígitos (e-mail)" : "Código do autenticador"}
               className="flex-1 border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white placeholder:text-muted-foreground/30 focus:outline-none focus:border-destructive/60 transition-colors" />
             <button onClick={handleDisable} disabled={disabling || !disableCode}
               className="flex items-center gap-2 border border-destructive/40 text-destructive/80 hover:border-destructive hover:text-destructive px-4 py-2.5 text-xs font-black uppercase tracking-widest disabled:opacity-40 transition-colors">
