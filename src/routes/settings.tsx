@@ -8,7 +8,7 @@ import {
   Smartphone, Globe, Clock, Trash2, Search,
   MousePointer2, Palette, Gamepad2, Zap,
   Twitter, Instagram, Twitch, MessageSquare, Camera,
-  ShieldCheck, ShieldOff, Copy, QrCode,
+  ShieldCheck, ShieldOff, Copy, QrCode, Mail,
   PanelLeft, Menu, X, ArrowLeft,
 } from "lucide-react";
 import {
@@ -731,7 +731,8 @@ function SegurancaSection() {
 
 function TwoFactorBlock() {
   const user = useAuth((s) => s.user);
-  const [step, setStep] = useState<"idle" | "setup" | "codes">("idle");
+  type Step = "idle" | "method-select" | "setup-app" | "setup-email" | "codes";
+  const [step, setStep] = useState<Step>("idle");
   const [secret, setSecret] = useState("");
   const [otpauthUrl, setOtpauthUrl] = useState("");
   const [code, setCode] = useState("");
@@ -740,27 +741,37 @@ function TwoFactorBlock() {
   const [error, setError] = useState<string | null>(null);
   const [disableCode, setDisableCode] = useState("");
   const [disabling, setDisabling] = useState(false);
-  const [totpEnabled, setTotpEnabled] = useState(false); // carregado do server
+  const [sendingDisableOtp, setSendingDisableOtp] = useState(false);
+  const [disableOtpSent, setDisableOtpSent] = useState(false);
+  const [totpEnabled, setTotpEnabled] = useState(false);
+  const [totpMethod, setTotpMethod] = useState<"authenticator" | "email" | null>(null);
+  const [emailMasked, setEmailMasked] = useState("");
 
-  // Verifica status 2FA no auth-api
   useEffect(() => {
     if (!user) return;
     fetch(`${AUTH_URL}/api/auth/session`, { credentials: "include" })
       .then(r => r.json())
-      .then(d => { if (d?.user?.totpEnabled !== undefined) setTotpEnabled(d.user.totpEnabled); })
+      .then(d => {
+        if (d?.user?.totpEnabled !== undefined) setTotpEnabled(d.user.totpEnabled);
+        if (d?.user?.totpMethod !== undefined) setTotpMethod(d.user.totpMethod ?? null);
+      })
       .catch(() => {});
   }, [user]);
 
-  async function startSetup() {
-    setError(null);
-    setLoading(true);
+  function reset() {
+    setStep("idle"); setCode(""); setError(null);
+    setSecret(""); setOtpauthUrl(""); setEmailMasked("");
+  }
+
+  async function startSetupApp() {
+    setError(null); setLoading(true);
     try {
-      const res = await fetch(`${AUTH_URL}/api/auth/2fa/setup`, { credentials: "include" });
+      const res = await fetch(`${AUTH_URL}/api/auth/2fa/setup?method=authenticator`, { credentials: "include" });
       if (!res.ok) throw new Error("Erro ao iniciar configuração.");
       const data = await res.json();
       setSecret(data.secret);
       setOtpauthUrl(data.otpauthUrl);
-      setStep("setup");
+      setStep("setup-app");
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -768,15 +779,29 @@ function TwoFactorBlock() {
     }
   }
 
-  async function confirmEnable() {
+  async function startSetupEmail() {
+    setError(null); setLoading(true);
+    try {
+      const res = await fetch(`${AUTH_URL}/api/auth/2fa/email/send-code`, {
+        method: "POST", credentials: "include",
+      });
+      if (!res.ok) throw new Error("Erro ao enviar código.");
+      const data = await res.json();
+      setEmailMasked(data.email ?? "");
+      setStep("setup-email");
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function confirmEnableApp() {
     if (code.length !== 6) { setError("Digite o código de 6 dígitos."); return; }
-    setError(null);
-    setLoading(true);
+    setError(null); setLoading(true);
     try {
       const res = await fetch(`${AUTH_URL}/api/auth/2fa/enable`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify({ secret, code }),
       });
       if (!res.ok) {
@@ -784,8 +809,9 @@ function TwoFactorBlock() {
         throw new Error(d?.message ?? "Código inválido.");
       }
       const data = await res.json();
-      setBackupCodes(data.backupCodes);
+      setBackupCodes(data.backupCodes ?? []);
       setTotpEnabled(true);
+      setTotpMethod("authenticator");
       setStep("codes");
     } catch (e: any) {
       setError(e.message);
@@ -794,17 +820,51 @@ function TwoFactorBlock() {
     }
   }
 
+  async function confirmEnableEmail() {
+    if (code.length !== 6) { setError("Digite o código de 6 dígitos."); return; }
+    setError(null); setLoading(true);
+    try {
+      const res = await fetch(`${AUTH_URL}/api/auth/2fa/email/confirm`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ code }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d?.message ?? "Código inválido.");
+      }
+      setTotpEnabled(true);
+      setTotpMethod("email");
+      setStep("idle");
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendDisableOtp() {
+    setSendingDisableOtp(true); setDisableOtpSent(false); setError(null);
+    try {
+      const res = await fetch(`${AUTH_URL}/api/auth/2fa/email/send-disable-code`, {
+        method: "POST", credentials: "include",
+      });
+      if (!res.ok) throw new Error("Erro ao enviar código.");
+      setDisableOtpSent(true);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSendingDisableOtp(false);
+    }
+  }
+
   async function handleDisable() {
-    if (!disableCode) { setError("Informe o código TOTP ou a senha."); return; }
-    setError(null);
-    setDisabling(true);
+    if (!disableCode) { setError("Informe o código ou sua senha."); return; }
+    setError(null); setDisabling(true);
     try {
       const isNumeric = /^\d{6}$/.test(disableCode);
       const body = isNumeric ? { code: disableCode } : { password: disableCode };
       const res = await fetch(`${AUTH_URL}/api/auth/2fa/disable`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -812,13 +872,21 @@ function TwoFactorBlock() {
         throw new Error(d?.message ?? "Falha ao desabilitar.");
       }
       setTotpEnabled(false);
+      setTotpMethod(null);
       setDisableCode("");
+      setDisableOtpSent(false);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setDisabling(false);
     }
   }
+
+  const methodLabel = totpMethod === "email"
+    ? "Ativa — código enviado por e-mail no login."
+    : totpMethod === "authenticator"
+    ? "Ativa — use um app autenticador para fazer login."
+    : "Inativa — adicione uma camada extra de segurança.";
 
   return (
     <div className="bg-[#0a0a0c]/60 border border-white/5 p-6">
@@ -828,9 +896,7 @@ function TwoFactorBlock() {
         </div>
         <div>
           <p className="text-sm font-black uppercase tracking-widest text-white">Autenticação em 2 Fatores (2FA)</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {totpEnabled ? "Ativa — use um app autenticador para fazer login." : "Inativa — adicione uma camada extra de segurança."}
-          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">{methodLabel}</p>
         </div>
       </div>
 
@@ -840,17 +906,50 @@ function TwoFactorBlock() {
         </div>
       )}
 
-      {/* Não configurado */}
+      {/* Escolher método */}
       {!totpEnabled && step === "idle" && (
-        <button onClick={startSetup} disabled={loading}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 text-xs font-black uppercase tracking-widest hover:bg-primary/90 disabled:opacity-40 transition-colors">
-          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
+        <button onClick={() => { setError(null); setStep("method-select"); }}
+          className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 text-xs font-black uppercase tracking-widest hover:bg-primary/90 transition-colors">
+          <ShieldCheck className="h-3.5 w-3.5" />
           Configurar 2FA
         </button>
       )}
 
-      {/* Setup — exibe URI e campo de código */}
-      {step === "setup" && (
+      {/* Seleção de método */}
+      {step === "method-select" && (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground mb-2">Escolha como deseja receber os códigos de verificação:</p>
+          <button onClick={startSetupApp} disabled={loading}
+            className="w-full flex items-center gap-3 border border-white/10 bg-white/[0.02] hover:border-primary/40 hover:bg-white/[0.04] px-4 py-3 text-left transition-colors">
+            <div className="p-2 bg-primary/10 text-primary shrink-0">
+              <Smartphone className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-white">App Autenticador</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Google Authenticator, Authy, etc. Mais seguro.</p>
+            </div>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin ml-auto text-muted-foreground" /> : <ChevronRight className="h-4 w-4 ml-auto text-muted-foreground" />}
+          </button>
+          <button onClick={startSetupEmail} disabled={loading}
+            className="w-full flex items-center gap-3 border border-white/10 bg-white/[0.02] hover:border-primary/40 hover:bg-white/[0.04] px-4 py-3 text-left transition-colors">
+            <div className="p-2 bg-blue-500/10 text-blue-400 shrink-0">
+              <Mail className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-white">E-mail</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Código enviado para seu e-mail a cada login.</p>
+            </div>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin ml-auto text-muted-foreground" /> : <ChevronRight className="h-4 w-4 ml-auto text-muted-foreground" />}
+          </button>
+          <button onClick={reset}
+            className="text-xs text-muted-foreground hover:text-white transition-colors">
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {/* Setup via App Autenticador */}
+      {step === "setup-app" && (
         <div className="space-y-4">
           <div className="bg-white/[0.03] border border-white/[0.06] p-4 space-y-4">
             <p className="text-xs text-white/60">
@@ -876,21 +975,16 @@ function TwoFactorBlock() {
               2. Digite o código gerado para confirmar
             </label>
             <div className="flex gap-2">
-              <input
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={code}
+              <input type="text" inputMode="numeric" maxLength={6} value={code}
                 onChange={e => setCode(e.target.value.replace(/\D/g, ""))}
                 placeholder="000000"
-                className="w-36 border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white font-mono tracking-[0.3em] placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/60"
-              />
-              <button onClick={confirmEnable} disabled={loading || code.length !== 6}
+                className="w-36 border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white font-mono tracking-[0.3em] placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/60" />
+              <button onClick={confirmEnableApp} disabled={loading || code.length !== 6}
                 className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 text-xs font-black uppercase tracking-widest hover:bg-primary/90 disabled:opacity-40 transition-colors">
                 {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                 Ativar
               </button>
-              <button onClick={() => { setStep("idle"); setCode(""); setError(null); }}
+              <button onClick={reset}
                 className="px-4 py-2.5 text-xs text-muted-foreground border border-white/10 hover:border-white/20 transition-colors">
                 Cancelar
               </button>
@@ -899,7 +993,36 @@ function TwoFactorBlock() {
         </div>
       )}
 
-      {/* Códigos de backup */}
+      {/* Setup via E-mail */}
+      {step === "setup-email" && (
+        <div className="space-y-4">
+          <div className="bg-blue-500/[0.04] border border-blue-500/20 px-4 py-3 text-xs text-blue-300">
+            Código de verificação enviado para <strong>{emailMasked || "seu e-mail"}</strong>. Verifique sua caixa de entrada.
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+              Digite o código de 6 dígitos
+            </label>
+            <div className="flex gap-2">
+              <input type="text" inputMode="numeric" maxLength={6} value={code}
+                onChange={e => setCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="000000"
+                className="w-36 border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white font-mono tracking-[0.3em] placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/60" />
+              <button onClick={confirmEnableEmail} disabled={loading || code.length !== 6}
+                className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 text-xs font-black uppercase tracking-widest hover:bg-primary/90 disabled:opacity-40 transition-colors">
+                {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                Confirmar
+              </button>
+              <button onClick={reset}
+                className="px-4 py-2.5 text-xs text-muted-foreground border border-white/10 hover:border-white/20 transition-colors">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Códigos de backup (só para autenticador) */}
       {step === "codes" && (
         <div className="space-y-3">
           <p className="text-xs text-white/70">
@@ -914,7 +1037,7 @@ function TwoFactorBlock() {
             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-white transition-colors">
             <Copy className="h-3.5 w-3.5" /> Copiar todos
           </button>
-          <button onClick={() => setStep("idle")}
+          <button onClick={reset}
             className="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 text-xs font-bold uppercase tracking-widest hover:border-white/20 transition-colors">
             <Check className="h-3.5 w-3.5 text-success" /> Entendi, já salvei
           </button>
@@ -924,10 +1047,26 @@ function TwoFactorBlock() {
       {/* Desabilitar 2FA */}
       {totpEnabled && step === "idle" && (
         <div className="mt-4 pt-4 border-t border-white/[0.05] space-y-3">
-          <p className="text-xs text-muted-foreground">Para desabilitar, informe o código TOTP ou sua senha:</p>
+          {totpMethod === "email" ? (
+            <>
+              <p className="text-xs text-muted-foreground">Para desabilitar, informe o código enviado ao seu e-mail ou sua senha:</p>
+              {!disableOtpSent && (
+                <button onClick={sendDisableOtp} disabled={sendingDisableOtp}
+                  className="flex items-center gap-2 border border-blue-500/30 text-blue-400 hover:border-blue-400 px-4 py-2 text-xs font-black uppercase tracking-widest disabled:opacity-40 transition-colors">
+                  {sendingDisableOtp ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                  Enviar código por e-mail
+                </button>
+              )}
+              {disableOtpSent && (
+                <p className="text-xs text-blue-400">✓ Código enviado! Insira abaixo para desabilitar.</p>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground">Para desabilitar, informe o código TOTP ou sua senha:</p>
+          )}
           <div className="flex gap-2">
             <input type="text" value={disableCode} onChange={e => setDisableCode(e.target.value)}
-              placeholder="Código TOTP ou senha"
+              placeholder={totpMethod === "email" ? "Código de e-mail ou senha" : "Código TOTP ou senha"}
               className="flex-1 border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white placeholder:text-muted-foreground/30 focus:outline-none focus:border-destructive/60 transition-colors" />
             <button onClick={handleDisable} disabled={disabling || !disableCode}
               className="flex items-center gap-2 border border-destructive/40 text-destructive/80 hover:border-destructive hover:text-destructive px-4 py-2.5 text-xs font-black uppercase tracking-widest disabled:opacity-40 transition-colors">
