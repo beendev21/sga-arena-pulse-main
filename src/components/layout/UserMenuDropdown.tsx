@@ -12,9 +12,10 @@ type Props = {
   children: React.ReactNode;
   side?: "top" | "bottom" | "left" | "right";
   align?: "start" | "center" | "end";
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function UserMenuDropdown({ children, side = "bottom", align = "end" }: Props) {
+export function UserMenuDropdown({ children, side = "bottom", align = "end", onOpenChange }: Props) {
   const user     = useAuth((s) => s.user);
   const logout   = useAuth((s) => s.logout);
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ export function UserMenuDropdown({ children, side = "bottom", align = "end" }: P
   const menuItem = "flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium cursor-pointer rounded-none hover:bg-white/5 transition-colors outline-none";
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent
         side={side}

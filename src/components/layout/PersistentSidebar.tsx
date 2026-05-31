@@ -63,10 +63,11 @@ export function PersistentSidebar() {
   const isAdmin = useAuth((s) => s.isAdmin);
 
   const sidebarAutoExpand = usePreferences((s) => s.sidebarAutoExpand);
-  const [pinned,  setPinned]  = useState(false);
-  const [hovered, setHovered] = useState(false);
+  const [pinned,    setPinned]    = useState(false);
+  const [hovered,   setHovered]   = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const expanded = pinned || (sidebarAutoExpand && hovered);
+  const expanded = pinned || (sidebarAutoExpand && (hovered || dropdownOpen));
   const w        = expanded ? EXPANDED_W : COLLAPSED_W;
   const items    = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS;
 
@@ -107,7 +108,7 @@ export function PersistentSidebar() {
         {/* User + toggle */}
         <div className="shrink-0 border-t border-white/[0.06]">
           {user ? (
-            <UserMenuDropdown side="right" align="end">
+            <UserMenuDropdown side="right" align="end" onOpenChange={setDropdownOpen}>
               <button className="w-full flex items-center gap-2 px-3 py-3 hover:bg-white/5 transition-colors overflow-hidden focus:outline-none">
                 <div className="h-8 w-8 shrink-0 border border-primary/40 overflow-hidden bg-primary/15 grid place-items-center">
                   {user.avatar

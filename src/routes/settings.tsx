@@ -259,6 +259,67 @@ function ContaSection({ user }: { user: NonNullable<ReturnType<typeof useAuth>["
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Alterar e-mail ──────────────────────────────────────────────────────
+  const [emailChangeOpen, setEmailChangeOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailPassword, setEmailPassword] = useState("");
+  const [emailChangeSent, setEmailChangeSent] = useState(false);
+  const [emailChangeLoading, setEmailChangeLoading] = useState(false);
+  const [emailChangeError, setEmailChangeError] = useState<string | null>(null);
+  const [emailConfirmStatus, setEmailConfirmStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  // Confirma mudança de e-mail via token na URL
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("confirm-email");
+    if (!token || !AUTH_URL) return;
+    setEmailConfirmStatus("loading");
+    fetch(`${AUTH_URL}/api/auth/change-email/confirm`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          updateUser({ email: data.newEmail });
+          setEmailConfirmStatus("success");
+          window.history.replaceState({}, "", window.location.pathname);
+        } else {
+          setEmailConfirmStatus("error");
+        }
+      })
+      .catch(() => setEmailConfirmStatus("error"));
+  }, [updateUser]);
+
+  async function handleEmailChangeRequest(e: React.FormEvent) {
+    e.preventDefault();
+    setEmailChangeLoading(true);
+    setEmailChangeError(null);
+    try {
+      const r = await fetch(`${AUTH_URL}/api/auth/change-email/request`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newEmail, password: emailPassword }),
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        const msgs: Record<string, string> = {
+          invalid_password: "Senha incorreta.",
+          same_email: "O novo e-mail é igual ao atual.",
+          email_taken: "Este e-mail já está em uso.",
+        };
+        throw new Error(msgs[data.error] ?? data.message ?? "Erro ao solicitar alteração.");
+      }
+      setEmailChangeSent(true);
+    } catch (err: any) {
+      setEmailChangeError(err.message ?? "Erro ao solicitar alteração.");
+    } finally {
+      setEmailChangeLoading(false);
+    }
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -399,8 +460,90 @@ function ContaSection({ user }: { user: NonNullable<ReturnType<typeof useAuth>["
             ))}
           </div>
 
+          {/* Confirmação de troca de e-mail via link */}
+          {emailConfirmStatus === "loading" && (
+            <div className="bg-primary/10 border border-primary/30 px-5 py-3 flex items-center gap-2">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />
+              <p className="text-xs text-primary">Confirmando alteração de e-mail...</p>
+            </div>
+          )}
+          {emailConfirmStatus === "success" && (
+            <div className="bg-green-500/10 border border-green-500/30 px-5 py-3 flex items-center gap-2">
+              <Check className="h-3.5 w-3.5 text-green-400 shrink-0" />
+              <p className="text-xs text-green-400">E-mail atualizado com sucesso!</p>
+            </div>
+          )}
+          {emailConfirmStatus === "error" && (
+            <div className="bg-destructive/10 border border-destructive/30 px-5 py-3 flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+              <p className="text-xs text-destructive">Link expirado ou inválido.</p>
+            </div>
+          )}
+
+          {/* Alterar e-mail */}
           <div className="bg-[#0a0a0c]/40 border border-white/[0.04] px-5 py-3">
-            <p className="text-xs text-muted-foreground/50">Para alterar login ou e-mail, contate um administrador.</p>
+            {!emailChangeOpen && !emailChangeSent ? (
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground/50">Para alterar o login, contate um administrador.</p>
+                <button
+                  onClick={() => setEmailChangeOpen(true)}
+                  className="text-xs font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-colors shrink-0"
+                >
+                  Alterar e-mail
+                </button>
+              </div>
+            ) : emailChangeSent ? (
+              <div className="flex items-center gap-2">
+                <Check className="h-3.5 w-3.5 text-green-400 shrink-0" />
+                <p className="text-xs text-green-400">
+                  E-mail de confirmação enviado para <strong>{newEmail}</strong>. Verifique sua caixa de entrada.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleEmailChangeRequest} className="space-y-3">
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-2">Alterar E-mail</p>
+                <div>
+                  <label className="block text-xs text-muted-foreground/60 mb-1">Novo e-mail</label>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    required
+                    placeholder="novo@email.com"
+                    className="w-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-white placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/60 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-muted-foreground/60 mb-1">Confirme com sua senha atual</label>
+                  <input
+                    type="password"
+                    value={emailPassword}
+                    onChange={(e) => setEmailPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    className="w-full border border-white/10 bg-white/[0.03] px-4 py-2 text-sm text-white placeholder:text-muted-foreground/30 focus:outline-none focus:border-primary/60 transition-colors"
+                  />
+                </div>
+                {emailChangeError && <p className="text-xs text-destructive">{emailChangeError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={emailChangeLoading}
+                    className="flex items-center gap-2 bg-primary px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  >
+                    {emailChangeLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                    Enviar confirmação
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEmailChangeOpen(false); setEmailChangeError(null); setNewEmail(""); setEmailPassword(""); }}
+                    className="px-4 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-white transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
 

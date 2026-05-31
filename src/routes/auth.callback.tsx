@@ -3,8 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 
-import ApiService from "@/API/service";
-import { useAuth } from "@/store/auth";
+import { useAuth, mapRole } from "@/store/auth";
+
+const AUTH_URL = ((import.meta as any).env?.VITE_AUTH_URL as string | undefined)?.trim()?.replace(/\/$/, "") ?? "";
 
 export const Route = createFileRoute("/auth/callback")({ component: AuthCallback });
 
@@ -15,34 +16,37 @@ function AuthCallback() {
   const handledRef = useRef(false);
 
   useEffect(() => {
-    if (handledRef.current) {
-      return;
-    }
+    if (handledRef.current) return;
     handledRef.current = true;
 
     async function handleCallback() {
       try {
-        const session = await ApiService.get("api/Auth/Session");
-        const result = session?.result;
+        if (!AUTH_URL) throw new Error("AUTH_URL não configurado.");
 
-        if (!result || typeof result.userId !== "number") {
+        const r = await fetch(`${AUTH_URL}/api/auth/session`, { credentials: "include" });
+        if (!r.ok) throw new Error("Sessao invalida.");
+        const data = await r.json();
+
+        if (!data?.authenticated || !data.user?.id) {
           throw new Error("Sessao invalida.");
         }
 
-        const userInfo = result.userInfo;
-        const player = userInfo?.player;
-        const user = {
-          id: result.userId,
-          name: player?.nickname || userInfo?.login || "",
-          email: userInfo?.email ?? "",
-          login: userInfo?.login ?? "",
-          role: userInfo?.role ?? "",
-          isActive: userInfo?.isActive ?? true,
-          lastLoginAt: userInfo?.lastLoginAt ?? "",
-          avatar: player?.avatarUrl || undefined
-        };
+        const u = data.user;
+        login(
+          {
+            id: u.id,
+            name: u.login,
+            email: u.email ?? "",
+            login: u.login,
+            role: mapRole(u.role),
+            isActive: true,
+            lastLoginAt: new Date().toISOString(),
+            createdAt: u.createdAt ?? null,
+          },
+          "",
+          false,
+        );
 
-        login(user, "", Boolean(player?.id));
         navigate({ to: "/" });
       } catch (err: any) {
         setError(err?.message ?? "Nao foi possivel autenticar.");
