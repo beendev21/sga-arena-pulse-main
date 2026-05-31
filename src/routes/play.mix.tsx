@@ -292,7 +292,7 @@ function ModalCheckout({
     <Dialog open={!!sessao} onOpenChange={v => !v && onClose()}>
       <DialogContent
         className="max-w-sm border"
-        style={{ background: "#0d0e12", borderColor: "rgba(245,158,11,0.22)" }}
+        style={{ background: "var(--surface-1)", borderColor: "rgba(245,158,11,0.22)" }}
       >
         <DialogTitle className="font-display text-lg font-black uppercase italic tracking-tight text-white">
           Garantir Vaga — {JOGO_CONFIG[sessao.jogo].label}

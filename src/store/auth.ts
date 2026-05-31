@@ -9,25 +9,14 @@ export type User = {
   role: string;
   isActive: boolean;
   lastLoginAt: string;
+  createdAt?: string | null;
   avatar?: string;
-};
-
-const syncSessionAuth = (user: User | null, token: string | null) => {
-  if (typeof window === "undefined") return;
-
-  if (token) {
-    sessionStorage.setItem("token", token);
-  } else {
-    sessionStorage.removeItem("token");
-  }
-
-  if (user) {
-    sessionStorage.setItem("username", user.name || user.login || "");
-    sessionStorage.setItem("user_data", JSON.stringify(user));
-  } else {
-    sessionStorage.removeItem("username");
-    sessionStorage.removeItem("user_data");
-  }
+  bio?: string | null;
+  avatarUrl?: string | null;
+  socialTwitter?: string | null;
+  socialInstagram?: string | null;
+  socialTwitch?: string | null;
+  socialDiscord?: string | null;
 };
 
 type AuthState = {
@@ -35,8 +24,11 @@ type AuthState = {
   token: string | null;
   isAdmin: boolean;
   isPlayer: boolean;
+  syncing: boolean;
   login: (user: User, token: string, playerExists?: boolean) => void;
   logout: () => void;
+  setSyncing: (v: boolean) => void;
+  updateUser: (partial: Partial<User>) => void;
 };
 
 export const useAuth = create<AuthState>()(
@@ -46,30 +38,37 @@ export const useAuth = create<AuthState>()(
       token: null,
       isAdmin: false,
       isPlayer: false,
-      login: (user, token, playerExists = false) => {
-        syncSessionAuth(user, token);
+      syncing: true,
+      login: (user, _token, playerExists = false) => {
         set({
           user,
-          token,
+          token: null,
           isAdmin: user.role === "Administrador",
           isPlayer: user.role === "Jogador" && playerExists,
+          syncing: false,
         });
       },
       logout: () => {
-        syncSessionAuth(null, null);
-        set({ user: null, token: null, isAdmin: false, isPlayer: false });
+        set({ user: null, token: null, isAdmin: false, isPlayer: false, syncing: false });
       },
+      setSyncing: (v) => set({ syncing: v }),
+      updateUser: (partial) => set((s) => ({ user: s.user ? { ...s.user, ...partial } : s.user })),
     }),
     {
-      name: "auth-storage", // Nome da chave no localStorage
-
+      name: "sga-auth",
+      partialize: (state) => ({ user: state.user }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-
         const role = state.user?.role ?? "";
         state.isAdmin = role === "Administrador";
-        state.isPlayer = role === "Jogador" && state.isPlayer;
+        state.isPlayer = false;
+        state.syncing = true;
       },
     }
   )
 );
+
+export function mapRole(role: number | undefined): string {
+  if (role === 1) return "Administrador";
+  return "Jogador";
+}

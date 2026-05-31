@@ -41,45 +41,45 @@ export function MatchCard({ m }: { m: Match }) {
         </span>
         <StatusBadge status={m.status} />
       </div>
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <div className={`flex items-center gap-3 ${winnerA ? "" : "opacity-90"}`}>
-          <TeamLogo team={teamA} size={48} />
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
+        <div className={`flex items-center gap-2 sm:gap-3 ${winnerA ? "" : "opacity-90"}`}>
+          <div className="shrink-0"><TeamLogo team={teamA} size={36} /></div>
           <div className="min-w-0">
-            <div className="font-display text-base md:text-lg font-bold uppercase tracking-tight truncate leading-tight">
-              {teamA.name || "Aguardando Time A"}
+            <div className="font-display text-sm font-bold uppercase tracking-tight truncate leading-tight">
+              {teamA.name || "TBD"}
             </div>
-            <div className="text-xs font-medium text-muted-foreground mt-0.5">{teamA.tag || "TBD"}</div>
+            <div className="text-xs font-medium text-muted-foreground mt-0.5 hidden sm:block">{teamA.tag || "TBD"}</div>
           </div>
         </div>
-        <div className="text-center min-w-[80px]">
+        <div className="text-center min-w-[60px] sm:min-w-[80px]">
           {m.status === "Agendada" ? (
             <div>
               <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">VS</div>
-              <div className="text-xs font-semibold mt-1 text-foreground/80">
-                {m.startsAt ? formatDateTimeBR(m.startsAt) : "Data a confirmar"}
+              <div className="text-[10px] sm:text-xs font-semibold mt-1 text-foreground/80">
+                {m.startsAt ? formatDateTimeBR(m.startsAt) : "A confirmar"}
               </div>
             </div>
           ) : (
-            <div className="font-display text-3xl font-black flex items-center justify-center gap-2 leading-none">
+            <div className="font-display text-2xl sm:text-3xl font-black flex items-center justify-center gap-1.5 leading-none">
               <span className={winnerA ? "text-primary" : "text-foreground/80"}>{m.scoreA}</span>
               <span className="text-muted-foreground/60">:</span>
               <span className={winnerB ? "text-primary" : "text-foreground/80"}>{m.scoreB}</span>
             </div>
           )}
           {m.map && (
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-2">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mt-1.5 truncate max-w-[70px] mx-auto">
               {m.map}
             </div>
           )}
         </div>
-        <div className={`flex items-center gap-3 justify-end ${winnerB ? "" : "opacity-90"}`}>
+        <div className={`flex items-center gap-2 sm:gap-3 justify-end ${winnerB ? "" : "opacity-90"}`}>
           <div className="min-w-0 text-right">
-            <div className="font-display text-base md:text-lg font-bold uppercase tracking-tight truncate leading-tight">
-              {teamB.name || "Aguardando Time B"}
+            <div className="font-display text-sm font-bold uppercase tracking-tight truncate leading-tight">
+              {teamB.name || "TBD"}
             </div>
-            <div className="text-xs font-medium text-muted-foreground mt-0.5">{teamB.tag || "TBD"}</div>
+            <div className="text-xs font-medium text-muted-foreground mt-0.5 hidden sm:block">{teamB.tag || "TBD"}</div>
           </div>
-          <TeamLogo team={teamB} size={48} />
+          <div className="shrink-0"><TeamLogo team={teamB} size={36} /></div>
         </div>
       </div>
     </Link>

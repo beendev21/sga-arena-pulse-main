@@ -1,16 +1,21 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ogMeta } from "@/lib/og";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Trophy, Users, Swords, Flame, ChevronRight, Crown, Medal, Award } from "lucide-react";
 import { TournamentCard } from "@/components/sga/TournamentCard";
 import { MatchCard } from "@/components/sga/MatchCard";
 import { TeamLogo } from "@/components/sga/TeamLogo";
 import { RankingTable } from "@/components/sga/RankingTable";
 import { PlayerStatsTable } from "@/components/sga/PlayerStatsTable";
-import { StatsCard } from "@/components/sga/StatsCard";
+import { AnimatedStatsCard } from "@/components/sga/AnimatedStatsCard";
 import { Button } from "@/components/ui/button";
+
+gsap.registerPlugin(ScrollTrigger);
 import useApiController from "../API/controler";
 import { unwrapList } from "@/lib/api";
 import { buildPublicMatches } from "@/lib/publicApi";
@@ -26,20 +31,55 @@ export const Route = createFileRoute("/")({
 });
 
 function Section({ title, index, action, children, id, alternate }: { title: string; index: string; action?: React.ReactNode; children: React.ReactNode; id?: string; alternate?: boolean }) {
+  const sectionRef = useRef<HTMLElement>(null)
+  const numRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  useGSAP(() => {
+    const section = sectionRef.current
+    if (!section) return
+
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: section,
+        start: 'top 78%',
+        once: true,
+      },
+    })
+
+    // número decorativo entra deslizando da direita
+    if (numRef.current) {
+      gsap.set(numRef.current, { x: 60, opacity: 0 })
+      tl.to(numRef.current, { x: 0, opacity: 0.025, duration: 0.9, ease: 'power3.out' }, 0)
+    }
+
+    // header sobe
+    if (headerRef.current) {
+      gsap.set(headerRef.current, { y: 28, opacity: 0 })
+      tl.to(headerRef.current, { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out' }, 0.1)
+    }
+
+    // conteúdo sobe com leve delay
+    if (contentRef.current) {
+      gsap.set(contentRef.current, { y: 20, opacity: 0 })
+      tl.to(contentRef.current, { y: 0, opacity: 1, duration: 0.7, ease: 'power2.out' }, 0.3)
+    }
+  }, { scope: sectionRef })
+
   return (
-    <section id={id} className={`py-20 md:py-24 relative ${alternate ? "bg-[var(--surface-1)]" : "bg-background"}`}>
-      {/* Decoração de fundo sutil */}
+    <section ref={sectionRef} id={id} className={`py-20 md:py-24 relative ${alternate ? "bg-[var(--surface-1)]" : "bg-background"}`}>
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.025),transparent_60%)]" />
       </div>
 
       {/* Numeração decorativa */}
-      <div className="absolute top-0 right-0 p-10 opacity-[0.025] pointer-events-none select-none hidden lg:block z-0">
+      <div ref={numRef} className="absolute top-0 right-0 p-10 opacity-0 pointer-events-none select-none hidden lg:block z-0">
         <div className="font-display text-[12rem] font-black italic leading-none">{index}</div>
       </div>
 
       <div className="mx-auto max-w-[1500px] px-4 md:px-6 relative z-10">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
+        <div ref={headerRef} className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4 opacity-0">
           <div className="flex items-start gap-4">
             <div className="bg-primary text-primary-foreground text-sm font-black px-2.5 py-1 mt-2 shadow-[2px_2px_0px_rgba(0,0,0,0.5)]">
               {index}
@@ -50,10 +90,12 @@ function Section({ title, index, action, children, id, alternate }: { title: str
           </div>
           {action}
         </div>
-        {children}
+        <div ref={contentRef} className="opacity-0">
+          {children}
+        </div>
       </div>
     </section>
-  );
+  )
 }
 
 function Home() {
@@ -201,10 +243,10 @@ function Home() {
             <p className="mt-5 text-foreground/80 max-w-lg text-base md:text-lg leading-relaxed">
               A plataforma competitiva da Santos Games. Monte seu time, dispute torneios, escale no ranking e prove que você é o melhor nos maiores títulos do momento.
             </p>
-            <div className="mt-7 flex items-center gap-8 opacity-70">
-              <img src="https://tipspace.gg/images/cs2/cs2-logo.webp" alt="CS2" className="h-8 w-auto" title="Counter-Strike 2" />
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Valorant_pink_version_logo.svg/3840px-Valorant_pink_version_logo.svg.png" alt="Valorant" className="h-6 w-auto" title="Valorant" />
-              <img src="https://upload.wikimedia.org/wikipedia/commons/d/d8/League_of_Legends_2019_vector.svg" alt="League of Legends" className="h-9 w-auto" title="League of Legends" />
+            <div className="mt-7 flex flex-wrap items-center gap-6 opacity-70">
+              <img src="https://tipspace.gg/images/cs2/cs2-logo.webp" alt="CS2" className="h-7 w-auto" title="Counter-Strike 2" />
+              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Valorant_pink_version_logo.svg/3840px-Valorant_pink_version_logo.svg.png" alt="Valorant" className="h-5 w-auto" title="Valorant" />
+              <img src="https://upload.wikimedia.org/wikipedia/commons/d/d8/League_of_Legends_2019_vector.svg" alt="League of Legends" className="h-8 w-auto" title="League of Legends" />
             </div>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link to="/login">
@@ -219,9 +261,9 @@ function Home() {
               </Link>
             </div>
             <div className="mt-10 grid grid-cols-3 gap-3 max-w-xl">
-              <StatsCard label="Times" value={teams.length} icon={Users} />
-              <StatsCard label="Partidas" value={matches.length} icon={Swords} accent />
-              <StatsCard label="Torneios" value={tournaments.length} icon={Trophy} />
+              <AnimatedStatsCard label="Times" value={teams.length} icon={Users} />
+              <AnimatedStatsCard label="Partidas" value={matches.length} icon={Swords} accent />
+              <AnimatedStatsCard label="Torneios" value={tournaments.length} icon={Trophy} />
             </div>
           </motion.div>
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.2 }}
@@ -231,29 +273,29 @@ function Home() {
               {/* Molduras táticas nos cantos */}
               <motion.div 
                 variants={{ hover: { x: -5, y: -5 } }}
-                className="absolute -top-[2px] -left-[2px] w-12 h-12 border-t-2 border-l-2 border-primary z-20 transition-all duration-500 group-hover:w-16 group-hover:h-16" 
+                className="absolute -top-[2px] -left-[2px] w-12 h-12 border-t-2 border-l-2 border-primary z-20 hidden lg:block" 
               />
               <motion.div 
                 variants={{ hover: { x: 5, y: 5 } }}
-                className="absolute -bottom-[2px] -right-[2px] w-12 h-12 border-b-2 border-r-2 border-primary z-20 transition-all duration-500 group-hover:w-16 group-hover:h-16" 
+                className="absolute -bottom-[2px] -right-[2px] w-12 h-12 border-b-2 border-r-2 border-primary z-20 hidden lg:block" 
               />
               <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-white/20 z-20" />
               <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-white/20 z-20" />
 
               <AnimatePresence mode="wait">
-                <motion.div 
+                <motion.div
                   key={heroIndex}
-                  initial={{ opacity: 0, x: 40, filter: "blur(10px)" }}
-                  animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, x: -40, filter: "blur(10px)" }}
+                  initial={{ opacity: 0, x: 40 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -40 }}
                   variants={{ hover: { scale: 1.02 } }}
-                  transition={{ 
-                    type: "spring", 
-                    stiffness: 90, 
+                  transition={{
+                    type: "spring",
+                    stiffness: 90,
                     damping: 20,
-                    mass: 1 
+                    mass: 1
                   }}
-                  className="relative overflow-hidden border border-white/[0.08] bg-[var(--surface-2)] shadow-2xl transition-all duration-500 group-hover:border-primary/50 cursor-pointer"
+                  className="relative overflow-hidden border border-white/[0.08] bg-[var(--surface-2)] shadow-2xl transition-[border-color] duration-300 group-hover:border-primary/50 cursor-pointer"
                 >
                   <motion.img
                     src={currentInfo.banner}
@@ -437,7 +479,7 @@ function Home() {
               {/* Conteúdo */}
               <div className="relative px-6 pb-7 pt-2 flex-1 flex flex-col items-center text-center">
                 <div className="relative -mt-12 mb-5 z-10">
-                  <div className={`absolute inset-0 ${color.replace('text-', 'bg-')}/20 blur-3xl rounded-full scale-150 -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
+                  <div className={`absolute inset-0 ${color.replace('text-', 'bg-')}/20 blur-3xl rounded-full scale-150 -z-10 opacity-0 hidden md:block group-hover:opacity-100 transition-opacity duration-500`} />
                   <TeamLogo team={team} size={110} />
                 </div>
 
@@ -464,7 +506,7 @@ function Home() {
 
       {/* RANKING DE EQUIPES */}
       <Section index="04" title="Ranking de Equipes" action={<Link to="/teams" className="text-sm font-bold text-primary hover:text-white uppercase tracking-wide">Ver todos os times →</Link>}>
-        <div className="inline-flex gap-2 mb-6 p-1 bg-[var(--surface-1)] border border-white/[0.06]">
+        <div className="flex flex-wrap gap-2 mb-6 p-1 bg-[var(--surface-1)] border border-white/[0.06]">
           {[
             { id: "COUNTER-STRIKE 2" as const, label: "CS2", color: "text-cs2" },
             { id: "VALORANT" as const, label: "Valorant", color: "text-valorant" },
@@ -473,7 +515,7 @@ function Home() {
             <button
               key={game.id}
               onClick={() => setRankingGame(game.id)}
-              className={`relative px-5 py-2.5 font-display text-sm md:text-base font-bold uppercase tracking-wide transition-colors ${
+              className={`relative px-4 py-2.5 font-display text-sm font-bold uppercase tracking-wide transition-colors ${
                 rankingGame === game.id
                   ? `${game.color} bg-[var(--surface-3)]`
                   : "text-muted-foreground hover:text-white"
@@ -500,7 +542,7 @@ function Home() {
       </Section>
 
       <Section index="05" title="Top 40 Jogadores" alternate action={<Link to="/players" className="text-sm font-bold text-primary hover:text-white uppercase tracking-wide">Ranking completo →</Link>}>
-        <div className="inline-flex gap-2 mb-6 p-1 bg-[var(--surface-2)] border border-white/[0.06]">
+        <div className="flex flex-wrap gap-2 mb-6 p-1 bg-[var(--surface-2)] border border-white/[0.06]">
           {[
             { id: "COUNTER-STRIKE 2" as const, label: "CS2", color: "text-cs2" },
             { id: "VALORANT" as const, label: "Valorant", color: "text-valorant" },
@@ -509,7 +551,7 @@ function Home() {
             <button
               key={game.id}
               onClick={() => setPlayerStatsGame(game.id)}
-              className={`relative px-5 py-2.5 font-display text-sm md:text-base font-bold uppercase tracking-wide transition-colors ${
+              className={`relative px-4 py-2.5 font-display text-sm font-bold uppercase tracking-wide transition-colors ${
                 playerStatsGame === game.id
                   ? `${game.color} bg-[var(--surface-3)]`
                   : "text-muted-foreground hover:text-white"

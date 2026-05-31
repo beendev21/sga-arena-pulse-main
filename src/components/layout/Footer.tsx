@@ -1,15 +1,23 @@
 import { Link } from "@tanstack/react-router";
 import { Twitter, Twitch, Youtube, Instagram, MapPin, Mail } from "lucide-react";
 import { getCurrentYear } from "@/lib/dateUtils";
+import { usePreferences } from "@/store/preferences";
 
 export function Footer() {
+  const bgTheme = usePreferences((s) => s.bgTheme);
+  const isLight = bgTheme === "branco";
+
   return (
-    <footer className="mt-20 border-t border-white/[0.06] bg-[var(--surface-1)]">
+    <footer className="border-t border-white/[0.06] bg-[var(--surface-1)]">
       <div className="mx-auto max-w-[1500px] px-6 py-14 grid gap-10 md:grid-cols-12">
         {/* Marca + descrição */}
         <div className="md:col-span-4">
           <div className="flex items-center gap-3">
-            <img src="/sga-logo.png" alt="Santos Games Arena" className="h-12 w-auto" />
+            <img
+              src={isLight ? "/sga-logo-preta.svg" : "/sga-logo.png"}
+              alt="Santos Games Arena"
+              className={`h-12 w-auto${isLight ? "" : " invert"}`}
+            />
             <div>
               <div className="font-display text-xl font-black tracking-tight text-white uppercase">Santos Games Arena</div>
               <div className="text-sm text-muted-foreground font-medium">A casa do e-sport competitivo</div>

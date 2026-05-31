@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { StatsCard } from "@/components/sga/StatsCard";
 import { useAuth } from "@/store/auth";
+import { usePreferences } from "@/store/preferences";
 import { toast } from "sonner";
 import useApiController from "../API/controler";
 import ApiService from "../API/service";
@@ -861,6 +862,7 @@ function Admin() {
   const isAdmin = useAuth((s) => s.isAdmin);
   const token = useAuth((s) => s.token);
   const nav = useNavigate();
+  const isLight = usePreferences((s) => s.bgTheme) === "branco";
 
   console.log("[SGA DEBUG] Usuário atual:", user?.email, "| Cargo:", user?.role);
 
@@ -3899,9 +3901,9 @@ function Admin() {
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <img
-            src="https://santos-games.com/encontre-um-time/assets/sga-logo-B5SOul8E.png"
+            src={isLight ? "/sga-logo-preta.svg" : "/sga-logo-preta.svg"}
             alt="SGA Logo"
-            className="h-12 w-auto"
+            className={`h-12 w-auto${isLight ? "" : " invert"}`}
           />
           <h1 className="font-display text-3xl uppercase tracking-widest">Painel de controle</h1>
         </div>

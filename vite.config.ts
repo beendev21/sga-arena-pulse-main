@@ -26,5 +26,34 @@ export default defineConfig(({ mode }) => {
         .map((h) => h.trim())
         .filter(Boolean),
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // React core — muda raramente, cache longo
+            "vendor-react": ["react", "react-dom"],
+            // Roteamento e data fetching
+            "vendor-tanstack": [
+              "@tanstack/react-router",
+              "@tanstack/react-query",
+            ],
+            // Animações — separadas pra não bloquear o parse inicial
+            "vendor-motion": ["framer-motion", "gsap", "@gsap/react"],
+            // UI primitives Radix
+            "vendor-ui": [
+              "@radix-ui/react-dialog",
+              "@radix-ui/react-dropdown-menu",
+              "@radix-ui/react-select",
+              "@radix-ui/react-tabs",
+              "@radix-ui/react-tooltip",
+              "@radix-ui/react-popover",
+              "@radix-ui/react-accordion",
+            ],
+          },
+        },
+      },
+      // avisa quando chunk > 400KB (padrão é 500KB)
+      chunkSizeWarningLimit: 400,
+    },
   };
 });

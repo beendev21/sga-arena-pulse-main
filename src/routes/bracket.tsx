@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ogMeta } from "@/lib/og";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import useApiController from "@/API/controler";
 import { motion, AnimatePresence } from "framer-motion";
+import gsap from "gsap";
 import { Bracket } from "@/components/sga/Bracket";
 import { buildPublicMatches } from "@/lib/publicApi";
 import { unwrapList } from "@/lib/api";
@@ -160,6 +161,21 @@ function BracketPage() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.4 }}
               className="rounded-none border border-white/5 bg-[#0a0a0c]/80 backdrop-blur-md shadow-2xl p-4 md:p-8 overflow-x-auto scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent"
+            ref={(el) => {
+              if (!el) return;
+              // scroll suave horizontal via GSAP ao rolar a roda
+              const onWheel = (e: WheelEvent) => {
+                if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // já scroll horizontal nativo
+                e.preventDefault();
+                gsap.to(el, {
+                  scrollLeft: el.scrollLeft + e.deltaY * 1.5,
+                  duration: 0.55,
+                  ease: "power2.out",
+                  overwrite: "auto",
+                });
+              };
+              el.addEventListener("wheel", onWheel, { passive: false });
+            }}
             >
               {selectedTournament ? (
                 <Bracket matches={selectedMatches} bracketType={selectedTournament.bracketType || selectedTournament.format} />

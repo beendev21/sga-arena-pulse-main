@@ -1,5 +1,3 @@
-import { getToken } from "../Utils/auth";
-
 // Configuração da URL Base da API.
 // Prioriza variáveis de ambiente (compatível com Create React App e Vite)
 // e usa a URL oficial da API como fallback padrão.
@@ -31,18 +29,11 @@ const getFullUrl = (endpoint: string) => {
   return `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
 };
 
-const authHeader = (): Record<string, string> => {
-  const token = getToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
 const buildHeaders = ({
-  includeAuth = true,
   includeJsonContentType = false,
-}: ApiRequestOptions & { includeJsonContentType?: boolean }): Record<string, string> => {
+}: ApiRequestOptions & { includeJsonContentType?: boolean } = {}): Record<string, string> => {
   return {
     ...(includeJsonContentType ? { "Content-Type": "application/json" } : {}),
-    ...(includeAuth ? authHeader() : {}),
   };
 };
 
