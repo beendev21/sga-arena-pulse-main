@@ -25,12 +25,18 @@ const AUTH_URL = ((import.meta as any).env?.VITE_AUTH_URL as string | undefined)
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: ogMeta({ title: "Configurações — SGA", description: "Gerencie sua conta na Santos Games Arena.", path: "/settings" }) }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: VALID_SECTIONS.includes(search.tab as Section) ? (search.tab as Section) : undefined,
+    "confirm-email": typeof search["confirm-email"] === "string" ? search["confirm-email"] : undefined,
+  }),
   component: SettingsPage,
 });
 
 const IS_DEV_LOGIN = ((import.meta as any).env?.VITE_DEV_TOKEN_LOGIN as string | undefined)?.trim() === "true";
 
 type Section = "conta" | "seguranca" | "sessoes" | "cursor" | "tema" | "jogos";
+
+const VALID_SECTIONS: Section[] = ["conta", "seguranca", "sessoes", "cursor", "tema", "jogos"];
 
 const NAV_GROUPS: { group: string; items: { id: Section; label: string; icon: typeof User; desc: string }[] }[] = [
   {
@@ -74,7 +80,8 @@ function SettingsPage() {
   const isSidebar = navLayout === "sidebar";
   const router = useRouter();
   const navigate = useNavigate();
-  const [section, setSection] = useState<Section>("conta");
+  const { tab } = Route.useSearch();
+  const [section, setSection] = useState<Section>(tab ?? "conta");
   const [navFilter, setNavFilter] = useState("");
 
   function handleClose() {
@@ -268,9 +275,11 @@ function ContaSection({ user }: { user: NonNullable<ReturnType<typeof useAuth>["
   const [emailChangeError, setEmailChangeError] = useState<string | null>(null);
   const [emailConfirmStatus, setEmailConfirmStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
+  const { "confirm-email": confirmEmailToken } = Route.useSearch();
+
   // Confirma mudança de e-mail via token na URL
   useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get("confirm-email");
+    const token = confirmEmailToken;
     if (!token || !AUTH_URL) return;
     setEmailConfirmStatus("loading");
     fetch(`${AUTH_URL}/api/auth/change-email/confirm`, {
